@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
+// import Script from "next/script";
 import "./globals.css";
 
 import Footer from "@/components/layout/Footer";
@@ -25,7 +25,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const META_PIXEL_ID = "887205770572625";
+// const META_PIXEL_ID = "887205770572625";
 // const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || "";
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
@@ -94,6 +94,7 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body>
+        {/* Meta Pixel is disabled.
         <Script id="meta-pixel" strategy="afterInteractive">
           {`
             !function(f,b,e,v,n,t,s)
@@ -113,6 +114,7 @@ export default async function RootLayout({
             __html: `<img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=${META_PIXEL_ID}&ev=PageView&noscript=1" />`,
           }}
         />
+        */}
         <JsonLd data={[organizationJsonLd(), websiteJsonLd()]} />
         <Providers>
           <SiteChrome
