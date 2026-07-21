@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   transaction: vi.fn(),
-  queryRaw: vi.fn(),
+  executeRaw: vi.fn(),
   categoryFindMany: vi.fn(),
   categoryFindUnique: vi.fn(),
   categoryFindFirst: vi.fn(),
@@ -156,7 +156,7 @@ beforeEach(() => {
   state.productsByCategory = new Map();
   state.nextId = 1;
 
-  mocks.queryRaw.mockResolvedValue([]);
+  mocks.executeRaw.mockResolvedValue(0);
   mocks.categoryFindMany.mockImplementation(async (args: CategoryReadArgs = {}) =>
     sortRows(state.records.filter((record) => matchesWhere(record, args.where))),
   );
@@ -215,7 +215,7 @@ beforeEach(() => {
   );
 
   const transactionClient = {
-    $queryRaw: mocks.queryRaw,
+    $executeRaw: mocks.executeRaw,
     category: {
       findMany: mocks.categoryFindMany,
       findUnique: mocks.categoryFindUnique,
@@ -246,6 +246,7 @@ describe("category hierarchy mutations", () => {
       depth: 0,
       position: 0,
     });
+    expect(mocks.executeRaw).toHaveBeenCalledTimes(1);
 
     const renamed = await updateCategory(created.id, { name: "Workshop Tools" });
     expect(renamed).toMatchObject({

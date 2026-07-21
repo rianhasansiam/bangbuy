@@ -667,7 +667,7 @@ async function withCategoryTreeLock<T>(
   operation: (tx: CategoryTransaction) => Promise<T>,
 ): Promise<T> {
   return prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${CATEGORY_TREE_LOCK_KEY}))`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${CATEGORY_TREE_LOCK_KEY}))`;
     return operation(tx);
   });
 }

@@ -151,10 +151,10 @@ export default function AdminCategoriesPage() {
     setPanelOpen(true);
   };
 
-  const closePanel = () => {
+  const closePanel = useCallback(() => {
     setPanelOpen(false);
     setMutationError(null);
-  };
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
