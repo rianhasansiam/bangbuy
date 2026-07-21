@@ -2,7 +2,7 @@ import { siteConfig } from "@/lib/seo/site";
 
 /**
  * Highlighted customer-support contact callout shared across policy pages
- * (Privacy, Return, Terms). Renders the standard PixoHouse support email,
+ * (Privacy, Return, Terms). Renders the standard BangBuy support email,
  * phone, and address inside a violet/pink gradient card.
  */
 export default function PolicyContactBlock() {

@@ -21,7 +21,7 @@ const supportLinks = [
 const socialLinks = [
   {
     name: "Facebook",
-    href: "https://www.facebook.com/pixohousee",
+    href: "https://www.facebook.com/BangBuye",
     className: "bg-[#1877F2] hover:bg-[#166FE5]",
     icon: (
       <svg
@@ -58,17 +58,17 @@ const Footer = () => {
       <div className="container mx-auto px-4 py-8 sm:py-10">
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
           {/* Brand Section */}
-          <div className="col-span-2 sm:col-span-2 md:col-span-1 space-y-3 sm:space-y-4">
+          <div className="col-span-2 sm:col-span-2 md:col-span-1 space-y-3 sm:space-y-4 ">
             <Link
               href="/"
               aria-label={`${siteConfig.name} home`}
-              className="group inline-flex flex-col rounded-xl py-1 pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 focus-visible:ring-offset-brand-black"
+              className="items-center  group inline-flex flex-col rounded-xl py-1 pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 focus-visible:ring-offset-brand-black"
             >
-              <span className="whitespace-nowrap text-3xl font-black leading-none tracking-[-0.06em] text-brand-white sm:text-4xl">
-                Pixo<span className="text-brand-red">House</span>
+              <span className="mb-2 whitespace-nowrap text-3xl font-black leading-none tracking-[-0.06em] text-brand-white sm:text-4xl">
+                Bang<span className="text-brand-red">Buy</span>
               </span>
               <span className="mt-1.5 whitespace-nowrap text-[0.52rem] font-bold uppercase leading-none tracking-[0.22em] text-brand-white/55 transition-colors duration-300 group-hover:text-brand-white/80">
-                Smart Finds, Great Deals
+                - Good Quality. Good Service. -
               </span>
             </Link>
             <p className="text-brand-white text-xs sm:text-sm leading-relaxed">

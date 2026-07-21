@@ -79,7 +79,7 @@ export function normalizeSavedItem(raw: unknown): SavedItem | null {
       typeof entry.attributeSummary === "string" ? entry.attributeSummary : null,
     name,
     brand:
-      typeof entry.brand === "string" && entry.brand ? entry.brand : "PixoHouse",
+      typeof entry.brand === "string" && entry.brand ? entry.brand : "BangBuy",
     image: image || FALLBACK_PRODUCT_IMAGE,
     price,
     originalPrice,

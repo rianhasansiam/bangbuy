@@ -17,6 +17,16 @@ function getDatabaseUrl() {
     if (!["postgresql:", "postgres:"].includes(parsed.protocol)) {
       throw new Error("DATABASE_URL must use the postgresql:// scheme.");
     }
+
+    if (
+      ["prefer", "require", "verify-ca"].includes(
+        parsed.searchParams.get("sslmode") ?? "",
+      )
+    ) {
+      parsed.searchParams.set("sslmode", "verify-full");
+    }
+
+    return parsed.toString();
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("DATABASE_URL")) {
       throw error;
@@ -25,8 +35,6 @@ function getDatabaseUrl() {
       "DATABASE_URL must be a valid PostgreSQL connection string. URL-encode special characters in the username or password.",
     );
   }
-
-  return url;
 }
 
 function createPrismaClient() {

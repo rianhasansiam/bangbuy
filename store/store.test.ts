@@ -47,7 +47,7 @@ describe("application store", () => {
         {
           id: "product-1",
           name: "Product",
-          brand: "PixoHouse",
+          brand: "BangBuy",
           image: "/product.png",
           price: 100,
           rating: 5,

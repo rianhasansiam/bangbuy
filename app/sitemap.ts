@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db/prisma";
 import { absoluteUrl } from "@/lib/seo/site";
 
 /**
- * Dynamic sitemap for PixoHouse.
+ * Dynamic sitemap for BangBuy.
  *
  * Lists the static public pages plus every ACTIVE category and ACTIVE
  * product. Inactive/soft-deleted rows (status === "INACTIVE") and all

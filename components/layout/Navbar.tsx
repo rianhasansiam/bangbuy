@@ -249,13 +249,13 @@ export default function Navbar({
 
             <div
               aria-hidden="true"
-              className="flex select-none flex-col"
+              className="flex select-none flex-col items-center"
             >
               <span className="whitespace-nowrap text-xl font-black leading-none tracking-[-0.055em] text-brand-black sm:text-2xl">
-                Pixo<span className="text-brand-red">House</span>
+                Bang<span className="text-brand-red">Buy</span>
               </span>
               <span className="mt-1 whitespace-nowrap text-[0.46rem] font-bold uppercase leading-none tracking-[0.15em] text-brand-text-muted transition-colors duration-300 group-hover:text-brand-black sm:text-[0.5rem] sm:tracking-[0.18em]">
-                Smart Finds, Great Deals
+               - Good Quality. Good Service. -
               </span>
             </div>
           </Link>

@@ -11,7 +11,7 @@ import { siteConfig } from "@/lib/seo/site";
  * Privacy Policy page.
  *
  * IMPORTANT: The legal text below is a professional starting template
- * tailored to the current PixoHouse feature set (credentials + Google login,
+ * tailored to the current BangBuy feature set (credentials + Google login,
  * guest checkout, cart/wishlist via localStorage, Cash on Delivery). It
  * should be reviewed by a qualified legal professional before being
  * used in production to ensure compliance with local data protection laws.
@@ -87,7 +87,7 @@ export default function PrivacyPolicyPage() {
 
       <PolicySection
         title="4. Authentication Information"
-        intro="We currently support two ways of signing in to your PixoHouse account:"
+        intro="We currently support two ways of signing in to your BangBuy account:"
       >
         <PolicyList
           items={[
@@ -203,7 +203,7 @@ export default function PrivacyPolicyPage() {
 
       <PolicySection
         title="10. Children's Privacy"
-        intro="PixoHouse is not directed to children under the age of 13."
+        intro="BangBuy is not directed to children under the age of 13."
       >
         <p>
           We do not knowingly collect personal information from children. If you believe a child has

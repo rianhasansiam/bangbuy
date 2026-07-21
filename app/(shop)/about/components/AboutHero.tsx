@@ -16,7 +16,7 @@ export default function AboutHero() {
           <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 backdrop-blur-sm ring-1 ring-white/20">
             <Sparkles className="h-3.5 w-3.5 text-brand-gold" />
             <span className="text-[11px] font-bold uppercase tracking-wide">
-              About PixoHouse
+              About BangBuy
             </span>
           </div>
 
@@ -28,7 +28,7 @@ export default function AboutHero() {
           </h1>
 
           <p className="mt-4 max-w-xl text-sm leading-relaxed text-white/90 sm:text-base">
-            PixoHouse brings carefully selected China-imported products to your
+            BangBuy brings carefully selected China-imported products to your
             doorstep with a focus on quality, trendy collections, fair pricing,
             and a smooth online shopping experience.
           </p>
@@ -60,7 +60,7 @@ export default function AboutHero() {
               </div>
 
               <div>
-                <p className="text-sm font-bold">PixoHouse Imported Collection</p>
+                <p className="text-sm font-bold">BangBuy Imported Collection</p>
                 <p className="text-xs text-white/80">
                   Trendy products selected with care
                 </p>

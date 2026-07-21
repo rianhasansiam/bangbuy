@@ -1,7 +1,7 @@
 import { absoluteUrl, siteConfig, socialProfiles } from "./site";
 
 /**
- * Strongly-typed-ish JSON-LD builders for PixoHouse.
+ * Strongly-typed-ish JSON-LD builders for BangBuy.
  *
  * Each helper returns a plain object ready to be serialized into a
  * `<script type="application/ld+json">` tag. We never invent data:
@@ -18,7 +18,7 @@ function prune<T extends JsonLd>(obj: T): T {
   ) as T;
 }
 
-/** Organization schema for PixoHouse (use once, app-wide). */
+/** Organization schema for BangBuy (use once, app-wide). */
 export function organizationJsonLd(): JsonLd {
   return prune({
     "@context": "https://schema.org",
@@ -32,7 +32,7 @@ export function organizationJsonLd(): JsonLd {
 }
 
 /**
- * WebSite schema with an optional SearchAction. PixoHouse's search routes
+ * WebSite schema with an optional SearchAction. BangBuy's search routes
  * to `/products?search=<query>`, so we wire the SearchAction there.
  */
 export function websiteJsonLd(): JsonLd {

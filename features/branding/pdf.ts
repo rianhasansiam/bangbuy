@@ -3,7 +3,7 @@ import { jsPDF } from "jspdf";
 import { siteConfig } from "@/lib/seo/site";
 
 /**
- * Shared branding primitives for every PixoHouse-generated PDF
+ * Shared branding primitives for every BangBuy-generated PDF
  * (order receipts, admin reports, …).
  *
  * Centralising the palette, logo loader, header, and footer keeps the

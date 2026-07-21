@@ -30,7 +30,7 @@ import { initialVariantSelectionId } from "./variant-selection";
 
 const FALLBACK_PRODUCT_IMAGE =
   "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400";
-const PRODUCT_VARIANT_IMAGE_EVENT = "pixohouse:product-variant-image";
+const PRODUCT_VARIANT_IMAGE_EVENT = "BangBuy:product-variant-image";
 const HEX_VALUE = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
 export type ProductVariantOption = {

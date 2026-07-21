@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 import { absoluteUrl, siteConfig } from "@/lib/seo/site";
 
 /**
- * Robots policy for PixoHouse.
+ * Robots policy for BangBuy.
  *
  * Public, customer-facing pages are crawlable. Private, transactional,
  * and authenticated areas are blocked so they never land in search

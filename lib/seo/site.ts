@@ -1,5 +1,5 @@
 /**
- * Central SEO/site configuration for PixoHouse.
+ * Central SEO/site configuration for BangBuy.
  *
  * Everything that the metadata helpers, JSON-LD builders, robots, and
  * sitemap need lives here so there is a single source of truth. The
@@ -15,17 +15,17 @@ const normalizedUrl = siteUrl.replace(/\/+$/, "");
 
 export const siteConfig = {
   /** Brand / website name. */
-  name: "PixoHouse",
+  name: "BangBuy",
   /** Short name for PWA-style metadata (application name). */
-  shortName: "PixoHouse",
-  /** Absolute production origin, e.g. https://pixohouse.tech (no trailing slash). */
+  shortName: "BangBuy",
+  /** Absolute production origin, e.g. https://BangBuy.tech (no trailing slash). */
   url: normalizedUrl,
   /** Default, e-commerce-focused site description. */
   description:
-    "PixoHouse is your trusted online shopping destination. Discover quality electronics, fashion, and home essentials with secure checkout, fast delivery, and great prices in BDT.",
+    "BangBuy is your trusted online shopping destination. Discover quality electronics, fashion, and home essentials with secure checkout, fast delivery, and great prices in BDT.",
   /** Default keyword set used as a baseline across the storefront. */
   keywords: [
-    "PixoHouse",
+    "BangBuy",
     "online shopping",
     "ecommerce",
     "buy online",
@@ -40,16 +40,16 @@ export const siteConfig = {
   locale: "en_US",
   /** Store currency (ISO 4217) — used in Product offers JSON-LD. */
   currency: "BDT",
-  author: "PixoHouse",
-  creator: "PixoHouse",
-  publisher: "PixoHouse",
+  author: "BangBuy",
+  creator: "BangBuy",
+  publisher: "BangBuy",
   /**
    * Business contact details — single source of truth for the contact
    * page, policy callouts, footer, and PDF documents.
    */
   contact: {
     /** Public support email. */
-    email: "pixohouse@gmail.com",
+    email: "BangBuy@gmail.com",
     /** Local Bangladeshi mobile number (display + tel: form). */
     phone: "01932600504",
     /** International (E.164) form for `tel:` links. */

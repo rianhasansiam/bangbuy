@@ -102,7 +102,7 @@ export default function ProductCard({
       id,
       slug,
       name,
-      brand: "PixoHouse",
+      brand: "BangBuy",
       image,
       price,
       originalPrice,

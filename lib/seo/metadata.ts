@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { absoluteUrl, siteConfig } from "./site";
 
 /**
- * Reusable Metadata builders for the PixoHouse storefront.
+ * Reusable Metadata builders for the BangBuy storefront.
  *
  * These keep page/route files thin and ensure every public page emits a
  * consistent, production-ready set of title/description/canonical/Open

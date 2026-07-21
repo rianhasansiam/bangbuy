@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 const FALLBACK_PRODUCT_IMAGE =
   "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400";
-const PRODUCT_VARIANT_IMAGE_EVENT = "pixohouse:product-variant-image";
+const PRODUCT_VARIANT_IMAGE_EVENT = "BangBuy:product-variant-image";
 
 type VariantGalleryImage = {
   variantId: string;

@@ -11,7 +11,7 @@ import { siteConfig } from "@/lib/seo/site";
  * Return Policy page.
  *
  * IMPORTANT: This is a professional starting template tailored to the
- * current PixoHouse checkout flow (Cash on Delivery active, online "Pay Now"
+ * current BangBuy checkout flow (Cash on Delivery active, online "Pay Now"
  * coming soon). Please have a qualified legal professional review and
  * adapt the content to your jurisdiction before going to production.
  */
