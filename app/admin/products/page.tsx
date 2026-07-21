@@ -219,6 +219,10 @@ export default function AdminProductsPage() {
     setPanelOpen(true);
   };
 
+  const closePanel = useCallback(() => {
+    if (!isSubmitting) setPanelOpen(false);
+  }, [isSubmitting]);
+
   const buildBody = (): ProductWriteBody => {
     const name = form.name.trim();
     if (!name) throw new Error("Product name is required.");
@@ -442,7 +446,7 @@ export default function AdminProductsPage() {
         error={mutationError}
         isSubmitting={isSubmitting}
         onChange={setForm}
-        onClose={() => { if (!isSubmitting) setPanelOpen(false); }}
+        onClose={closePanel}
         onSubmit={handleSubmit}
       />
     </div>
