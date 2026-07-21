@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 
 import { authConfig } from "@/lib/auth/auth.config";
+import type { AppSessionUser } from "@/lib/auth/session";
 import { FIELD_LIMITS } from "@/lib/auth/policy";
 import { verifyPassword } from "@/lib/auth/passwords";
 import { rateLimit } from "@/lib/auth/rate-limit";
@@ -162,7 +163,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Mutate the `user` object so the jwt() callback (which runs next,
         // with `user` populated only on this initial sign-in) picks up our IDs.
         user.id = dbUser.id;
-        user.role = dbUser.role;
+        (user as typeof user & Pick<AppSessionUser, "role">).role = dbUser.role;
 
         return true;
       } catch (error) {

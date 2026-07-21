@@ -1,120 +1,123 @@
-'use client'
+import { Building2, Factory, Star } from "lucide-react";
+import Link from "next/link";
 
-import React from 'react'
-import {
-  Battery,
-  Bluetooth,
-  Headphones,
-  Mic,
-  Armchair,
-  Lightbulb,
-  SlidersHorizontal,
-  Monitor,
-  Cpu,
-  Camera,
-  HardDrive,
-  Smartphone,
-  Keyboard,
-  Usb,
-  Square,
-  Settings,
-  LucideIcon
-} from 'lucide-react'
-
-type ProductSpec = {
-  id: string
-  icon: string
-  label: string
-  value: string
-}
+type CatalogEntity = {
+  name: string;
+  slug: string;
+  status: "ACTIVE" | "INACTIVE";
+};
 
 type ProductInfoProps = {
-  name: string
-  specs: ProductSpec[]
- 
-  productCode?: string | null
-}
+  name: string;
+  productCode?: string | null;
+  modelNumber?: string | null;
+  series?: string | null;
+  brand?: CatalogEntity | null;
+  manufacturer?: CatalogEntity | null;
+  rating: number;
+  reviewCount: number;
+};
 
-type IconName =
-  | 'Battery'
-  | 'Bluetooth'
-  | 'Headphones'
-  | 'Mic'
-  | 'Armchair'
-  | 'Lightbulb'
-  | 'SlidersHorizontal'
-  | 'Monitor'
-  | 'Cpu'
-  | 'Camera'
-  | 'HardDrive'
-  | 'Smartphone'
-  | 'Keyboard'
-  | 'Usb'
-  | 'Square'
-  | 'Settings'
-
-// Icon mapping for dynamic rendering
-const iconMap: Record<IconName, LucideIcon> = {
-  Battery,
-  Bluetooth,
-  Headphones,
-  Mic,
-  Armchair,
-  Lightbulb,
-  SlidersHorizontal,
-  Monitor,
-  Cpu,
-  Camera,
-  HardDrive,
-  Smartphone,
-  Keyboard,
-  Usb,
-  Square,
-  Settings,
-}
-
-const ProductInfo: React.FC<ProductInfoProps> = ({
+const ProductInfo = ({
   name,
-  specs,
   productCode,
-}) => {
+  modelNumber,
+  series,
+  brand,
+  manufacturer,
+  rating,
+  reviewCount,
+}: ProductInfoProps) => {
   return (
-    <div className="space-y-6">
-      {/* Product Name */}
+    <div className="space-y-5">
       <div>
-        <h1 className="text-xl md:text-2xl font-bold text-gray-900 leading-tight">
+        <h1 className="text-xl font-bold leading-tight text-gray-900 md:text-2xl">
           {name}
         </h1>
-        {productCode && (
-          <p className="mt-1 font-mono text-xs text-gray-400">
-            Product Code: {productCode}
-          </p>
-        )}
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+          {productCode && (
+            <span className="font-mono">Product code: {productCode}</span>
+          )}
+          {reviewCount > 0 && (
+            <a
+              href="#reviews"
+              className="inline-flex items-center gap-1 font-medium text-gray-700 hover:text-brand-red"
+              aria-label={`${rating.toFixed(1)} out of 5 from ${reviewCount} reviews`}
+            >
+              <Star
+                className="h-3.5 w-3.5 fill-brand-gold text-brand-gold"
+                aria-hidden="true"
+              />
+              {rating.toFixed(1)} ({reviewCount.toLocaleString()})
+            </a>
+          )}
+        </div>
       </div>
 
-      {/* Specs List */}
-      {specs.length > 0 && (
-        <div className="space-y-3">
-          {specs.map((spec) => {
-            const IconComponent = iconMap[spec.icon as IconName] || Battery
-            return (
-              <div key={spec.id} className="flex gap-3 text-sm">
-                <div className="shrink-0 w-5 h-5 mt-0.5 text-brand-red flex items-center justify-center">
-                  <IconComponent className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="font-semibold text-gray-900">{spec.label}:</span>{' '}
-                  <span className="text-gray-600">{spec.value}</span>
-                </div>
+      {(brand || manufacturer || modelNumber || series) && (
+        <dl className="grid gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3 text-sm sm:grid-cols-2">
+          {brand && (
+            <div className="flex min-w-0 items-start gap-2.5">
+              <Building2
+                className="mt-0.5 h-4 w-4 shrink-0 text-brand-red"
+                aria-hidden="true"
+              />
+              <div className="min-w-0">
+                <dt className="text-xs text-gray-500">Brand</dt>
+                <dd className="truncate font-semibold text-gray-900">
+                  {brand.status === "ACTIVE" ? (
+                    <Link
+                      href={`/products?brandSlug=${encodeURIComponent(brand.slug)}`}
+                      className="hover:text-brand-red"
+                    >
+                      {brand.name}
+                    </Link>
+                  ) : (
+                    brand.name
+                  )}
+                </dd>
               </div>
-            )
-          })}
-        </div>
+            </div>
+          )}
+          {manufacturer && (
+            <div className="flex min-w-0 items-start gap-2.5">
+              <Factory
+                className="mt-0.5 h-4 w-4 shrink-0 text-brand-red"
+                aria-hidden="true"
+              />
+              <div className="min-w-0">
+                <dt className="text-xs text-gray-500">Manufacturer</dt>
+                <dd className="truncate font-semibold text-gray-900">
+                  {manufacturer.status === "ACTIVE" ? (
+                    <Link
+                      href={`/products?manufacturerSlug=${encodeURIComponent(manufacturer.slug)}`}
+                      className="hover:text-brand-red"
+                    >
+                      {manufacturer.name}
+                    </Link>
+                  ) : (
+                    manufacturer.name
+                  )}
+                </dd>
+              </div>
+            </div>
+          )}
+          {modelNumber && (
+            <div>
+              <dt className="text-xs text-gray-500">Model number</dt>
+              <dd className="font-semibold text-gray-900">{modelNumber}</dd>
+            </div>
+          )}
+          {series && (
+            <div>
+              <dt className="text-xs text-gray-500">Series</dt>
+              <dd className="font-semibold text-gray-900">{series}</dd>
+            </div>
+          )}
+        </dl>
       )}
-
-     
     </div>
-  )
-}
+  );
+};
 
-export default ProductInfo
+export default ProductInfo;

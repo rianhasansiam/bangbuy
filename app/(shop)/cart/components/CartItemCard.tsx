@@ -28,6 +28,8 @@ type CartItem = {
   maxQuantity: number;
   color?: string;
   size?: string;
+  variantName?: string;
+  attributeSummary?: string;
   inStock: boolean;
   deliveryDays?: number;
   perks?: string[];
@@ -94,6 +96,13 @@ export default function CartItemCard({
               </Link>
               {(item.color || item.size) && (
                 <ColorBadge color={item.color} size={item.size} className="mt-1" />
+              )}
+              {(item.variantName || item.attributeSummary) && (
+                <p className="mt-1 line-clamp-2 text-xs text-gray-500">
+                  {[item.variantName, item.attributeSummary]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
               )}
             </div>
 

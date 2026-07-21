@@ -42,7 +42,7 @@ export default function ProductsToolbar({
             type="text"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="Search by name, code, category..."
+            placeholder="Search name, code, model, brand, category, SKU..."
             className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
           />
 

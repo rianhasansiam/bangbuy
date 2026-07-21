@@ -18,8 +18,11 @@ export type SavedItem = {
   slug: string;
   variantId?: string | null;
   sku?: string | null;
+  variantName?: string | null;
   color?: string | null;
   size?: string | null;
+  attributes?: Record<string, string> | null;
+  attributeSummary?: string | null;
   name: string;
   brand: string;
   image: string;
@@ -52,14 +55,28 @@ export function normalizeSavedItem(raw: unknown): SavedItem | null {
       ? entry.originalPrice
       : undefined;
 
+  const attributesRecord = asRecord(entry.attributes);
+  const attributes = attributesRecord
+    ? Object.fromEntries(
+        Object.entries(attributesRecord).filter(
+          (item): item is [string, string] => typeof item[1] === "string",
+        ),
+      )
+    : null;
+
   return {
     id: id || `saved:${productId}`,
     productId,
     slug: typeof entry.slug === "string" && entry.slug ? entry.slug : productId,
     variantId: typeof entry.variantId === "string" ? entry.variantId : null,
     sku: typeof entry.sku === "string" ? entry.sku : null,
+    variantName:
+      typeof entry.variantName === "string" ? entry.variantName : null,
     color: typeof entry.color === "string" ? entry.color : null,
     size: typeof entry.size === "string" ? entry.size : null,
+    attributes,
+    attributeSummary:
+      typeof entry.attributeSummary === "string" ? entry.attributeSummary : null,
     name,
     brand:
       typeof entry.brand === "string" && entry.brand ? entry.brand : "PixoHouse",

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { deriveVariantKey } from "@/lib/catalog/variant-options";
+
 /**
  * Zod schemas for the Product API.
  *
@@ -17,7 +19,13 @@ import { z } from "zod";
 
 const PRODUCT_STATUS = ["ACTIVE", "INACTIVE"] as const;
 
-const SORT_VALUES = ["latest", "price-low", "price-high"] as const;
+const SORT_VALUES = [
+  "latest",
+  "price-low",
+  "price-high",
+  "rating",
+  "popular",
+] as const;
 const HEX_COLOR_VALUE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
 /** Common reusable fragments. */
@@ -77,6 +85,37 @@ const image = z
 
 const images = z.array(z.string().trim().max(2048)).max(20).optional();
 
+const optionalText = (max: number) =>
+  z.string().trim().min(1).max(max).optional().nullable();
+
+const entityId = z.string().trim().min(1).optional().nullable();
+
+const attributes = z
+  .record(
+    z.string().trim().min(1).max(80),
+    z.string().trim().min(1).max(300),
+  )
+  .refine((value) => Object.keys(value).length <= 30, {
+    message: "A variant can have at most 30 attributes.",
+  })
+  .optional()
+  .nullable();
+
+const specifications = z
+  .record(
+    z.string().trim().min(1).max(100),
+    z.union([
+      z.string().trim().min(1).max(1000),
+      z.number().finite(),
+      z.boolean(),
+    ]),
+  )
+  .refine((value) => Object.keys(value).length <= 100, {
+    message: "A product can have at most 100 specifications.",
+  })
+  .optional()
+  .nullable();
+
 /**
  * A single purchasable size+color variant row. Size and color are
  * required so each row maps to a concrete combination (e.g. "M / Red").
@@ -85,11 +124,14 @@ const images = z.array(z.string().trim().max(2048)).max(20).optional();
  */
 const variantInput = z.object({
   id: z.string().trim().min(1).optional(),
-  size: z.string().trim().min(1, "Size is required.").max(40),
-  color: variantColor,
+  name: optionalText(120),
+  size: optionalText(40),
+  color: variantColor.optional().nullable(),
+  modelNumber: optionalText(100),
   sku: z.string().trim().min(1).max(80).optional().nullable(),
   stock: stock.default(0),
   image: image,
+  attributes,
   isActive: z.boolean().default(true),
 });
 
@@ -104,18 +146,25 @@ function discountWithinSale(data: {
   return data.discountPrice <= data.salePrice;
 }
 
-/** No two variant rows may share the same size+color (case-insensitive). */
+/** No two variant rows may resolve to the same deterministic option key. */
 function variantsHaveUniqueCombos(
   variants: ProductVariantInput[] | undefined,
 ): boolean {
   if (!variants || variants.length === 0) return true;
   const seen = new Set<string>();
   for (const v of variants) {
-    const key = `${v.size.trim().toLowerCase()}|${v.color.trim().toLowerCase()}`;
+    const key = deriveVariantKey(v);
     if (seen.has(key)) return false;
     seen.add(key);
   }
   return true;
+}
+
+function defaultVariantIsUnambiguous(
+  variants: ProductVariantInput[] | undefined,
+): boolean {
+  if (!variants || variants.length <= 1) return true;
+  return variants.every((variant) => deriveVariantKey(variant) !== "default");
 }
 
 /** No two provided SKUs may collide (ignores blank/missing SKUs). */
@@ -134,11 +183,23 @@ function variantsHaveUniqueSkus(
   return true;
 }
 
+/** Existing variant IDs form a set; repeating one would update it twice. */
+function variantsHaveUniqueIds(
+  variants: ProductVariantInput[] | undefined,
+): boolean {
+  if (!variants || variants.length === 0) return true;
+  const ids = variants.flatMap((variant) => (variant.id ? [variant.id] : []));
+  return new Set(ids).size === ids.length;
+}
+
 /** Body for `POST /api/products`. */
 export const createProductSchema = z
   .object({
     name,
     description,
+    modelNumber: optionalText(100),
+    series: optionalText(100),
+    specifications,
     buyingPrice,
     salePrice,
     discountPrice,
@@ -146,6 +207,8 @@ export const createProductSchema = z
     images,
     status: z.enum(PRODUCT_STATUS).default("ACTIVE"),
     categoryId: z.string().trim().min(1, "Category is required."),
+    brandId: entityId,
+    manufacturerId: entityId,
     variants: z.array(variantInput).min(1, "Add at least one variant."),
   })
   .refine(discountWithinSale, {
@@ -154,11 +217,19 @@ export const createProductSchema = z
   })
   .refine((data) => variantsHaveUniqueCombos(data.variants), {
     path: ["variants"],
-    message: "Each size + color combination must be unique.",
+    message: "Each option combination must be unique.",
+  })
+  .refine((data) => defaultVariantIsUnambiguous(data.variants), {
+    path: ["variants"],
+    message: "Only a product with one optionless variant may use the default option.",
   })
   .refine((data) => variantsHaveUniqueSkus(data.variants), {
     path: ["variants"],
     message: "Each SKU must be unique.",
+  })
+  .refine((data) => variantsHaveUniqueIds(data.variants), {
+    path: ["variants"],
+    message: "Each existing variant may only appear once.",
   });
 
 /**
@@ -173,6 +244,9 @@ export const updateProductSchema = z
   .object({
     name: name.optional(),
     description,
+    modelNumber: optionalText(100),
+    series: optionalText(100),
+    specifications,
     buyingPrice: buyingPrice.optional(),
     salePrice: salePrice.optional(),
     discountPrice,
@@ -180,6 +254,8 @@ export const updateProductSchema = z
     images,
     status: z.enum(PRODUCT_STATUS).optional(),
     categoryId: z.string().trim().min(1).optional(),
+    brandId: entityId,
+    manufacturerId: entityId,
     variants: z.array(variantInput).min(1).optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
@@ -187,11 +263,19 @@ export const updateProductSchema = z
   })
   .refine((data) => variantsHaveUniqueCombos(data.variants), {
     path: ["variants"],
-    message: "Each size + color combination must be unique.",
+    message: "Each option combination must be unique.",
+  })
+  .refine((data) => defaultVariantIsUnambiguous(data.variants), {
+    path: ["variants"],
+    message: "Only a product with one optionless variant may use the default option.",
   })
   .refine((data) => variantsHaveUniqueSkus(data.variants), {
     path: ["variants"],
     message: "Each SKU must be unique.",
+  })
+  .refine((data) => variantsHaveUniqueIds(data.variants), {
+    path: ["variants"],
+    message: "Each existing variant may only appear once.",
   });
 
 /**
@@ -207,7 +291,23 @@ export const productQuerySchema = z
     pageSize: z.coerce.number().int().min(1).max(100).default(20),
     search: z.string().trim().min(1).max(150).optional(),
     categoryId: z.string().trim().min(1).optional(),
+    categoryPath: z
+      .string()
+      .trim()
+      .min(1)
+      .max(1000)
+      .refine(
+        (value) => !value.startsWith("/") && !value.endsWith("/") && !value.includes("//"),
+        "Category path must be canonical without leading or trailing slashes.",
+      )
+      .optional(),
+    brandId: z.string().trim().min(1).optional(),
+    brandSlug: z.string().trim().min(1).max(160).optional(),
+    manufacturerId: z.string().trim().min(1).optional(),
+    manufacturerSlug: z.string().trim().min(1).max(160).optional(),
     status: z.enum(PRODUCT_STATUS).optional(),
+    stock: z.enum(["in-stock", "out-of-stock"]).optional(),
+    minRating: z.coerce.number().min(0).max(5).optional(),
     minPrice: z.coerce.number().nonnegative().optional(),
     maxPrice: z.coerce.number().nonnegative().optional(),
     sort: z.enum(SORT_VALUES).default("latest"),

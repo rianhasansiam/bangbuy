@@ -6,25 +6,17 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import FilterSidebar from "./FilterSidebar";
+import type { CatalogFacets } from "@/features/products/api";
 
-type Filters = {
-  categories: string[];
-  brands: string[];
-  priceRange: [number, number];
-  minRating: number;
-  inStockOnly: boolean;
-};
+import FilterSidebar, { type CatalogFilterState } from "./FilterSidebar";
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  filters: Filters;
-  onChange: (next: Filters) => void;
+  filters: CatalogFilterState;
+  onChange: (next: CatalogFilterState) => void;
   onReset: () => void;
-  categories: string[];
-  brands: string[];
-  priceBounds: [number, number];
+  facets: CatalogFacets;
 };
 
 export default function MobileFilterDrawer({
@@ -33,30 +25,27 @@ export default function MobileFilterDrawer({
   filters,
   onChange,
   onReset,
-  categories,
-  brands,
-  priceBounds,
+  facets,
 }: Props) {
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
+    <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
       <SheetContent
         side="left"
-        className="w-[85%] max-w-sm bg-brand-light-bg p-0 lg:hidden"
+        className="w-[88%] max-w-sm bg-brand-light-bg p-0 lg:hidden"
       >
         <SheetHeader className="bg-brand-black px-4 py-3 text-brand-white">
           <SheetTitle className="text-base font-bold text-brand-white">
-            Filters
+            Product filters
           </SheetTitle>
         </SheetHeader>
 
         <div className="h-[calc(100%-3.25rem)] overflow-y-auto p-3">
           <FilterSidebar
+            className="static max-h-none"
             filters={filters}
             onChange={onChange}
             onReset={onReset}
-            categories={categories}
-            brands={brands}
-            priceBounds={priceBounds}
+            facets={facets}
           />
         </div>
       </SheetContent>

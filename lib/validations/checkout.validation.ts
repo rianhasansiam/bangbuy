@@ -28,9 +28,9 @@ const checkoutItem = z.object({
 /**
  * Body for `POST /api/checkout/preview`.
  *
- * Authenticated users only. Used by the checkout page to compute
- * totals as the customer types their promo code or toggles between
- * cart / buy-now items. Read-only by design.
+ * Guests provide explicit items; authenticated users may omit them to
+ * price their saved cart. Used by cart and checkout to compute totals
+ * as the customer changes delivery zone or promo code. Read-only by design.
  */
 export const checkoutPreviewSchema = z.object({
   items: z.array(checkoutItem).max(100).optional(),

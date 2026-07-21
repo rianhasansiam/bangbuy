@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@/app/generated/prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 
 import { prisma } from "@/lib/db/prisma";

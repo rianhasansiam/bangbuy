@@ -24,6 +24,7 @@ const STATIC_ROUTES: {
 }[] = [
   { path: "/", changeFrequency: "daily", priority: 1 },
   { path: "/products", changeFrequency: "daily", priority: 0.9 },
+  { path: "/categories", changeFrequency: "weekly", priority: 0.8 },
   { path: "/about", changeFrequency: "monthly", priority: 0.5 },
   { path: "/contact", changeFrequency: "monthly", priority: 0.5 },
   { path: "/privacy-policy", changeFrequency: "yearly", priority: 0.3 },
@@ -31,8 +32,17 @@ const STATIC_ROUTES: {
   { path: "/terms-and-conditions", changeFrequency: "yearly", priority: 0.3 },
 ];
 
-type SitemapDbRow = {
+type ProductSitemapRow = {
   slug: string;
+  updatedAt: Date;
+  categoryId: string;
+};
+
+type CategorySitemapRow = {
+  id: string;
+  parentId: string | null;
+  path: string;
+  status: "ACTIVE" | "INACTIVE";
   updatedAt: Date;
 };
 
@@ -49,37 +59,79 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let categoryEntries: MetadataRoute.Sitemap = [];
   let productEntries: MetadataRoute.Sitemap = [];
 
+  let effectivelyActiveCategoryIds = new Set<string>();
+
   try {
-    const categories: SitemapDbRow[] = await prisma.category.findMany({
-      where: { status: "ACTIVE" },
-      select: { slug: true, updatedAt: true },
+    const categories: CategorySitemapRow[] = await prisma.category.findMany({
+      select: {
+        id: true,
+        parentId: true,
+        path: true,
+        status: true,
+        updatedAt: true,
+      },
       orderBy: { updatedAt: "desc" },
     });
 
-    categoryEntries = categories.map((category) => ({
-      url: absoluteUrl(`/categories/${category.slug}`),
-      lastModified: category.updatedAt,
-      changeFrequency: "weekly",
-      priority: 0.7,
-    }));
+    const categoriesById = new Map(categories.map((category) => [category.id, category]));
+    const activeMemo = new Map<string, boolean>();
+    const isEffectivelyActive = (category: CategorySitemapRow): boolean => {
+      const memoized = activeMemo.get(category.id);
+      if (memoized !== undefined) return memoized;
+
+      const visited = new Set<string>();
+      let current: CategorySitemapRow | undefined = category;
+      while (current) {
+        if (visited.has(current.id) || current.status !== "ACTIVE") {
+          activeMemo.set(category.id, false);
+          return false;
+        }
+        visited.add(current.id);
+        if (!current.parentId) break;
+        const parent = categoriesById.get(current.parentId);
+        if (!parent) {
+          activeMemo.set(category.id, false);
+          return false;
+        }
+        current = parent;
+      }
+
+      activeMemo.set(category.id, true);
+      return true;
+    };
+
+    effectivelyActiveCategoryIds = new Set(
+      categories.filter(isEffectivelyActive).map((category) => category.id),
+    );
+
+    categoryEntries = categories
+      .filter((category) => effectivelyActiveCategoryIds.has(category.id))
+      .map((category) => ({
+        url: absoluteUrl(`/categories/${category.path}`),
+        lastModified: category.updatedAt,
+        changeFrequency: "weekly",
+        priority: category.parentId ? 0.65 : 0.7,
+      }));
   } catch (error) {
     // Never let a DB hiccup break the sitemap — log and fall back.
     console.error("sitemap: failed to load categories", error);
   }
 
   try {
-    const products: SitemapDbRow[] = await prisma.product.findMany({
+    const products: ProductSitemapRow[] = await prisma.product.findMany({
       where: { status: "ACTIVE" },
-      select: { slug: true, updatedAt: true },
+      select: { slug: true, updatedAt: true, categoryId: true },
       orderBy: { updatedAt: "desc" },
     });
 
-    productEntries = products.map((product) => ({
-      url: absoluteUrl(`/products/${product.slug}`),
-      lastModified: product.updatedAt,
-      changeFrequency: "weekly",
-      priority: 0.8,
-    }));
+    productEntries = products
+      .filter((product) => effectivelyActiveCategoryIds.has(product.categoryId))
+      .map((product) => ({
+        url: absoluteUrl(`/products/${product.slug}`),
+        lastModified: product.updatedAt,
+        changeFrequency: "weekly",
+        priority: 0.8,
+      }));
   } catch (error) {
     console.error("sitemap: failed to load products", error);
   }

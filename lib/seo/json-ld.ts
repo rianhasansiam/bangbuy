@@ -87,14 +87,17 @@ export type ProductJsonLdInput = {
   sku?: string | null;
   /** Real brand name if available — omitted entirely when absent. */
   brand?: string | null;
+  /** Aggregate backed by persisted reviews; omitted when no reviews exist. */
+  rating?: {
+    average: number;
+    count: number;
+  };
 };
 
 /**
  * Product schema for a product detail page.
  *
- * Only emits `offers`, `sku`, `brand`, `category` and `image` when real
- * values exist. No `aggregateRating`/`review` is ever fabricated — add
- * that separately only when backed by real review data.
+ * Only emits optional catalog and rating fields when real values are passed.
  */
 export function productJsonLd(input: ProductJsonLdInput): JsonLd {
   const url = absoluteUrl(input.path);
@@ -112,6 +115,21 @@ export function productJsonLd(input: ProductJsonLdInput): JsonLd {
     sku: input.sku ?? undefined,
     brand: input.brand ? { "@type": "Brand", name: input.brand } : undefined,
     category: input.category ?? undefined,
+    aggregateRating:
+      input.rating &&
+      Number.isFinite(input.rating.average) &&
+      input.rating.average >= 1 &&
+      input.rating.average <= 5 &&
+      Number.isInteger(input.rating.count) &&
+      input.rating.count > 0
+        ? {
+            "@type": "AggregateRating",
+            ratingValue: Number(input.rating.average.toFixed(2)),
+            reviewCount: input.rating.count,
+            bestRating: 5,
+            worstRating: 1,
+          }
+        : undefined,
     offers: prune({
       "@type": "Offer",
       url,

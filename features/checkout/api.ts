@@ -13,9 +13,14 @@ export type CheckoutItemInput = {
 export type CheckoutItemPriced = {
   productId: string;
   variantId: string;
-  sku: string;
+  sku: string | null;
+  variantKey: string;
+  variantName: string | null;
+  modelNumber: string | null;
   color: string | null;
   size: string | null;
+  attributes: Record<string, string> | null;
+  attributeSummary: string | null;
   name: string;
   image: string | null;
   quantity: number;

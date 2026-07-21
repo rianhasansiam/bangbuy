@@ -1,6 +1,7 @@
 import type { z } from "zod";
 
 import { adminJsonRoute, adminRoute } from "@/lib/api/handlers";
+import { revalidateCacheTagsImmediately } from "@/lib/cache/revalidation";
 import {
   createAdminReview,
   listReviewsForAdmin,
@@ -35,9 +36,13 @@ export const GET = adminRoute({
 export const POST = adminJsonRoute({
   schema: createAdminReviewSchema,
   scope: "admin.reviews.POST",
-  revalidate: ["admin-reviews"],
   handler: async ({ body }) => {
     const review = await createAdminReview(body);
+    revalidateCacheTagsImmediately([
+      "admin-reviews",
+      "home-categories",
+      "products",
+    ]);
     return { status: 201, data: review };
   },
 });

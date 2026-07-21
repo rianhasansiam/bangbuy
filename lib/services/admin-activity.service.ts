@@ -2,7 +2,7 @@ import "server-only";
 
 import { randomUUID } from "crypto";
 
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@/app/generated/prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
 

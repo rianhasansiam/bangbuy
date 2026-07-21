@@ -1,10 +1,13 @@
 import "server-only";
 
-import type { Prisma } from "@prisma/client";
-import type { OrderStatus } from "@prisma/client";
+import type { OrderStatus, Prisma } from "@/app/generated/prisma/client";
 import { unstable_cache } from "next/cache";
 
 import { prisma } from "@/lib/db/prisma";
+import {
+  cleanVariantAttributes,
+  formatVariantAttributes,
+} from "@/lib/catalog/variant-options";
 import { toNumber } from "@/lib/money";
 import {
   CUSTOMER_CANCELLABLE_STATUSES,
@@ -103,6 +106,7 @@ export type OrderWithItemsAndUser = Prisma.OrderGetPayload<{
  * product link kept (nullable) for navigation.
  */
 function serializeOrderItem(item: OrderWithItems["items"][number]) {
+  const variantAttributes = cleanVariantAttributes(item.variantAttributes);
   return {
     id: item.id,
     productId: item.productId,
@@ -110,8 +114,11 @@ function serializeOrderItem(item: OrderWithItems["items"][number]) {
     productName: item.productName,
     productImage: item.productImage,
     sku: item.sku,
+    variantName: item.variantName,
     color: item.color,
     size: item.size,
+    variantAttributes,
+    attributeSummary: formatVariantAttributes(variantAttributes),
     quantity: item.quantity,
     unitPrice: toNumber(item.unitPrice),
     totalPrice: toNumber(item.totalPrice),
@@ -228,6 +235,14 @@ function recordStatusHistory(
   });
 }
 
+/** Serialize status transitions for one order for the lifetime of the transaction. */
+async function lockOrderForStatusChange(
+  tx: Prisma.TransactionClient,
+  orderId: string,
+): Promise<void> {
+  await tx.$queryRaw`SELECT "id" FROM "Order" WHERE "id" = ${orderId} FOR UPDATE`;
+}
+
 /**
  * Fire a best-effort status-change notification for an already-committed
  * order. Kept outside the DB transaction so a delivery hiccup can't roll
@@ -299,6 +314,7 @@ async function restoreStockForItems(
 
 export async function cancelOrderAsCustomer(orderId: string, userId: string) {
   const result = await prisma.$transaction(async (tx) => {
+    await lockOrderForStatusChange(tx, orderId);
     const order = await tx.order.findFirst({
       where: { id: orderId, userId },
       include: { items: true },
@@ -455,6 +471,7 @@ export async function updateOrderStatus(
   updatedBy?: string | null,
 ) {
   const result = await prisma.$transaction(async (tx) => {
+    await lockOrderForStatusChange(tx, orderId);
     const order = await tx.order.findUnique({
       where: { id: orderId },
       include: { items: true },

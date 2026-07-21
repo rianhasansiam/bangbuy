@@ -9,22 +9,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import type { ProductSortOption } from "@/features/products/api";
 import { cn } from "@/lib/utils";
-
-type SortOption =
-  | "popular"
-  | "price-low"
-  | "price-high"
-  | "rating"
-  | "newest";
 
 type ViewMode = "grid" | "list";
 
 type Props = {
   resultsCount: number;
   totalCount: number;
-  sort: SortOption;
-  onSortChange: (sort: SortOption) => void;
+  page: number;
+  pageSize: number;
+  activeFilterCount: number;
+  sort: ProductSortOption;
+  onSortChange: (sort: ProductSortOption) => void;
+  onPageSizeChange: (pageSize: number) => void;
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   onOpenMobileFilter: () => void;
@@ -32,27 +30,34 @@ type Props = {
   onToggleSidebar: () => void;
 };
 
-const SORT_LABELS: Record<SortOption, string> = {
+const SORT_LABELS: Record<ProductSortOption, string> = {
   popular: "Most Popular",
-  newest: "Newest First",
+  latest: "Newest First",
   "price-low": "Price: Low to High",
   "price-high": "Price: High to Low",
   rating: "Top Rated",
 };
 
-const SORT_OPTIONS = Object.keys(SORT_LABELS) as SortOption[];
+const SORT_OPTIONS = Object.keys(SORT_LABELS) as ProductSortOption[];
 
 export default function ProductToolbar({
   resultsCount,
   totalCount,
+  page,
+  pageSize,
+  activeFilterCount,
   sort,
   onSortChange,
+  onPageSizeChange,
   viewMode,
   onViewModeChange,
   onOpenMobileFilter,
   sidebarOpen,
   onToggleSidebar,
 }: Props) {
+  const firstResult = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
+  const lastResult = totalCount === 0 ? 0 : firstResult + resultsCount - 1;
+
   return (
     <div className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-brand-border bg-white px-3 py-2.5 shadow-sm transition-shadow duration-300 hover:shadow-md sm:px-4">
       <div className="flex items-center gap-2">
@@ -65,6 +70,11 @@ export default function ProductToolbar({
         >
           <SlidersHorizontal className="size-4" />
           Filters
+          {activeFilterCount > 0 && (
+            <span className="rounded-full bg-brand-red px-1.5 py-0.5 text-[10px] leading-none text-white">
+              {activeFilterCount}
+            </span>
+          )}
         </Button>
 
         <Button
@@ -86,15 +96,14 @@ export default function ProductToolbar({
         </Button>
 
         <p className="hidden text-xs text-gray-600 sm:block sm:text-sm">
-          Showing{" "}
-          <span className="font-semibold text-gray-900 transition-colors">
-            {resultsCount}
-          </span>{" "}
-          of <span className="font-semibold text-gray-900">{totalCount}</span>{" "}
-          products
+          Showing <span className="font-semibold text-gray-900">{firstResult}</span>
+          {lastResult !== firstResult && (
+            <>–<span className="font-semibold text-gray-900">{lastResult}</span></>
+          )}{" "}
+          of <span className="font-semibold text-gray-900">{totalCount}</span>
         </p>
         <p className="text-xs text-gray-600 sm:hidden">
-          <span className="font-semibold text-gray-900">{resultsCount}</span>{" "}
+          <span className="font-semibold text-gray-900">{totalCount}</span>{" "}
           results
         </p>
       </div>
@@ -116,7 +125,9 @@ export default function ProductToolbar({
           <DropdownMenuContent align="end" className="w-52">
             <DropdownMenuRadioGroup
               value={sort}
-              onValueChange={(v) => onSortChange(v as SortOption)}
+              onValueChange={(value) =>
+                onSortChange(value as ProductSortOption)
+              }
             >
               {SORT_OPTIONS.map((opt) => (
                 <DropdownMenuRadioItem key={opt} value={opt}>
@@ -126,6 +137,22 @@ export default function ProductToolbar({
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <label className="hidden items-center gap-1 text-xs text-gray-500 md:flex">
+          Show
+          <select
+            value={pageSize}
+            onChange={(event) => onPageSizeChange(Number(event.target.value))}
+            className="h-8 rounded-md border border-gray-200 bg-white px-1.5 text-xs font-semibold text-gray-800 outline-none focus:border-brand-red"
+            aria-label="Products per page"
+          >
+            {[12, 24, 48].map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+        </label>
 
         <div className="hidden items-center rounded-lg border border-gray-200 bg-gray-50 p-0.5 sm:flex">
           <ViewToggle

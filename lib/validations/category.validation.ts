@@ -1,18 +1,8 @@
 import { z } from "zod";
 
-/**
- * Zod schemas for the Category API.
- *
- * Kept HTTP-free so the same shapes can power server actions, admin
- * forms, or seed scripts. Mirror the Prisma `Category` model and its
- * `CategoryStatus` enum — keep them in sync when the schema changes.
- */
-
 const CATEGORY_STATUS = ["ACTIVE", "INACTIVE"] as const;
+const SORT_VALUES = ["position", "name", "latest", "oldest"] as const;
 
-const SORT_VALUES = ["latest", "oldest"] as const;
-
-/** Reusable fragments. */
 const name = z
   .string()
   .trim()
@@ -27,51 +17,75 @@ const description = z
   .nullable();
 
 const image = z.string().trim().max(2048).optional().nullable();
+const parentId = z.string().trim().min(1).max(191).nullable();
+const position = z.number().int().min(0).max(1_000_000);
 
-/** Body for `POST /api/categories`. */
-export const createCategorySchema = z.object({
-  name,
-  description,
-  image,
-  status: z.enum(CATEGORY_STATUS).default("ACTIVE"),
-});
+export const createCategorySchema = z
+  .object({
+    name,
+    description,
+    image,
+    status: z.enum(CATEGORY_STATUS).default("ACTIVE"),
+    parentId: parentId.optional().default(null),
+    position: position.optional(),
+  })
+  .strict();
 
-/**
- * Body for `PATCH /api/categories/[id]`.
- *
- * Every field optional, but at least one must be provided so a PATCH
- * can never be a silent no-op.
- */
 export const updateCategorySchema = z
   .object({
     name: name.optional(),
     description,
     image,
     status: z.enum(CATEGORY_STATUS).optional(),
+    parentId: parentId.optional(),
+    position: position.optional(),
   })
+  .strict()
   .refine((data) => Object.keys(data).length > 0, {
     message: "Provide at least one field to update.",
   });
 
-/**
- * Query string for `GET /api/categories`.
- *
- * `z.coerce.*` because URLSearchParams values are strings. Defaults
- * keep callers minimal — pass only what you want to override.
- */
+const booleanQueryParam = z
+  .enum(["true", "false"])
+  .transform((value) => value === "true");
+
+const parentQueryParam = z
+  .string()
+  .trim()
+  .min(1)
+  .max(191)
+  .transform((value) =>
+    value === "root" || value === "null" ? null : value,
+  )
+  .optional();
+
 export const categoryQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20),
-  search: z.string().trim().min(1).max(80).optional(),
+  pageSize: z.coerce.number().int().min(1).max(500).default(20),
+  search: z.string().trim().min(1).max(120).optional(),
   status: z.enum(CATEGORY_STATUS).optional(),
-  sort: z.enum(SORT_VALUES).default("latest"),
-  // `?withProductCount=true` opts into the extra count aggregation.
-  withProductCount: z
-    .enum(["true", "false"])
-    .default("false")
-    .transform((value) => value === "true"),
+  parentId: parentQueryParam,
+  sort: z.enum(SORT_VALUES).default("position"),
+  view: z.enum(["flat", "tree"]).default("flat"),
+  withCounts: booleanQueryParam.default(true),
+  // Compatibility with the original admin client. Counts are now always
+  // included, but accepting this parameter avoids breaking older callers.
+  withProductCount: booleanQueryParam.default(false),
 });
+
+export const reorderCategoriesSchema = z
+  .object({
+    parentId,
+    orderedIds: z
+      .array(z.string().trim().min(1).max(191))
+      .max(10_000)
+      .refine((ids) => new Set(ids).size === ids.length, {
+        message: "orderedIds must not contain duplicates.",
+      }),
+  })
+  .strict();
 
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
 export type UpdateCategoryInput = z.infer<typeof updateCategorySchema>;
 export type CategoryQueryInput = z.infer<typeof categoryQuerySchema>;
+export type ReorderCategoriesInput = z.infer<typeof reorderCategoriesSchema>;

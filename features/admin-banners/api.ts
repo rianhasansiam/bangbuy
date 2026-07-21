@@ -52,7 +52,19 @@ export type CategoryBannerRow = {
     id: string;
     name: string;
     slug: string;
+    path: string;
   };
+};
+
+export type CategoryBannerCategoryOption = {
+  id: string;
+  name: string;
+  slug: string;
+  path: string;
+  parentId: string | null;
+  depth: number;
+  position: number;
+  status: BannerStatus;
 };
 
 export type TopBannerRow = {
@@ -301,6 +313,7 @@ function parseCategoryBanner(entry: unknown): CategoryBannerRow {
       id: asString(category.id),
       name: asString(category.name),
       slug: asString(category.slug),
+      path: asString(category.path) || asString(category.slug),
     },
   };
 }
@@ -404,6 +417,63 @@ export async function fetchAllBanners(): Promise<AdminBannersBundle> {
     throw new Error(readApiError(payload, "Failed to load banners."));
   }
   return parseBannersBundle(payload);
+}
+
+/** Category banners intentionally target only visible top-level sections. */
+export async function fetchActiveRootBannerCategories(): Promise<
+  CategoryBannerCategoryOption[]
+> {
+  const params = new URLSearchParams({
+    view: "flat",
+    status: "ACTIVE",
+    parentId: "root",
+    sort: "position",
+    pageSize: "500",
+  });
+  const response = await fetch(`/api/categories?${params.toString()}`, {
+    method: "GET",
+    cache: "no-store",
+  });
+  const payload = await readJson(response);
+  if (!response.ok) {
+    throw new Error(
+      readApiError(payload, "Failed to load active root categories."),
+    );
+  }
+
+  const envelope = payload as ApiEnvelope<unknown>;
+  const rows = Array.isArray(envelope?.data) ? envelope.data : [];
+  return rows
+    .flatMap((entry): CategoryBannerCategoryOption[] => {
+      if (!entry || typeof entry !== "object") return [];
+      const row = entry as Record<string, unknown>;
+      const id = asString(row.id);
+      const name = asString(row.name);
+      const slug = asString(row.slug);
+      const path = asString(row.path) || slug;
+      const parentId = typeof row.parentId === "string" ? row.parentId : null;
+      const depth = Number(row.depth ?? 0);
+      const position = Number(row.position ?? 0);
+      const status = parseStatus(row.status);
+
+      if (
+        !id ||
+        !name ||
+        !path ||
+        row.status !== "ACTIVE" ||
+        parentId !== null ||
+        depth !== 0
+      ) {
+        return [];
+      }
+      return [{ id, name, slug, path, parentId, depth, position, status }];
+    })
+    .sort((a, b) => a.position - b.position || a.name.localeCompare(b.name));
+}
+
+export function categoryBannerHref(path: string): string {
+  const canonical = path.trim().replace(/^\/+|\/+$/g, "");
+  return canonical ? `/categories/${canonical}` : "/categories";
 }
 
 type CarouselCreateBody = {
@@ -747,7 +817,7 @@ export function buildCategoryBannerForm(
     heading: banner.heading,
     discount: banner.discount,
     description: banner.description,
-    link: banner.link ?? "",
+    link: banner.link ?? categoryBannerHref(banner.category.path),
     categoryId: banner.categoryId,
     status: banner.status,
   };

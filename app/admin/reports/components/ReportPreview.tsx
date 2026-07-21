@@ -655,6 +655,10 @@ function CategoriesPreview({ report }: { report: CategoriesReport }) {
                 value: String(report.summary.activeCategories),
               },
               {
+                label: "Catalog products",
+                value: String(report.summary.totalProducts),
+              },
+              {
                 label: "Units sold",
                 value: String(report.summary.unitsSold),
               },
@@ -668,14 +672,52 @@ function CategoriesPreview({ report }: { report: CategoriesReport }) {
       </div>
 
       <div>
-        <SectionHeading>Category performance</SectionHeading>
+        <SectionHeading>Direct category performance</SectionHeading>
         <div className="mt-2">
           <DataTable
-            headers={["Category", "Status", "Products", "Units", "Revenue"]}
+            headers={[
+              "Category breadcrumb",
+              "Canonical path",
+              "Status",
+              "Direct products",
+              "Units",
+              "Revenue",
+            ]}
             rows={report.rows.map((row) => [
-              row.name,
+              row.breadcrumbLabel,
+              `/${row.path}`,
               row.status,
-              row.productCount,
+              row.directProductCount,
+              row.unitsSold,
+              formatCurrency(row.revenue),
+            ])}
+          />
+        </div>
+      </div>
+
+      <div>
+        <SectionHeading>Root category rollups</SectionHeading>
+        <p className="mt-1 text-xs text-gray-500">
+          Each descendant contributes to one root only; these rows do not
+          duplicate intermediate-category totals.
+        </p>
+        <div className="mt-2">
+          <DataTable
+            headers={[
+              "Root category",
+              "Canonical path",
+              "Status",
+              "Categories",
+              "Subtree products",
+              "Units",
+              "Revenue",
+            ]}
+            rows={report.rootRollups.map((row) => [
+              row.name,
+              `/${row.path}`,
+              row.status,
+              row.categoryCount,
+              row.totalProductCount,
               row.unitsSold,
               formatCurrency(row.revenue),
             ])}

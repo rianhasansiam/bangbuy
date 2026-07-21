@@ -7,9 +7,12 @@ export type CartItem = {
   productId: string;
   slug?: string | null;
   variantId?: string | null;
+  variantName?: string | null;
   sku?: string | null;
   color?: string | null;
   size?: string | null;
+  attributes?: Record<string, string> | null;
+  attributeSummary?: string | null;
   name: string;
   image: string | null;
   quantity: number;

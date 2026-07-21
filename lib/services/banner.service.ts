@@ -1,7 +1,6 @@
 import "server-only";
 
-import type { Prisma } from "@prisma/client";
-import type { BannerType } from "@prisma/client";
+import type { BannerType, Prisma } from "@/app/generated/prisma/client";
 import { unstable_cache } from "next/cache";
 
 import { prisma } from "@/lib/db/prisma";
@@ -81,7 +80,7 @@ export type CategoryBannerRow = {
   status: BannerStatus;
   createdAt: Date;
   updatedAt: Date;
-  category: { id: string; name: string; slug: string };
+  category: { id: string; name: string; slug: string; path: string };
 };
 
 export type TopBannerRow = {
@@ -180,7 +179,7 @@ const bannerSelect = {
 
 const bannerWithCategorySelect = {
   ...bannerSelect,
-  category: { select: { id: true, name: true, slug: true } },
+  category: { select: { id: true, name: true, slug: true, path: true } },
 } satisfies Prisma.BannerSelect;
 
 type BannerRow = Prisma.BannerGetPayload<{ select: typeof bannerSelect }>;
@@ -230,8 +229,13 @@ function toCategoryRow(b: BannerRowWithCategory): CategoryBannerRow {
     createdAt: b.createdAt,
     updatedAt: b.updatedAt,
     category: b.category
-      ? { id: b.category.id, name: b.category.name, slug: b.category.slug }
-      : { id: b.categoryId ?? "", name: "", slug: "" },
+      ? {
+          id: b.category.id,
+          name: b.category.name,
+          slug: b.category.slug,
+          path: b.category.path,
+        }
+      : { id: b.categoryId ?? "", name: "", slug: "", path: "" },
   };
 }
 
@@ -457,12 +461,16 @@ export function getActiveCarouselBanners() {
 /* -------------------------------------------------------------------------- */
 
 export async function createCategoryBanner(input: CreateCategoryBannerInput) {
-  const category = await prisma.category.findUnique({
-    where: { id: input.categoryId },
-    select: { id: true },
+  const category = await prisma.category.findFirst({
+    where: {
+      id: input.categoryId,
+      parentId: null,
+      status: "ACTIVE",
+    },
+    select: { id: true, path: true },
   });
   if (!category) {
-    throw new BannerError(404, "Category not found.");
+    throw new BannerError(400, "Category banners require an active root category.");
   }
 
   const row = await prisma.banner.create({
@@ -470,7 +478,7 @@ export async function createCategoryBanner(input: CreateCategoryBannerInput) {
       type: "CATEGORY",
       image: input.image,
       description: input.description,
-      link: input.link ?? null,
+      link: input.link ?? `/categories/${category.path}`,
       categoryId: input.categoryId,
       status: input.status,
       metadata: cleanMeta({
@@ -490,26 +498,38 @@ export async function updateCategoryBanner(
 ) {
   await findBannerOfTypeOrThrow(id, "CATEGORY");
 
+  let selectedCategory: { id: string; path: string } | null = null;
   if (input.categoryId !== undefined) {
-    const category = await prisma.category.findUnique({
-      where: { id: input.categoryId },
-      select: { id: true },
+    selectedCategory = await prisma.category.findFirst({
+      where: {
+        id: input.categoryId,
+        parentId: null,
+        status: "ACTIVE",
+      },
+      select: { id: true, path: true },
     });
-    if (!category) {
-      throw new BannerError(404, "Category not found.");
+    if (!selectedCategory) {
+      throw new BannerError(400, "Category banners require an active root category.");
     }
   }
 
   const current = await prisma.banner.findUnique({
     where: { id },
-    select: { metadata: true },
+    select: {
+      metadata: true,
+      category: { select: { path: true } },
+    },
   });
   const meta = readMeta(current?.metadata ?? null);
 
   const data: Prisma.BannerUpdateInput = {};
   if (input.image !== undefined) data.image = input.image;
   if (input.description !== undefined) data.description = input.description;
-  if (input.link !== undefined) data.link = input.link;
+  if (input.link !== undefined) {
+    const categoryPath = selectedCategory?.path ?? current?.category?.path;
+    data.link =
+      input.link ?? (categoryPath ? `/categories/${categoryPath}` : null);
+  }
   if (input.status !== undefined) data.status = input.status;
   if (input.categoryId !== undefined) {
     data.category = { connect: { id: input.categoryId } };

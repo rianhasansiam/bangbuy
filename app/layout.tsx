@@ -10,6 +10,8 @@ import TopBanner from "@/components/layout/TopBanner";
 import JsonLd from "@/components/seo/JsonLd";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/seo/json-ld";
 import { siteConfig } from "@/lib/seo/site";
+import { parsePublicCategoryNode } from "@/features/categories/api";
+import { getActiveCategoryTree } from "@/lib/services/category.service";
 
 import Providers from "./providers";
 
@@ -74,11 +76,18 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const categories = await getActiveCategoryTree()
+    .then((tree) => tree.map(parsePublicCategoryNode))
+    .catch((error: unknown) => {
+      console.error("layout: failed to load category navigation", error);
+      return [];
+    });
+
   return (
     <html
       lang="en"
@@ -108,7 +117,7 @@ export default function RootLayout({
         <Providers>
           <SiteChrome
             banner={<TopBanner />}
-            navbar={<Navbar />}
+            navbar={<Navbar categories={categories} />}
             footer={<Footer />}
           >
             {children}

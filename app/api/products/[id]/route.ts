@@ -1,14 +1,16 @@
 import type { NextRequest } from "next/server";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
-import { revalidateTag } from "next/cache";
 import { z } from "zod";
 
 import { isAdminRequest, requireAdmin } from "@/lib/api/guards";
 import { jsonError, ok } from "@/lib/api/response";
+import { revalidateCacheTagsImmediately } from "@/lib/cache/revalidation";
 import { logAdminActivity } from "@/lib/services/admin-activity.service";
 import {
   getProductById,
+  getActiveProductById,
   hardDeleteProduct,
+  ProductError,
   serializeProduct,
   updateProduct,
 } from "@/lib/services/product.service";
@@ -27,12 +29,11 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
   try {
-    const product = await getProductById(id);
-    if (!product) return jsonError(404, "Product not found.");
     const includeBuyingPrice = await isAdminRequest();
-    if (!includeBuyingPrice && product.status !== "ACTIVE") {
-      return jsonError(404, "Product not found.");
-    }
+    const product = includeBuyingPrice
+      ? await getProductById(id)
+      : await getActiveProductById(id);
+    if (!product) return jsonError(404, "Product not found.");
     return ok(serializeProduct(product, { includeBuyingPrice }));
   } catch (error) {
     console.error("[products/[id].GET] failed", error);
@@ -110,10 +111,18 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       href: "/admin/products",
       actor: guard.session.user,
     });
-    revalidateTag("home-categories", "max");
-    revalidateTag("categories", "max");
+    revalidateCacheTagsImmediately([
+      "home-categories",
+      "categories",
+      "products",
+      "catalog-facets",
+      "catalog-search",
+    ]);
     return ok(serializeProduct(product, { includeBuyingPrice: true }));
   } catch (error) {
+    if (error instanceof ProductError) {
+      return jsonError(error.status, error.message, error.details);
+    }
     if (
       error instanceof PrismaClientKnownRequestError &&
       error.code === "P2025"
@@ -130,8 +139,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           fieldErrors: { variants: ["Duplicate SKU."] },
         });
       }
-      return jsonError(409, "Each size + color combination must be unique.", {
-        fieldErrors: { variants: ["Duplicate size + color combination."] },
+      return jsonError(409, "Each option combination must be unique.", {
+        fieldErrors: { variants: ["Duplicate option combination."] },
       });
     }
     console.error("[products/[id].PATCH] failed", error);
@@ -176,8 +185,13 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       href: "/admin/products",
       actor: guard.session.user,
     });
-    revalidateTag("home-categories", "max");
-    revalidateTag("categories", "max");
+    revalidateCacheTagsImmediately([
+      "home-categories",
+      "categories",
+      "products",
+      "catalog-facets",
+      "catalog-search",
+    ]);
     return ok(serializeProduct(existing));
   } catch (error) {
     if (

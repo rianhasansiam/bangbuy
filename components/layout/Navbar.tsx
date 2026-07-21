@@ -21,7 +21,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
+import { signOut } from "next-auth/react";
+import { useSession } from "@/lib/auth/use-app-session";
 import { useSelector } from "react-redux";
 
 import {
@@ -33,6 +34,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import SearchBar from "@/components/layout/SearchBar";
+import {
+  DesktopCategoryMenu,
+  MobileCategoryMenu,
+} from "@/components/layout/CategoryNavigation";
+import type { PublicCategoryNode } from "@/features/categories/api";
 import { confirm } from "@/lib/feedback";
 import { siteConfig } from "@/lib/seo/site";
 import type { RootState } from "@/store";
@@ -54,7 +60,11 @@ const MENU_ITEMS: readonly MenuItem[] = [
 /** Grace period (ms) so the cursor can travel from trigger to dropdown content. */
 const HOVER_CLOSE_DELAY_MS = 120;
 
-export default function Navbar() {
+export default function Navbar({
+  categories = [],
+}: {
+  categories?: PublicCategoryNode[];
+}) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const user = session?.user ?? null;
@@ -253,6 +263,10 @@ export default function Navbar() {
 
         {/* DESKTOP MENU */}
         <nav className="hidden items-center gap-2 lg:flex">
+          <DesktopCategoryMenu
+            categories={categories}
+            active={pathname === "/categories" || pathname.startsWith("/categories/")}
+          />
           {visibleMenuItems.map((item) => {
             const Icon = item.icon;
             const active = pathname === item.href;
@@ -592,6 +606,10 @@ export default function Navbar() {
         </div>
 
         <nav className="flex flex-col gap-1 p-3">
+          <MobileCategoryMenu
+            categories={categories}
+            onNavigate={() => setMobileMenuOpen(false)}
+          />
           {visibleMenuItems.map((item) => {
             const Icon = item.icon;
             const active = pathname === item.href;

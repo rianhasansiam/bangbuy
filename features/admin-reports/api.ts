@@ -98,6 +98,7 @@ export type ProductsReport = {
     productId: string;
     name: string;
     category: string;
+    categoryPath: string | null;
     unitsSold: number;
     revenue: number;
     currentPrice: number | null;
@@ -119,6 +120,7 @@ export type ProfitReport = {
     productId: string;
     name: string;
     category: string;
+    categoryPath: string | null;
     unitsSold: number;
     revenue: number;
     cost: number;
@@ -141,6 +143,7 @@ export type InventoryReport = {
     id: string;
     name: string;
     category: string;
+    categoryPath: string;
     price: number;
     discountPrice: number | null;
     stock: number;
@@ -174,14 +177,30 @@ export type CategoriesReport = {
   summary: {
     totalCategories: number;
     activeCategories: number;
+    totalProducts: number;
     unitsSold: number;
     revenue: number;
   };
   rows: Array<{
     categoryId: string;
     name: string;
+    breadcrumbLabel: string;
+    path: string;
+    depth: number;
     status: "ACTIVE" | "INACTIVE";
+    directProductCount: number;
+    /** Compatibility alias for older report payloads. */
     productCount: number;
+    unitsSold: number;
+    revenue: number;
+  }>;
+  rootRollups: Array<{
+    categoryId: string;
+    name: string;
+    path: string;
+    status: "ACTIVE" | "INACTIVE";
+    categoryCount: number;
+    totalProductCount: number;
     unitsSold: number;
     revenue: number;
   }>;
@@ -245,7 +264,8 @@ export const REPORT_DEFS: Record<
   },
   categories: {
     label: "Categories",
-    description: "How each category performed in the date window.",
+    description:
+      "Direct category performance with separate, non-duplicating root rollups.",
     subject: "Category Performance",
   },
 };

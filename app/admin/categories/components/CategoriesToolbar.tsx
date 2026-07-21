@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, RotateCcw, Search } from "lucide-react";
+import { ChevronsDownUp, ChevronsUpDown, Plus, RotateCcw, Search } from "lucide-react";
 
 import { LoadingSpinner } from "@/components/ui/loading";
 import {
@@ -20,6 +20,8 @@ export default function CategoriesToolbar({
   onStatusChange,
   onRefresh,
   onCreate,
+  onExpandAll,
+  onCollapseAll,
 }: {
   query: string;
   statusFilter: StatusFilter;
@@ -30,6 +32,8 @@ export default function CategoriesToolbar({
   onStatusChange: (value: StatusFilter) => void;
   onRefresh: () => void;
   onCreate: () => void;
+  onExpandAll: () => void;
+  onCollapseAll: () => void;
 }) {
   return (
     <div className="rounded-2xl border border-brand-border bg-brand-white p-4 shadow-sm sm:p-5">
@@ -63,6 +67,24 @@ export default function CategoriesToolbar({
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={onExpandAll}
+            title="Expand all categories"
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-brand-border px-3 text-sm font-semibold text-brand-black transition hover:bg-brand-light-bg"
+          >
+            <ChevronsUpDown className="h-4 w-4" />
+            <span className="hidden xl:inline">Expand</span>
+          </button>
+          <button
+            type="button"
+            onClick={onCollapseAll}
+            title="Collapse all categories"
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-brand-border px-3 text-sm font-semibold text-brand-black transition hover:bg-brand-light-bg"
+          >
+            <ChevronsDownUp className="h-4 w-4" />
+            <span className="hidden xl:inline">Collapse</span>
+          </button>
+          <button
+            type="button"
             onClick={onRefresh}
             disabled={isLoading}
             aria-busy={isLoading}
@@ -82,7 +104,7 @@ export default function CategoriesToolbar({
             className="inline-flex h-10 items-center gap-2 rounded-xl bg-brand-red px-4 text-sm font-semibold text-brand-white transition hover:bg-brand-red-hover"
           >
             <Plus className="h-4 w-4" />
-            Create Category
+            Add root category
           </button>
         </div>
       </div>

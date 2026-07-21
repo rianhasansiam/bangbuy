@@ -3,7 +3,13 @@ import "server-only";
 import type { Session } from "next-auth";
 
 import { auth } from "@/lib/auth/auth";
+import {
+  toAppSession,
+  type AdminSession,
+  type AppSession,
+} from "@/lib/auth/session";
 import { jsonError } from "@/lib/api/response";
+import { prisma } from "@/lib/db/prisma";
 
 /**
  * Centralized auth gates for protected routes.
@@ -17,25 +23,35 @@ import { jsonError } from "@/lib/api/response";
  *   // ...do admin work, guard.session.user.id is available
  */
 export type AuthGuard =
-  | { ok: true; session: Session }
+  | { ok: true; session: AppSession }
   | { ok: false; response: Response };
 
-/** @deprecated alias retained for older imports. Prefer `AuthGuard`. */
-export type AdminGuard = AuthGuard;
+export type AdminGuard =
+  | { ok: true; session: AdminSession }
+  | { ok: false; response: Response };
 
-export async function requireAdmin(): Promise<AuthGuard> {
+export async function requireAdmin(): Promise<AdminGuard> {
   // NextAuth's `auth()` is overloaded; the no-arg form returns the session.
-  const session = (await auth()) as Session | null;
+  const session = toAppSession((await auth()) as Session | null);
 
-  if (!session?.user) {
+  if (!session) {
     return { ok: false, response: jsonError(401, "Authentication required.") };
   }
 
-  if (session.user.role !== "ADMIN") {
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+
+  if (currentUser?.role !== "ADMIN") {
     return { ok: false, response: jsonError(403, "Admin access only.") };
   }
 
-  return { ok: true, session };
+  const currentSession: AdminSession = {
+    ...session,
+    user: { ...session.user, role: "ADMIN" },
+  };
+  return { ok: true, session: currentSession };
 }
 
 /**
@@ -44,15 +60,21 @@ export async function requireAdmin(): Promise<AuthGuard> {
  * anonymous/regular callers. Returns a plain boolean.
  */
 export async function isAdminRequest(): Promise<boolean> {
-  const session = (await auth()) as Session | null;
-  return session?.user?.role === "ADMIN";
+  const session = toAppSession((await auth()) as Session | null);
+  if (!session) return false;
+
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true },
+  });
+  return currentUser?.role === "ADMIN";
 }
 
 /** Logged-in users only — no role check. */
 export async function requireUser(): Promise<AuthGuard> {
-  const session = (await auth()) as Session | null;
+  const session = toAppSession((await auth()) as Session | null);
 
-  if (!session?.user?.id) {
+  if (!session) {
     return { ok: false, response: jsonError(401, "Authentication required.") };
   }
 

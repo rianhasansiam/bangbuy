@@ -200,6 +200,20 @@ export default function AdminOrderDrawer({
                   )} balance due
                 </p>
               )}
+              <ul className="mt-4 space-y-2 text-left">
+                {placedOrder.items.map((item) => (
+                  <li key={item.id} className="rounded-xl border border-emerald-200 bg-white/80 px-3 py-2 text-xs text-emerald-950">
+                    <p className="font-semibold">{item.productName} × {item.quantity}</p>
+                    {(item.variantName || item.attributeSummary || item.size || item.color) && (
+                      <p className="mt-0.5 text-emerald-800">
+                        {[item.variantName, item.attributeSummary, item.size, item.color]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
               <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
                 <button
                   type="button"
@@ -405,7 +419,14 @@ export default function AdminOrderDrawer({
                             >
                               {variants.map((variant) => (
                                 <option key={variant.id} value={variant.id}>
-                                  {variant.size} / {variant.color} ({variant.stock} in stock)
+                                  {variant.name ||
+                                    variant.attributeSummary ||
+                                    [variant.size, variant.color]
+                                      .filter(Boolean)
+                                      .join(" / ") ||
+                                    variant.modelNumber ||
+                                    variant.sku ||
+                                    "Default option"} ({variant.stock} in stock)
                                 </option>
                               ))}
                             </select>

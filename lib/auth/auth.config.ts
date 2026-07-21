@@ -1,5 +1,7 @@
 import type { NextAuthConfig } from "next-auth";
 
+import { normalizeRole, type AppSessionUser } from "@/lib/auth/session";
+
 /**
  * Edge-safe portion of the NextAuth config. The middleware imports this
  * file and must NOT pull in Prisma or bcrypt (they don't run on the Edge
@@ -15,7 +17,7 @@ export const authConfig = {
     jwt: async ({ token, user, trigger, session }) => {
       if (user) {
         token.id = (user as { id?: string }).id ?? token.id;
-        token.role = (user as { role?: string }).role ?? "USER";
+        token.role = normalizeRole((user as Partial<AppSessionUser>).role);
       }
 
       // The `update()` helper from `useSession()` calls back into the
@@ -42,8 +44,10 @@ export const authConfig = {
     },
     session: async ({ session, token }) => {
       if (session.user) {
-        session.user.id = (token.id as string | undefined) ?? "";
-        session.user.role = (token.role as string | undefined) ?? "USER";
+        const appUser = session.user as typeof session.user &
+          Partial<AppSessionUser>;
+        appUser.id = (token.id as string | undefined) ?? "";
+        appUser.role = normalizeRole(token.role);
       }
       return session;
     },

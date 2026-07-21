@@ -123,6 +123,7 @@ export default function OrderSummaryCard({
                 type="text"
                 value={promoCode}
                 onChange={(e) => onPromoCodeChange(e.target.value)}
+                maxLength={40}
                 placeholder="Promo code"
                 className="h-11 rounded-xl border-brand-border bg-white pl-10 pr-3 text-sm font-medium uppercase tracking-wide focus-visible:border-brand-red focus-visible:ring-brand-red/30"
               />

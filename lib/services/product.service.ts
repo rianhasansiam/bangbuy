@@ -1,44 +1,95 @@
-
 import "server-only";
 
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@/app/generated/prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 
+import {
+  cleanVariantAttributes,
+  deriveVariantKey,
+  formatVariantAttributes,
+} from "@/lib/catalog/variant-options";
 import { prisma } from "@/lib/db/prisma";
+import { ServiceError } from "@/lib/services/service-error";
+import {
+  getCategoryBreadcrumbsByIds,
+  getCategorySubtreeIds,
+  getEffectiveActiveCategoryIds,
+  isCategoryEffectivelyActive,
+  type CategoryBreadcrumb,
+} from "@/lib/services/category.service";
 import type {
   CreateProductInput,
   ProductQueryInput,
+  ProductVariantInput,
   UpdateProductInput,
 } from "@/lib/validations/product.validation";
 
-/**
- * The single home for Product DB logic.
- *
- * Route handlers stay thin and reusable from anywhere on the server
- * (server actions, scripts, cron) — they all hit these helpers.
- *
- * Pricing lives on the Product (`buyingPrice`/`salePrice`/`discountPrice`).
- * `buyingPrice` is the business source cost and is ADMIN-ONLY: it is only
- * serialized when `includeBuyingPrice` is explicitly passed by an
- * authenticated admin route. Each `ProductVariant` is a purchasable
- * size+color inventory row (no price of its own).
- */
+export class ProductError extends ServiceError {
+  constructor(
+    status: number,
+    message: string,
+    details?: Record<string, unknown>,
+  ) {
+    super(status, message, details);
+    this.name = "ProductError";
+  }
+}
 
-/** Fields the API returns alongside the product. */
 const productInclude = {
-  category: { select: { id: true, name: true, slug: true, image: true } },
+  category: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      path: true,
+      depth: true,
+      parentId: true,
+      image: true,
+      status: true,
+    },
+  },
+  brand: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      logo: true,
+      website: true,
+      status: true,
+    },
+  },
+  manufacturer: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      logo: true,
+      website: true,
+      country: true,
+      status: true,
+    },
+  },
   images: { orderBy: { position: "asc" } },
   variants: { orderBy: { createdAt: "asc" } },
+  reviews: { select: { rating: true } },
 } satisfies Prisma.ProductInclude;
 
-export type ProductWithCategory = Prisma.ProductGetPayload<{
-  include: typeof productInclude;
-}>;
+type ProductRow = Prisma.ProductGetPayload<{ include: typeof productInclude }>;
 
-/**
- * Customer-facing effective price of a product: the discount price when
- * set (and valid), otherwise the sale price.
- */
+export type ProductWithCategory = ProductRow & {
+  categoryBreadcrumb: CategoryBreadcrumb[];
+};
+
+export type SerializeOptions = {
+  /** Admin-only business source cost. */
+  includeBuyingPrice?: boolean;
+};
+
+export type ListProductsOptions = {
+  /** Enforce active product + complete active category ancestry. Default true. */
+  publicOnly?: boolean;
+};
+
 export function effectiveProductPrice(product: {
   salePrice: Prisma.Decimal;
   discountPrice: Prisma.Decimal | null;
@@ -48,33 +99,35 @@ export function effectiveProductPrice(product: {
   return discount != null && discount < sale ? discount : sale;
 }
 
-export type SerializeOptions = {
-  /** Admin-only: include the business `buyingPrice`. Default false. */
-  includeBuyingPrice?: boolean;
-};
+function productRating(product: Pick<ProductRow, "reviews">) {
+  const reviewCount = product.reviews.length;
+  const rating =
+    reviewCount === 0
+      ? 0
+      : product.reviews.reduce((sum, review) => sum + review.rating, 0) /
+        reviewCount;
+  return { rating, reviewCount };
+}
 
-/**
- * Flatten a product into the shape the API exposes. The public contract
- * keeps `price` (the regular sale price) and `discountPrice`; `salePrice`
- * is exposed as an explicit alias of `price`. `buyingPrice` is included
- * ONLY when `includeBuyingPrice` is true (admin routes) and is never sent
- * to public clients.
- *
- * `stock` is the sum of stock across all variants; `color`/`size` come
- * from the primary (oldest) variant for legacy single-value consumers.
- */
+function jsonObject(value: Prisma.JsonValue | null): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
 export function serializeProduct(
   product: ProductWithCategory,
   options: SerializeOptions = {},
 ) {
   const salePrice = product.salePrice.toNumber();
+  const rawDiscount = product.discountPrice?.toNumber() ?? null;
   const discountPrice =
-    product.discountPrice != null ? product.discountPrice.toNumber() : null;
-  const effectiveDiscount =
-    discountPrice != null && discountPrice < salePrice ? discountPrice : null;
-  const imageUrls = product.images.map((img) => img.url);
-  const totalStock = product.variants.reduce((sum, v) => sum + v.stock, 0);
-  const primary = product.variants[0];
+    rawDiscount != null && rawDiscount < salePrice ? rawDiscount : null;
+  const imageUrls = product.images.map((image) => image.url);
+  const activeVariants = product.variants.filter((variant) => variant.isActive);
+  const totalStock = activeVariants.reduce((sum, variant) => sum + variant.stock, 0);
+  const primary = activeVariants[0] ?? product.variants[0];
+  const { rating, reviewCount } = productRating(product);
 
   return {
     id: product.id,
@@ -82,126 +135,253 @@ export function serializeProduct(
     name: product.name,
     slug: product.slug,
     description: product.description,
-    // `price` keeps its long-standing meaning: the regular selling price.
+    modelNumber: product.modelNumber,
+    series: product.series,
+    specifications: jsonObject(product.specifications),
     price: salePrice,
     salePrice,
-    discountPrice: effectiveDiscount,
+    discountPrice,
     ...(options.includeBuyingPrice
       ? { buyingPrice: product.buyingPrice.toNumber() }
       : {}),
     stock: totalStock,
+    inStock: totalStock > 0,
     image: imageUrls[0] ?? null,
     images: imageUrls,
-    rating: 0,
-    reviewCount: 0,
+    rating,
+    reviewCount,
+    badge: null,
     color: primary?.color ?? null,
     size: primary?.size ?? null,
-    variantCount: product.variants.length,
+    variantCount: activeVariants.length,
     status: product.status,
     categoryId: product.categoryId,
+    categoryPath: product.category.path,
     category: {
       id: product.category.id,
       name: product.category.name,
+      slug: product.category.slug,
+      path: product.category.path,
+      depth: product.category.depth,
+      parentId: product.category.parentId,
       image: product.category.image,
+      status: product.category.status,
     },
-    // Variants are pure size/color inventory rows — no price exposed.
-    variants: product.variants.map((v) => ({
-      id: v.id,
-      sku: v.sku,
-      color: v.color,
-      size: v.size,
-      stock: v.stock,
-      image: v.image,
-      isActive: v.isActive,
-    })),
+    categoryBreadcrumb: product.categoryBreadcrumb,
+    brandId: product.brandId,
+    brand: product.brand,
+    manufacturerId: product.manufacturerId,
+    manufacturer: product.manufacturer,
+    variants: product.variants.map((variant) => {
+      const attributes = cleanVariantAttributes(variant.attributes);
+      return {
+        id: variant.id,
+        variantKey: variant.variantKey,
+        name: variant.name,
+        sku: variant.sku,
+        modelNumber: variant.modelNumber,
+        color: variant.color,
+        size: variant.size,
+        attributes,
+        attributeSummary: formatVariantAttributes(attributes),
+        stock: variant.stock,
+        image: variant.image,
+        isActive: variant.isActive,
+      };
+    }),
     createdAt: product.createdAt,
     updatedAt: product.updatedAt,
   };
 }
 
-/** Slugify a product name into a URL-safe, unique-ish slug. */
 function slugify(name: string): string {
-  const base = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return base || "product";
+  return (
+    name
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "product"
+  );
 }
 
-/** Ensure a slug is unique by appending a short random suffix on collision. */
 async function uniqueSlug(name: string): Promise<string> {
   const base = slugify(name);
-  const existing = await prisma.product.findUnique({
-    where: { slug: base },
-    select: { id: true },
+  const existing = await prisma.product.findMany({
+    where: { OR: [{ slug: base }, { slug: { startsWith: `${base}-` } }] },
+    select: { slug: true },
   });
-  if (!existing) return base;
-  return `${base}-${Math.random().toString(36).slice(2, 8)}`;
+  const used = new Set(existing.map((row) => row.slug));
+  if (!used.has(base)) return base;
+  for (let suffix = 2; ; suffix += 1) {
+    const candidate = `${base}-${suffix}`;
+    if (!used.has(candidate)) return candidate;
+  }
 }
 
-/** Prefix + zero-padding width for human-readable product codes. */
 const PRODUCT_CODE_PREFIX = "PRD-";
 const PRODUCT_CODE_PAD = 5;
 
-/** Format a sequence number into a product code, e.g. 42 -> "PRD-00042". */
 function formatProductCode(sequence: number): string {
   return `${PRODUCT_CODE_PREFIX}${String(sequence).padStart(PRODUCT_CODE_PAD, "0")}`;
 }
 
-/**
- * Generate the next human-readable product code (e.g. "PRD-00042").
- *
- * Codes are sequential and easy to read/say over the phone. We derive the
- * next number from the highest existing code rather than a global counter
- * so it stays correct even if rows were imported out of band. The unique
- * constraint on `productCode` is the real guard; `createProduct` retries
- * on the rare collision from two concurrent creates.
- */
 async function nextProductCode(): Promise<string> {
   const last = await prisma.product.findFirst({
     where: { productCode: { startsWith: PRODUCT_CODE_PREFIX } },
     orderBy: { productCode: "desc" },
     select: { productCode: true },
   });
-
   const lastSequence = last
     ? Number.parseInt(last.productCode.slice(PRODUCT_CODE_PREFIX.length), 10)
     : 0;
-  const next = Number.isFinite(lastSequence) ? lastSequence + 1 : 1;
-  return formatProductCode(next);
+  return formatProductCode(Number.isFinite(lastSequence) ? lastSequence + 1 : 1);
 }
 
-/** Build the Prisma `where` clause from validated query params. */
-function buildWhere(query: ProductQueryInput): Prisma.ProductWhereInput {
-  const where: Prisma.ProductWhereInput = {};
+async function withBreadcrumbs(
+  rows: readonly ProductRow[],
+): Promise<ProductWithCategory[]> {
+  const breadcrumbs = await getCategoryBreadcrumbsByIds(
+    rows.map((row) => row.categoryId),
+  );
+  return rows.map((row) => ({
+    ...row,
+    categoryBreadcrumb: breadcrumbs.get(row.categoryId) ?? [],
+  }));
+}
+
+async function resolveCategoryIds(
+  query: ProductQueryInput,
+  publicOnly: boolean,
+): Promise<string[] | undefined> {
+  let selected: Set<string> | undefined = publicOnly
+    ? new Set(await getEffectiveActiveCategoryIds())
+    : undefined;
+
+  const identifiers = [
+    ...(query.categoryId ? [{ id: query.categoryId } as const] : []),
+    ...(query.categoryPath ? [{ path: query.categoryPath } as const] : []),
+  ];
+
+  for (const identifier of identifiers) {
+    const subtree = new Set(
+      await getCategorySubtreeIds(identifier, {
+        effectiveActiveOnly: publicOnly,
+      }),
+    );
+    if (subtree.size === 0) return [];
+    selected = selected
+      ? new Set([...selected].filter((id) => subtree.has(id)))
+      : subtree;
+  }
+
+  return selected ? [...selected] : undefined;
+}
+
+function priceWhere(query: ProductQueryInput): Prisma.ProductWhereInput | null {
+  if (query.minPrice == null && query.maxPrice == null) return null;
+  const range = {
+    ...(query.minPrice != null ? { gte: query.minPrice } : {}),
+    ...(query.maxPrice != null ? { lte: query.maxPrice } : {}),
+  };
+  return {
+    OR: [
+      { discountPrice: { not: null, ...range } },
+      { discountPrice: null, salePrice: range },
+    ],
+  };
+}
+
+function buildWhere(
+  query: ProductQueryInput,
+  categoryIds: string[] | undefined,
+  publicOnly: boolean,
+): Prisma.ProductWhereInput {
+  const and: Prisma.ProductWhereInput[] = [];
 
   if (query.search) {
-    // Match the product name OR its category name so a search like
-    // "electronics" surfaces every product in that category.
-    where.OR = [
-      { name: { contains: query.search, mode: "insensitive" } },
-      {
-        category: {
-          name: { contains: query.search, mode: "insensitive" },
+    and.push({
+      OR: [
+        { name: { contains: query.search, mode: "insensitive" } },
+        { productCode: { contains: query.search, mode: "insensitive" } },
+        { modelNumber: { contains: query.search, mode: "insensitive" } },
+        { series: { contains: query.search, mode: "insensitive" } },
+        { category: { name: { contains: query.search, mode: "insensitive" } } },
+        { category: { path: { contains: query.search, mode: "insensitive" } } },
+        { brand: { name: { contains: query.search, mode: "insensitive" } } },
+        {
+          manufacturer: {
+            name: { contains: query.search, mode: "insensitive" },
+          },
         },
+        {
+          variants: {
+            some: {
+              OR: [
+                { sku: { contains: query.search, mode: "insensitive" } },
+                {
+                  modelNumber: {
+                    contains: query.search,
+                    mode: "insensitive",
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+  }
+
+  if (categoryIds) and.push({ categoryId: { in: categoryIds } });
+  if (publicOnly) and.push({ status: "ACTIVE" });
+  else if (query.status) and.push({ status: query.status });
+  if (query.brandId) {
+    and.push(
+      publicOnly
+        ? { brand: { id: query.brandId, status: "ACTIVE" } }
+        : { brandId: query.brandId },
+    );
+  }
+  if (query.brandSlug) {
+    and.push({
+      brand: {
+        slug: query.brandSlug,
+        ...(publicOnly ? { status: "ACTIVE" as const } : {}),
       },
-    ];
+    });
   }
-  if (query.categoryId) where.categoryId = query.categoryId;
-  if (query.status) where.status = query.status;
-
-  if (query.minPrice != null || query.maxPrice != null) {
-    // Price lives on the product now — filter on the regular sale price.
-    where.salePrice = {
-      ...(query.minPrice != null ? { gte: query.minPrice } : {}),
-      ...(query.maxPrice != null ? { lte: query.maxPrice } : {}),
-    };
+  if (query.manufacturerId) {
+    and.push(
+      publicOnly
+        ? {
+            manufacturer: {
+              id: query.manufacturerId,
+              status: "ACTIVE",
+            },
+          }
+        : { manufacturerId: query.manufacturerId },
+    );
   }
+  if (query.manufacturerSlug) {
+    and.push({
+      manufacturer: {
+        slug: query.manufacturerSlug,
+        ...(publicOnly ? { status: "ACTIVE" as const } : {}),
+      },
+    });
+  }
+  if (query.stock === "in-stock") {
+    and.push({ variants: { some: { isActive: true, stock: { gt: 0 } } } });
+  } else if (query.stock === "out-of-stock") {
+    and.push({ NOT: { variants: { some: { isActive: true, stock: { gt: 0 } } } } });
+  }
+  const price = priceWhere(query);
+  if (price) and.push(price);
 
-  return where;
+  return and.length > 0 ? { AND: and } : {};
 }
 
-/** Map our public `sort` value to a Prisma `orderBy`. */
 function buildOrderBy(
   sort: ProductQueryInput["sort"],
 ): Prisma.ProductOrderByWithRelationInput {
@@ -210,34 +390,149 @@ function buildOrderBy(
       return { salePrice: "asc" };
     case "price-high":
       return { salePrice: "desc" };
-    case "latest":
     default:
       return { createdAt: "desc" };
   }
 }
 
-/** Paginated, filtered, sorted product list. */
-export async function listProducts(query: ProductQueryInput) {
-  const where = buildWhere(query);
-  const orderBy = buildOrderBy(query.sort);
-  const skip = (query.page - 1) * query.pageSize;
+type RankedProductRow = {
+  id: string;
+  rating: number;
+  reviewCount: number;
+  total: number;
+};
 
-  // Run count + page query in parallel; one round trip's worth of latency.
-  const [items, total] = await Promise.all([
-    prisma.product.findMany({
-      where,
-      orderBy,
-      skip,
-      take: query.pageSize,
-      include: productInclude,
-    }),
-    prisma.product.count({ where }),
-  ]);
+async function rankedProductPage(
+  candidateIds: string[],
+  query: ProductQueryInput,
+): Promise<{ ids: string[]; total: number; page: number }> {
+  if (candidateIds.length === 0) return { ids: [], total: 0, page: 1 };
+
+  const orderBy =
+    query.sort === "rating"
+      ? Prisma.sql`rating DESC, "reviewCount" DESC, id ASC`
+      : query.sort === "popular"
+        ? Prisma.sql`"reviewCount" DESC, rating DESC, id ASC`
+        : query.sort === "price-low"
+          ? Prisma.sql`"effectivePrice" ASC, id ASC`
+          : query.sort === "price-high"
+            ? Prisma.sql`"effectivePrice" DESC, id ASC`
+            : Prisma.sql`"createdAt" DESC, id ASC`;
+  const minimumRating = query.minRating ?? 0;
+  const readPage = (offset: number, limit = query.pageSize) =>
+    prisma.$queryRaw<RankedProductRow[]>(Prisma.sql`
+      WITH metrics AS (
+        SELECT
+          p.id,
+          p."createdAt",
+          p."salePrice",
+          CASE
+            WHEN p."discountPrice" IS NOT NULL
+              AND p."discountPrice" < p."salePrice"
+            THEN p."discountPrice"
+            ELSE p."salePrice"
+          END AS "effectivePrice",
+          COALESCE(AVG(r.rating), 0)::double precision AS rating,
+          COUNT(r.id)::integer AS "reviewCount"
+        FROM "Product" p
+        LEFT JOIN "Review" r ON r."productId" = p.id
+        WHERE p.id IN (${Prisma.join(candidateIds)})
+        GROUP BY p.id, p."createdAt", p."salePrice", p."discountPrice"
+      ), filtered AS (
+        SELECT *, COUNT(*) OVER()::integer AS total
+        FROM metrics
+        WHERE rating >= ${minimumRating}
+      )
+      SELECT id, rating, "reviewCount", total
+      FROM filtered
+      ORDER BY ${orderBy}
+      LIMIT ${limit}
+      OFFSET ${offset}
+    `);
+
+  let page = query.page;
+  let rows = await readPage((page - 1) * query.pageSize);
+  let total = Number(rows[0]?.total ?? 0);
+
+  if (rows.length === 0 && page > 1) {
+    const firstRow = await readPage(0, 1);
+    total = Number(firstRow[0]?.total ?? 0);
+    page = Math.min(page, Math.max(1, Math.ceil(total / query.pageSize)));
+    rows = total > 0 ? await readPage((page - 1) * query.pageSize) : [];
+  }
 
   return {
-    items,
+    ids: rows.map((row) => row.id),
+    total,
+    page,
+  };
+}
+
+export async function listProducts(
+  query: ProductQueryInput,
+  options: ListProductsOptions = {},
+) {
+  const publicOnly = options.publicOnly ?? true;
+  const categoryIds = await resolveCategoryIds(query, publicOnly);
+  const where = buildWhere(query, categoryIds, publicOnly);
+  const skip = (query.page - 1) * query.pageSize;
+  const aggregateSort = query.minRating != null || query.sort !== "latest";
+
+  let rows: ProductRow[];
+  let total: number;
+  let page = query.page;
+  if (aggregateSort) {
+    const candidates = await prisma.product.findMany({
+      where,
+      select: { id: true },
+    });
+    const ranked = await rankedProductPage(
+      candidates.map((candidate) => candidate.id),
+      query,
+    );
+    total = ranked.total;
+    page = ranked.page;
+    if (ranked.ids.length === 0) {
+      rows = [];
+    } else {
+      const hydrated = await prisma.product.findMany({
+        where: { id: { in: ranked.ids } },
+        include: productInclude,
+      });
+      const byId = new Map(hydrated.map((row) => [row.id, row]));
+      rows = ranked.ids.flatMap((id) => {
+        const row = byId.get(id);
+        return row ? [row] : [];
+      });
+    }
+  } else {
+    [rows, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        orderBy: buildOrderBy(query.sort),
+        skip,
+        take: query.pageSize,
+        include: productInclude,
+      }),
+      prisma.product.count({ where }),
+    ]);
+    const totalPages = Math.max(1, Math.ceil(total / query.pageSize));
+    page = Math.min(query.page, totalPages);
+    if (total > 0 && page !== query.page) {
+      rows = await prisma.product.findMany({
+        where,
+        orderBy: buildOrderBy(query.sort),
+        skip: (page - 1) * query.pageSize,
+        take: query.pageSize,
+        include: productInclude,
+      });
+    }
+  }
+
+  return {
+    items: await withBreadcrumbs(rows),
     meta: {
-      page: query.page,
+      page,
       pageSize: query.pageSize,
       total,
       totalPages: Math.max(1, Math.ceil(total / query.pageSize)),
@@ -245,234 +540,326 @@ export async function listProducts(query: ProductQueryInput) {
   };
 }
 
-export function getProductById(id: string) {
-  return prisma.product.findUnique({
-    where: { id },
-    include: productInclude,
-  });
+async function hydrateOne(row: ProductRow | null): Promise<ProductWithCategory | null> {
+  if (!row) return null;
+  return (await withBreadcrumbs([row]))[0] ?? null;
 }
 
-/**
- * Fetch a product only when it is publicly visible (status ACTIVE).
- *
- * Used by SEO surfaces (metadata, JSON-LD, sitemap) so draft/inactive/
- * soft-deleted products are never exposed to crawlers. Returns null for
- * missing OR inactive products.
- */
-export function getActiveProductById(id: string) {
-  return prisma.product.findFirst({
+export async function getProductById(id: string) {
+  return hydrateOne(
+    await prisma.product.findUnique({ where: { id }, include: productInclude }),
+  );
+}
+
+export async function getActiveProductById(id: string) {
+  const row = await prisma.product.findFirst({
     where: { id, status: "ACTIVE" },
     include: productInclude,
   });
+  if (!row || !(await isCategoryEffectivelyActive(row.categoryId))) {
+    return null;
+  }
+  return (await withBreadcrumbs([row]))[0] ?? null;
 }
 
-/** Fetch a product by its unique slug (any status), or null. */
-export function getProductBySlug(slug: string) {
-  return prisma.product.findUnique({
-    where: { slug },
-    include: productInclude,
-  });
+export async function getProductBySlug(slug: string) {
+  return hydrateOne(
+    await prisma.product.findUnique({ where: { slug }, include: productInclude }),
+  );
 }
 
-/**
- * Fetch a publicly visible (ACTIVE) product by slug, or null.
- *
- * The slug is the canonical, SEO-friendly product identifier used in
- * `/products/<slug>` URLs. Inactive/soft-deleted products resolve to
- * null so they are never exposed to crawlers.
- */
-export function getActiveProductBySlug(slug: string) {
-  return prisma.product.findFirst({
+export async function getActiveProductBySlug(slug: string) {
+  const row = await prisma.product.findFirst({
     where: { slug, status: "ACTIVE" },
     include: productInclude,
   });
+  if (!row || !(await isCategoryEffectivelyActive(row.categoryId))) {
+    return null;
+  }
+  return (await withBreadcrumbs([row]))[0] ?? null;
 }
 
-/** Resolve just the slug for a public product id (used for id -> slug redirects). */
 export async function getProductSlugById(id: string): Promise<string | null> {
-  const row = await prisma.product.findFirst({
-    where: { id, status: "ACTIVE" },
-    select: { slug: true },
-  });
-  return row?.slug ?? null;
+  const product = await getActiveProductById(id);
+  return product?.slug ?? null;
 }
 
-/** Normalize an optional SKU: blank -> null. */
 function normalizeSku(sku: string | null | undefined): string | null {
-  const trimmed = sku?.trim();
-  return trimmed ? trimmed : null;
+  return sku?.trim() || null;
+}
+
+function nullableJson(value: unknown): Prisma.InputJsonValue | typeof Prisma.DbNull {
+  return value == null ? Prisma.DbNull : (value as Prisma.InputJsonValue);
+}
+
+function variantData(variant: ProductVariantInput) {
+  const attributes = cleanVariantAttributes(variant.attributes);
+  return {
+    variantKey: deriveVariantKey({
+      size: variant.size,
+      color: variant.color,
+      attributes,
+    }),
+    name: variant.name ?? null,
+    size: variant.size ?? null,
+    color: variant.color ?? null,
+    modelNumber: variant.modelNumber ?? null,
+    sku: normalizeSku(variant.sku),
+    stock: variant.stock,
+    image: variant.image ?? null,
+    attributes: nullableJson(attributes),
+    isActive: variant.isActive,
+  };
+}
+
+async function assertReferences(
+  client: Prisma.TransactionClient,
+  input: {
+    categoryId?: string;
+    brandId?: string | null;
+    manufacturerId?: string | null;
+  },
+) {
+  const [category, brand, manufacturer] = await Promise.all([
+    input.categoryId
+      ? client.category.findUnique({
+          where: { id: input.categoryId },
+          select: { id: true },
+        })
+      : null,
+    input.brandId
+      ? client.brand.findUnique({
+          where: { id: input.brandId },
+          select: { id: true, status: true },
+        })
+      : null,
+    input.manufacturerId
+      ? client.manufacturer.findUnique({
+          where: { id: input.manufacturerId },
+          select: { id: true, status: true },
+        })
+      : null,
+  ]);
+  if (input.categoryId && !category) {
+    throw new ProductError(400, "Selected category does not exist.", {
+      fieldErrors: { categoryId: ["Select a valid category."] },
+    });
+  }
+  if (input.brandId && (!brand || brand.status !== "ACTIVE")) {
+    throw new ProductError(400, "Selected brand is not active.", {
+      fieldErrors: { brandId: ["Select an active brand."] },
+    });
+  }
+  if (
+    input.manufacturerId &&
+    (!manufacturer || manufacturer.status !== "ACTIVE")
+  ) {
+    throw new ProductError(400, "Selected manufacturer is not active.", {
+      fieldErrors: { manufacturerId: ["Select an active manufacturer."] },
+    });
+  }
+}
+
+function uniqueImages(input: { image?: string | null; images?: string[] }) {
+  return Array.from(
+    new Set([...(input.image ? [input.image] : []), ...(input.images ?? [])]),
+  );
 }
 
 export async function createProduct(input: CreateProductInput) {
   const slug = await uniqueSlug(input.name);
-  const imageUrls = [
-    ...(input.image ? [input.image] : []),
-    ...(input.images ?? []),
-  ];
-  // De-dupe while preserving order.
-  const uniqueImages = Array.from(new Set(imageUrls));
-
-  const variantsToCreate = input.variants.map((v) => ({
-    size: v.size,
-    color: v.color,
-    sku: normalizeSku(v.sku),
-    stock: v.stock,
-    image: v.image ?? null,
-    isActive: v.isActive,
-  }));
-
-  // Generate a human-readable product code. The unique constraint is the
-  // real guard, so on the rare concurrent-create collision (P2002) we
-  // recompute the next code and retry a few times before giving up. The
-  // product and its variants are written together in a single create.
+  const images = uniqueImages(input);
+  const variants = input.variants.map(variantData);
   const MAX_ATTEMPTS = 5;
+
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     const productCode = await nextProductCode();
     try {
-      return await prisma.product.create({
-        data: {
-          productCode,
-          name: input.name,
-          slug,
-          description: input.description ?? null,
-          status: input.status,
-          categoryId: input.categoryId,
-          buyingPrice: input.buyingPrice,
-          salePrice: input.salePrice,
-          discountPrice: input.discountPrice ?? null,
-          variants: {
-            create: variantsToCreate,
+      const row = await prisma.$transaction(async (tx) => {
+        await assertReferences(tx, input);
+        const created = await tx.product.create({
+          data: {
+            productCode,
+            name: input.name,
+            slug,
+            description: input.description ?? null,
+            modelNumber: input.modelNumber ?? null,
+            series: input.series ?? null,
+            specifications: nullableJson(input.specifications),
+            status: input.status,
+            categoryId: input.categoryId,
+            brandId: input.brandId ?? null,
+            manufacturerId: input.manufacturerId ?? null,
+            buyingPrice: input.buyingPrice,
+            salePrice: input.salePrice,
+            discountPrice: input.discountPrice ?? null,
+            variants: { create: variants },
+            images: {
+              create: images.map((url, position) => ({ url, position })),
+            },
           },
-          images: {
-            create: uniqueImages.map((url, index) => ({
-              url,
-              position: index,
-            })),
-          },
-        },
-        include: productInclude,
+          include: productInclude,
+        });
+
+        const stockLogs = created.variants
+          .filter((variant) => variant.stock !== 0)
+          .map((variant) => ({
+            variantId: variant.id,
+            type: "MANUAL_ADJUSTMENT" as const,
+            quantity: variant.stock,
+            note: "Initial product stock",
+          }));
+        if (stockLogs.length > 0) {
+          await tx.inventoryLog.createMany({ data: stockLogs });
+        }
+        return created;
       });
+      return hydrateOne(row).then((product) => product!);
     } catch (error) {
-      const isCodeCollision =
+      const target =
+        error instanceof PrismaClientKnownRequestError
+          ? ((error.meta?.target as string[] | undefined) ?? [])
+          : [];
+      if (
         error instanceof PrismaClientKnownRequestError &&
         error.code === "P2002" &&
-        (error.meta?.target as string[] | undefined)?.includes("productCode");
-      if (isCodeCollision && attempt < MAX_ATTEMPTS - 1) continue;
+        target.includes("productCode") &&
+        attempt < MAX_ATTEMPTS - 1
+      ) {
+        continue;
+      }
       throw error;
     }
   }
-
-  // Unreachable in practice: the loop either returns or throws above.
   throw new Error("Failed to generate a unique product code.");
 }
 
 export async function updateProduct(id: string, input: UpdateProductInput) {
-  // Catalog + pricing fields go on the product; image changes replace the
-  // ProductImage set; when `variants` is supplied it is reconciled
-  // (update existing / create new / delete removed) inside the transaction.
-  const productData: Prisma.ProductUpdateInput = {};
-  if (input.name !== undefined) productData.name = input.name;
-  if (input.description !== undefined) {
-    productData.description = input.description;
-  }
-  if (input.status !== undefined) productData.status = input.status;
-  if (input.categoryId !== undefined) {
-    productData.category = { connect: { id: input.categoryId } };
-  }
-  if (input.buyingPrice !== undefined) productData.buyingPrice = input.buyingPrice;
-  if (input.salePrice !== undefined) productData.salePrice = input.salePrice;
-  if (input.discountPrice !== undefined) {
-    productData.discountPrice = input.discountPrice;
-  }
+  const row = await prisma.$transaction(async (tx) => {
+    const lockedProducts = await tx.$queryRaw<Array<{ id: string }>>(
+      Prisma.sql`SELECT "id" FROM "Product" WHERE "id" = ${id} FOR UPDATE`,
+    );
+    if (lockedProducts.length === 0) {
+      throw new ProductError(404, "Product not found.");
+    }
 
-  return prisma.$transaction(async (tx) => {
-    await tx.product.update({ where: { id }, data: productData });
+    await assertReferences(tx, {
+      categoryId: input.categoryId,
+      brandId: input.brandId,
+      manufacturerId: input.manufacturerId,
+    });
+
+    const data: Prisma.ProductUpdateInput = {};
+    if (input.name !== undefined) data.name = input.name;
+    if (input.description !== undefined) data.description = input.description;
+    if (input.modelNumber !== undefined) data.modelNumber = input.modelNumber;
+    if (input.series !== undefined) data.series = input.series;
+    if (input.specifications !== undefined) {
+      data.specifications = nullableJson(input.specifications);
+    }
+    if (input.status !== undefined) data.status = input.status;
+    if (input.categoryId !== undefined) {
+      data.category = { connect: { id: input.categoryId } };
+    }
+    if (input.brandId !== undefined) {
+      data.brand = input.brandId
+        ? { connect: { id: input.brandId } }
+        : { disconnect: true };
+    }
+    if (input.manufacturerId !== undefined) {
+      data.manufacturer = input.manufacturerId
+        ? { connect: { id: input.manufacturerId } }
+        : { disconnect: true };
+    }
+    if (input.buyingPrice !== undefined) data.buyingPrice = input.buyingPrice;
+    if (input.salePrice !== undefined) data.salePrice = input.salePrice;
+    if (input.discountPrice !== undefined) data.discountPrice = input.discountPrice;
+    await tx.product.update({ where: { id }, data });
 
     if (input.variants !== undefined) {
+      await tx.$queryRaw(
+        Prisma.sql`SELECT "id" FROM "ProductVariant" WHERE "productId" = ${id} ORDER BY "id" FOR UPDATE`,
+      );
       const existing = await tx.productVariant.findMany({
         where: { productId: id },
-        select: { id: true },
+        select: { id: true, stock: true },
       });
-      const existingIds = new Set(existing.map((v) => v.id));
+      const existingById = new Map(existing.map((variant) => [variant.id, variant]));
       const keptIds = new Set<string>();
 
       for (const variant of input.variants) {
-        const data = {
-          size: variant.size,
-          color: variant.color,
-          sku: normalizeSku(variant.sku),
-          stock: variant.stock,
-          image: variant.image ?? null,
-          isActive: variant.isActive,
-        };
-
-        if (variant.id && existingIds.has(variant.id)) {
+        const next = variantData(variant);
+        if (variant.id) {
+          const previous = existingById.get(variant.id);
+          if (!previous) {
+            throw new ProductError(400, "A variant does not belong to this product.", {
+              fieldErrors: { variants: ["Refresh the product and try again."] },
+            });
+          }
           keptIds.add(variant.id);
-          await tx.productVariant.update({
-            where: { id: variant.id },
-            data,
-          });
+          await tx.productVariant.update({ where: { id: variant.id }, data: next });
+          const delta = next.stock - previous.stock;
+          if (delta !== 0) {
+            await tx.inventoryLog.create({
+              data: {
+                variantId: variant.id,
+                type: "MANUAL_ADJUSTMENT",
+                quantity: delta,
+                note: "Stock changed from product editor",
+              },
+            });
+          }
         } else {
-          await tx.productVariant.create({
-            data: { productId: id, ...data },
+          const created = await tx.productVariant.create({
+            data: { productId: id, ...next },
+            select: { id: true },
           });
+          if (next.stock !== 0) {
+            await tx.inventoryLog.create({
+              data: {
+                variantId: created.id,
+                type: "MANUAL_ADJUSTMENT",
+                quantity: next.stock,
+                note: "Initial variant stock",
+              },
+            });
+          }
         }
       }
 
-      // Delete variants the caller dropped from the set.
-      const toDelete = [...existingIds].filter((vid) => !keptIds.has(vid));
-      if (toDelete.length > 0) {
-        await tx.productVariant.deleteMany({
-          where: { id: { in: toDelete } },
-        });
+      const removedIds = [...existingById.keys()].filter((variantId) =>
+        !keptIds.has(variantId),
+      );
+      if (removedIds.length > 0) {
+        await tx.productVariant.deleteMany({ where: { id: { in: removedIds } } });
       }
     }
 
-    // Replace the image set when the caller provided image fields.
     if (input.image !== undefined || input.images !== undefined) {
-      const imageUrls = [
-        ...(input.image ? [input.image] : []),
-        ...(input.images ?? []),
-      ];
-      const uniqueImages = Array.from(new Set(imageUrls));
+      const images = uniqueImages(input);
       await tx.productImage.deleteMany({ where: { productId: id } });
-      if (uniqueImages.length > 0) {
+      if (images.length > 0) {
         await tx.productImage.createMany({
-          data: uniqueImages.map((url, index) => ({
-            productId: id,
-            url,
-            position: index,
-          })),
+          data: images.map((url, position) => ({ productId: id, url, position })),
         });
       }
     }
 
-    return tx.product.findUniqueOrThrow({
-      where: { id },
-      include: productInclude,
-    });
+    return tx.product.findUniqueOrThrow({ where: { id }, include: productInclude });
   });
+
+  return hydrateOne(row).then((product) => product!);
 }
 
-/**
- * Soft delete: flip status to INACTIVE rather than wipe the row.
- * Keeps order history, reviews, and analytics intact.
- */
-export function softDeleteProduct(id: string) {
-  return prisma.product.update({
+export async function softDeleteProduct(id: string) {
+  const row = await prisma.product.update({
     where: { id },
     data: { status: "INACTIVE" },
     include: productInclude,
   });
+  return hydrateOne(row).then((product) => product!);
 }
 
-/**
- * Hard delete: permanently remove the product row.
- *
- * Related rows are handled by DB relations:
- * - ProductImage/ProductVariant/CartItem/Wishlist cascade delete.
- * - OrderItem product/variant references are set to NULL (snapshot stays).
- */
 export function hardDeleteProduct(id: string) {
   return prisma.product.delete({ where: { id } });
 }

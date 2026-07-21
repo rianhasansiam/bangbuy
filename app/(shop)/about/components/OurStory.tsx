@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Heart, PackageCheck, Target } from "lucide-react";
+import { PackageCheck, Target } from "lucide-react";
 
 export default function OurStory() {
   return (

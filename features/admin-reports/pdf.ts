@@ -508,28 +508,57 @@ function renderCategories(doc: Doc, report: CategoriesReport, startY: number): v
   let y = drawKpiCards(doc, startY, [
     { label: "Total categories", value: formatNumber(report.summary.totalCategories) },
     { label: "Active categories", value: formatNumber(report.summary.activeCategories) },
+    { label: "Catalog products", value: formatNumber(report.summary.totalProducts) },
     { label: "Units sold", value: formatNumber(report.summary.unitsSold) },
     { label: "Revenue", value: formatCurrency(report.summary.revenue) },
   ]);
 
-  y = drawSection(doc, y, "Category performance");
+  y = drawSection(doc, y, "Direct category performance");
+  y = drawDataTable(
+    doc,
+    y,
+    [
+      { header: "Category breadcrumb", bold: true },
+      { header: "Path", width: 42 },
+      { header: "Status", width: 20 },
+      { header: "Direct products", align: "right", width: 25 },
+      { header: "Units", align: "right", width: 18 },
+      { header: "Revenue", align: "right", width: 30, bold: true },
+    ],
+    report.rows.map((row) => [
+      safeText(row.breadcrumbLabel, "—"),
+      `/${safeText(row.path)}`,
+      titleCase(row.status),
+      formatNumber(row.directProductCount),
+      formatNumber(row.unitsSold),
+      formatCurrency(row.revenue),
+    ]),
+    8,
+  );
+
+  y = drawSection(doc, y, "Root category rollups (non-duplicating)");
   drawDataTable(
     doc,
     y,
     [
-      { header: "Category", bold: true },
-      { header: "Status", width: 22 },
-      { header: "Products", align: "right", width: 24 },
-      { header: "Units sold", align: "right", width: 26 },
-      { header: "Revenue", align: "right", width: 34, bold: true },
+      { header: "Root category", bold: true },
+      { header: "Path", width: 42 },
+      { header: "Status", width: 20 },
+      { header: "Categories", align: "right", width: 22 },
+      { header: "Products", align: "right", width: 22 },
+      { header: "Units", align: "right", width: 18 },
+      { header: "Revenue", align: "right", width: 30, bold: true },
     ],
-    report.rows.map((row) => [
+    report.rootRollups.map((row) => [
       safeText(row.name, "—"),
+      `/${safeText(row.path)}`,
       titleCase(row.status),
-      formatNumber(row.productCount),
+      formatNumber(row.categoryCount),
+      formatNumber(row.totalProductCount),
       formatNumber(row.unitsSold),
       formatCurrency(row.revenue),
     ]),
+    8,
   );
 }
 

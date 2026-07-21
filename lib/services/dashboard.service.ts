@@ -1,12 +1,13 @@
 import "server-only";
 
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@/app/generated/prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
 import { round2, toNumber } from "@/lib/money";
 import { type OrderStatus } from "@/lib/orders/status";
 import { type AdminActivityKind } from "@/lib/services/admin-activity.service";
 import { getRecentActivityFeed } from "@/lib/services/activity-feed.service";
+import { getCategoryBreadcrumbsByIds } from "@/lib/services/category.service";
 
 /**
  * Aggregations powering the admin dashboard page.
@@ -401,15 +402,17 @@ async function loadTopProducts(now: Date): Promise<DashboardTopProduct[]> {
       id: true,
       name: true,
       status: true,
-      category: { select: { name: true } },
+      category: { select: { id: true, name: true } },
       variants: {
         orderBy: { createdAt: "asc" },
-        take: 1,
         select: { stock: true },
       },
     },
   });
   const productMap = new Map(products.map((row) => [row.id, row]));
+  const categoryBreadcrumbs = await getCategoryBreadcrumbsByIds(
+    products.map((product) => product.category.id),
+  );
 
   return Array.from(stats.entries())
     .map(([productId, bucket]) => {
@@ -417,10 +420,16 @@ async function loadTopProducts(now: Date): Promise<DashboardTopProduct[]> {
       return {
         id: productId,
         name: product?.name ?? "Deleted product",
-        category: product?.category?.name ?? "—",
+        category: product
+          ? (categoryBreadcrumbs.get(product.category.id) ?? [])
+              .map((crumb) => crumb.name)
+              .join(" / ") || product.category.name
+          : "—",
         unitsSold: bucket.units,
         revenue: money(bucket.revenue),
-        stock: product?.variants[0]?.stock ?? 0,
+        stock:
+          product?.variants.reduce((sum, variant) => sum + variant.stock, 0) ??
+          0,
         status: product?.status ?? "INACTIVE",
       } satisfies DashboardTopProduct;
     })

@@ -1,9 +1,11 @@
 import "server-only";
 
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@/app/generated/prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
 import { round2, toNumber } from "@/lib/money";
+import { buildCategoryPerformance } from "@/lib/reports/category-rollups";
+import { getCategoryBreadcrumbsByIds } from "@/lib/services/category.service";
 import { ServiceError } from "@/lib/services/service-error";
 import type { ReportQueryInput } from "@/lib/validations/report.validation";
 
@@ -33,6 +35,21 @@ export class ReportError extends ServiceError {
 /** Round currency to 2 dp; accepts Decimal or number. Use everywhere here. */
 function money(value: Parameters<typeof toNumber>[0]): number {
   return round2(value);
+}
+
+async function categoryLabelsById(
+  categoryIds: readonly string[],
+): Promise<Map<string, string>> {
+  const ids = [...new Set(categoryIds.filter(Boolean))];
+  if (ids.length === 0) return new Map();
+
+  const breadcrumbs = await getCategoryBreadcrumbsByIds(ids);
+  return new Map(
+    ids.map((id) => [
+      id,
+      (breadcrumbs.get(id) ?? []).map((crumb) => crumb.name).join(" / "),
+    ]),
+  );
 }
 
 /**
@@ -349,13 +366,16 @@ async function buildProductsReport(window: Window, limit: number) {
       status: true,
       salePrice: true,
       discountPrice: true,
-      category: { select: { id: true, name: true } },
+      category: { select: { id: true, name: true, path: true } },
       variants: {
         select: { stock: true },
       },
     },
   });
   const productInfo = new Map(products.map((p) => [p.id, p]));
+  const categoryLabels = await categoryLabelsById(
+    products.map((product) => product.category.id),
+  );
 
   const rows = Array.from(productMap.entries())
     .map(([productId, agg]) => {
@@ -372,7 +392,11 @@ async function buildProductsReport(window: Window, limit: number) {
       return {
         productId,
         name: info?.name ?? "Deleted product",
-        category: info?.category?.name ?? "—",
+        category:
+          (info && categoryLabels.get(info.category.id)) ||
+          info?.category?.name ||
+          "—",
+        categoryPath: info?.category?.path ?? null,
         unitsSold: agg.units,
         revenue: money(agg.revenue),
         currentPrice: currentPrice != null ? money(currentPrice) : null,
@@ -463,11 +487,14 @@ async function buildProfitReport(window: Window, limit: number) {
       id: true,
       name: true,
       status: true,
-      category: { select: { name: true } },
+      category: { select: { id: true, name: true, path: true } },
       variants: { select: { stock: true } },
     },
   });
   const productInfo = new Map(products.map((p) => [p.id, p]));
+  const categoryLabels = await categoryLabelsById(
+    products.map((product) => product.category.id),
+  );
 
   const rows = Array.from(productMap.entries())
     .map(([productId, agg]) => {
@@ -478,7 +505,11 @@ async function buildProfitReport(window: Window, limit: number) {
       return {
         productId,
         name: info?.name ?? "Deleted product",
-        category: info?.category?.name ?? "—",
+        category:
+          (info && categoryLabels.get(info.category.id)) ||
+          info?.category?.name ||
+          "—",
+        categoryPath: info?.category?.path ?? null,
         unitsSold: agg.units,
         revenue: money(agg.revenue),
         cost: money(agg.cost),
@@ -537,7 +568,7 @@ async function buildInventoryReport(limit: number) {
       status: true,
       salePrice: true,
       discountPrice: true,
-      category: { select: { id: true, name: true } },
+      category: { select: { id: true, name: true, path: true } },
       updatedAt: true,
       variants: {
         select: { stock: true },
@@ -549,12 +580,17 @@ async function buildInventoryReport(limit: number) {
     id: string;
     name: string;
     category: string;
+    categoryPath: string;
     price: number;
     discountPrice: number | null;
     stock: number;
     status: (typeof products)[number]["status"];
     updatedAt: string;
   };
+
+  const categoryLabels = await categoryLabelsById(
+    products.map((product) => product.category.id),
+  );
 
   let totalUnits = 0;
   let outOfStock = 0;
@@ -578,7 +614,8 @@ async function buildInventoryReport(limit: number) {
     return {
       id: p.id,
       name: p.name,
-      category: p.category?.name ?? "—",
+      category: categoryLabels.get(p.category.id) || p.category.name || "—",
+      categoryPath: p.category.path,
       price: money(price),
       discountPrice: discountPrice != null ? money(discountPrice) : null,
       stock,
@@ -698,18 +735,25 @@ async function buildCustomersReport(window: Window, limit: number) {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Performance by category: products per category, units sold and
- * revenue earned by category in the window.
+ * Performance by category has two deliberate views:
+ * - direct rows attribute products/sales only to the product's category;
+ * - root rollups fold every direct row into exactly one top-level category.
+ *
+ * The headline totals come from all direct rows before the preview limit is
+ * applied, so neither pagination nor the second rollup view can double count.
  */
 async function buildCategoriesReport(window: Window, limit: number) {
   const categories = await prisma.category.findMany({
     select: {
       id: true,
       name: true,
+      path: true,
+      parentId: true,
+      depth: true,
       status: true,
       _count: { select: { products: true } },
     },
-    orderBy: { name: "asc" },
+    orderBy: [{ depth: "asc" }, { position: "asc" }, { name: "asc" }],
   });
 
   // Pull every order item in the window; small-shop catalog so a bulk
@@ -739,32 +783,33 @@ async function buildCategoriesReport(window: Window, limit: number) {
     aggregate.set(key, bucket);
   }
 
-  const rows = categories
-    .map((category) => {
-      const stats = aggregate.get(category.id);
-      return {
-        categoryId: category.id,
-        name: category.name,
-        status: category.status,
-        productCount: category._count.products,
-        unitsSold: stats?.units ?? 0,
-        revenue: money(stats?.revenue ?? 0),
-      };
-    })
-    .sort((a, b) => b.revenue - a.revenue)
-    .slice(0, limit);
-
-  const totalRevenue = money(rows.reduce((sum, row) => sum + row.revenue, 0));
-  const totalUnits = rows.reduce((sum, row) => sum + row.unitsSold, 0);
+  const performance = buildCategoryPerformance(
+    categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      path: category.path,
+      parentId: category.parentId,
+      depth: category.depth,
+      status: category.status,
+      directProductCount: category._count.products,
+    })),
+    [...aggregate.entries()].map(([categoryId, stats]) => ({
+      categoryId,
+      unitsSold: stats.units,
+      revenue: stats.revenue,
+    })),
+  );
 
   return {
     summary: {
       totalCategories: categories.length,
       activeCategories: categories.filter((c) => c.status === "ACTIVE").length,
-      unitsSold: totalUnits,
-      revenue: totalRevenue,
+      totalProducts: performance.totals.products,
+      unitsSold: performance.totals.unitsSold,
+      revenue: performance.totals.revenue,
     },
-    rows,
+    rows: performance.rows.slice(0, limit),
+    rootRollups: performance.rootRollups.slice(0, limit),
   };
 }
 

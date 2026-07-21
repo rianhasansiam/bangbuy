@@ -1,10 +1,18 @@
 import "server-only";
 
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@/app/generated/prisma/client";
 
+import {
+  cleanVariantAttributes,
+  formatVariantAttributes,
+} from "@/lib/catalog/variant-options";
 import { prisma } from "@/lib/db/prisma";
 import { multiply, round2, subtractClamped, sumDecimals, toDecimal } from "@/lib/money";
 import { ServiceError } from "@/lib/services/service-error";
+import {
+  getEffectiveActiveCategoryIds,
+  isCategoryEffectivelyActive,
+} from "@/lib/services/category.service";
 import type {
   AddToCartInput,
   SyncCartInput,
@@ -49,6 +57,7 @@ const cartItemProductSelect = {
   name: true,
   slug: true,
   status: true,
+  categoryId: true,
   salePrice: true,
   discountPrice: true,
   images: {
@@ -61,14 +70,19 @@ const cartItemProductSelect = {
 /** The exact selected variant carries the size/color + stock for the line. */
 const cartItemVariantSelect = {
   id: true,
+  variantKey: true,
+  name: true,
   sku: true,
   color: true,
   size: true,
+  modelNumber: true,
+  attributes: true,
   stock: true,
+  isActive: true,
+  product: { select: cartItemProductSelect },
 } satisfies Prisma.ProductVariantSelect;
 
 const cartItemInclude = {
-  product: { select: cartItemProductSelect },
   variant: { select: cartItemVariantSelect },
 } satisfies Prisma.CartItemInclude;
 
@@ -105,8 +119,13 @@ type CartLine = {
   slug: string;
   variantId: string;
   sku: string | null;
+  variantKey: string;
+  variantName: string | null;
+  modelNumber: string | null;
   color: string | null;
   size: string | null;
+  attributes: Record<string, string> | null;
+  attributeSummary: string | null;
   name: string;
   image: string | null;
   quantity: number;
@@ -129,12 +148,16 @@ type CartSummary = {
  * count toward the totals (inactive products are surfaced but ignored
  * in the summary so the UI can warn the user).
  */
-function toLine(row: CartItemWithRelations): {
+function toLine(
+  row: CartItemWithRelations,
+  activeCategoryIds?: ReadonlySet<string>,
+): {
   line: CartLine;
   countable: boolean;
 } {
-  const p = row.product;
   const variant = row.variant;
+  const p = variant.product;
+  const attributes = cleanVariantAttributes(variant.attributes);
   const listPrice = toDecimal(p.salePrice);
   const unitPrice = effectiveProductPrice(p);
   const stock = variant.stock;
@@ -144,8 +167,13 @@ function toLine(row: CartItemWithRelations): {
     slug: p.slug,
     variantId: variant.id,
     sku: variant.sku,
+    variantKey: variant.variantKey,
+    variantName: variant.name,
+    modelNumber: variant.modelNumber,
     color: variant.color,
     size: variant.size,
+    attributes,
+    attributeSummary: formatVariantAttributes(attributes),
     name: p.name,
     image: p.images[0]?.url ?? null,
     quantity: row.quantity,
@@ -153,12 +181,23 @@ function toLine(row: CartItemWithRelations): {
     originalPrice: round2(listPrice),
     lineTotal: round2(multiply(unitPrice, row.quantity)),
     stock,
-    status: p.status,
+    status:
+      p.status === "ACTIVE" &&
+      variant.isActive &&
+      (!activeCategoryIds || activeCategoryIds.has(p.categoryId))
+        ? "ACTIVE"
+        : "INACTIVE",
   };
-  return { line, countable: p.status === "ACTIVE" };
+  return {
+    line,
+    countable: line.status === "ACTIVE",
+  };
 }
 
-function summarize(rows: CartItemWithRelations[]): {
+function summarize(
+  rows: CartItemWithRelations[],
+  activeCategoryIds?: ReadonlySet<string>,
+): {
   items: CartLine[];
   summary: CartSummary;
 } {
@@ -167,7 +206,7 @@ function summarize(rows: CartItemWithRelations[]): {
   const countableLines: CartLine[] = [];
 
   for (const row of rows) {
-    const { line, countable } = toLine(row);
+    const { line, countable } = toLine(row, activeCategoryIds);
     items.push(line);
     if (!countable) continue;
     countableLines.push(line);
@@ -213,9 +252,10 @@ async function resolveVariant(
       id: true,
       name: true,
       status: true,
+      categoryId: true,
       variants: {
         orderBy: { createdAt: "asc" },
-        select: { id: true, stock: true },
+        select: { id: true, stock: true, isActive: true },
       },
     },
   });
@@ -223,11 +263,16 @@ async function resolveVariant(
   if (product.status !== "ACTIVE") {
     throw new CartError(409, `"${product.name}" is no longer available.`);
   }
+  if (!(await isCategoryEffectivelyActive(product.categoryId))) {
+    throw new CartError(409, `"${product.name}" is no longer available.`);
+  }
+
+  const activeVariants = product.variants.filter((item) => item.isActive);
 
   // When the product has more than one variant, the caller MUST specify
   // which size+color they want. We only fall back to the single variant
   // when there is exactly one (an unambiguous choice).
-  if (!variantId && product.variants.length > 1) {
+  if (!variantId && activeVariants.length > 1) {
     throw new CartError(
       400,
       `Please select a size and color for "${product.name}" before adding to the cart.`,
@@ -236,8 +281,8 @@ async function resolveVariant(
   }
 
   const variant = variantId
-    ? product.variants.find((v) => v.id === variantId)
-    : product.variants[0];
+    ? activeVariants.find((v) => v.id === variantId)
+    : activeVariants[0];
 
   if (!variant) {
     throw new CartError(
@@ -255,13 +300,16 @@ async function resolveVariant(
 /* -------------------------------------------------------------------------- */
 
 export async function getMyCart(userId: string) {
-  const rows = await prisma.cartItem.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-    include: cartItemInclude,
-  });
+  const [rows, activeCategoryIds] = await Promise.all([
+    prisma.cartItem.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      include: cartItemInclude,
+    }),
+    getEffectiveActiveCategoryIds(),
+  ]);
 
-  return summarize(rows);
+  return summarize(rows, new Set(activeCategoryIds));
 }
 
 // NOTE: The cart is per-user and is read immediately after every write
@@ -334,7 +382,6 @@ export async function syncCartItems(userId: string, input: SyncCartInput) {
     return prisma.cartItem.create({
       data: {
         userId,
-        productId: item.productId,
         variantId: item.variantId,
         quantity,
       },
@@ -385,7 +432,6 @@ export async function addToCart(userId: string, input: AddToCartInput) {
     where: { userId_variantId: { userId, variantId: variant.id } },
     create: {
       userId,
-      productId: product.id,
       variantId: variant.id,
       quantity: input.quantity,
     },
@@ -413,8 +459,11 @@ export async function updateCartItem(
   });
   if (!existing) throw new CartError(404, "Cart item not found.");
 
-  const product = existing.product;
+  const product = existing.variant.product;
   if (product.status !== "ACTIVE") {
+    throw new CartError(409, `"${product.name}" is no longer available.`);
+  }
+  if (!(await isCategoryEffectivelyActive(product.categoryId))) {
     throw new CartError(409, `"${product.name}" is no longer available.`);
   }
   const stock = existing.variant.stock;
@@ -536,7 +585,6 @@ export async function mergeCartItems(
         },
         create: {
           userId,
-          productId: item.productId,
           variantId: item.variantId,
           quantity: Math.min(item.quantity, stock),
         },

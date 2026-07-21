@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@/app/generated/prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
 import { ORDER_STATUS_META, type OrderStatus } from "@/lib/orders/status";
@@ -10,6 +10,7 @@ import {
   type AdminActivityActorOption,
   type AdminActivityKind,
 } from "@/lib/services/admin-activity.service";
+import { getCategoryBreadcrumbsByIds } from "@/lib/services/category.service";
 
 /**
  * Unified, READ-ONLY activity feed.
@@ -327,23 +328,45 @@ async function collectAdmin(
     limit ?? null,
   );
 
-  return rows.map((row) => ({
-    id: `admin-${row.id}`,
-    source: "admin" as const,
-    kind: row.kind,
-    action: row.action,
-    target: row.target,
-    targetId: row.targetId,
-    href: row.href,
-    actorId: row.actorId,
-    actorName: row.actorName,
-    actorEmail: row.actorEmail,
-    performedBy: personLabel(
-      { name: row.actorName, email: row.actorEmail },
-      "Unknown",
-    ),
-    createdAt: row.createdAt,
-  }));
+  const categoryTargetIds = rows.flatMap((row) =>
+    row.kind === "category" && row.targetId ? [row.targetId] : [],
+  );
+  const categoryBreadcrumbs: Map<string, Array<{ name: string }>> =
+    categoryTargetIds.length > 0
+      ? await getCategoryBreadcrumbsByIds(categoryTargetIds)
+      : new Map<string, Array<{ name: string }>>();
+
+  return rows.map((row) => {
+    const breadcrumb = row.targetId
+      ? (categoryBreadcrumbs.get(row.targetId) ?? [])
+          .map((crumb) => crumb.name)
+          .join(" / ")
+      : "";
+    const target =
+      row.kind === "category" && breadcrumb
+        ? row.action.toLocaleLowerCase().includes("reorder")
+          ? `${row.target ?? "Subcategories"} · ${breadcrumb}`
+          : breadcrumb
+        : row.target;
+
+    return {
+      id: `admin-${row.id}`,
+      source: "admin" as const,
+      kind: row.kind,
+      action: row.action,
+      target,
+      targetId: row.targetId,
+      href: row.href,
+      actorId: row.actorId,
+      actorName: row.actorName,
+      actorEmail: row.actorEmail,
+      performedBy: personLabel(
+        { name: row.actorName, email: row.actorEmail },
+        "Unknown",
+      ),
+      createdAt: row.createdAt,
+    };
+  });
 }
 
 async function collectCapitalCost(

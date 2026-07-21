@@ -1,8 +1,13 @@
 import "server-only";
 
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@/app/generated/prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 
+import {
+  cleanVariantAttributes,
+  formatVariantAttributes,
+  type VariantAttributeMap,
+} from "@/lib/catalog/variant-options";
 import { prisma } from "@/lib/db/prisma";
 import {
   greaterThanOrEqual,
@@ -15,6 +20,7 @@ import {
   toDecimal,
 } from "@/lib/money";
 import { ServiceError } from "@/lib/services/service-error";
+import { getEffectiveActiveCategoryIds } from "@/lib/services/category.service";
 import {
   findActivePromoCode,
   getStoreSettings,
@@ -130,7 +136,11 @@ async function resolveItems(
 
   const cart = await prisma.cartItem.findMany({
     where: { userId },
-    select: { productId: true, variantId: true, quantity: true },
+    select: {
+      variantId: true,
+      quantity: true,
+      variant: { select: { productId: true } },
+    },
   });
 
   if (cart.length === 0) {
@@ -142,7 +152,7 @@ async function resolveItems(
 
   return {
     items: cart.map((row) => ({
-      productId: row.productId,
+      productId: row.variant.productId,
       variantId: row.variantId,
       quantity: row.quantity,
     })),
@@ -158,8 +168,13 @@ type PricedLine = {
   productId: string;
   variantId: string;
   sku: string | null;
+  variantKey: string;
+  variantName: string | null;
+  modelNumber: string | null;
   color: string | null;
   size: string | null;
+  attributes: VariantAttributeMap | null;
+  attributeSummary: string | null;
   name: string;
   image: string | null;
   quantity: number;
@@ -173,34 +188,52 @@ type PricedLine = {
   stock: number;
 };
 
-async function priceLines(items: ResolvedItem[]): Promise<PricedLine[]> {
+type CheckoutCatalogReader = Pick<
+  Prisma.TransactionClient,
+  "category" | "product"
+>;
+
+async function priceLines(
+  items: ResolvedItem[],
+  client: CheckoutCatalogReader = prisma,
+): Promise<PricedLine[]> {
   const productIds = items.map((item) => item.productId);
-  const products = await prisma.product.findMany({
-    where: { id: { in: productIds } },
-    select: {
-      id: true,
-      name: true,
-      status: true,
-      salePrice: true,
-      discountPrice: true,
-      buyingPrice: true,
-      images: {
-        orderBy: { position: "asc" },
-        take: 1,
-        select: { url: true },
-      },
-      variants: {
-        orderBy: { createdAt: "asc" },
-        select: {
-          id: true,
-          sku: true,
-          color: true,
-          size: true,
-          stock: true,
+  const [products, activeCategoryIds] = await Promise.all([
+    client.product.findMany({
+      where: { id: { in: productIds } },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        categoryId: true,
+        salePrice: true,
+        discountPrice: true,
+        buyingPrice: true,
+        images: {
+          orderBy: { position: "asc" },
+          take: 1,
+          select: { url: true },
+        },
+        variants: {
+          orderBy: { createdAt: "asc" },
+          select: {
+            id: true,
+            variantKey: true,
+            name: true,
+            sku: true,
+            modelNumber: true,
+            color: true,
+            size: true,
+            attributes: true,
+            stock: true,
+            isActive: true,
+          },
         },
       },
-    },
-  });
+    }),
+    getEffectiveActiveCategoryIds(client),
+  ]);
+  const activeCategoryIdSet = new Set(activeCategoryIds);
   const productMap = new Map(products.map((p) => [p.id, p]));
 
   return items.map((line) => {
@@ -208,25 +241,29 @@ async function priceLines(items: ResolvedItem[]): Promise<PricedLine[]> {
     if (!product) {
       throw new CheckoutError(404, `Product not found: ${line.productId}`);
     }
-    if (product.status !== "ACTIVE") {
+    if (
+      product.status !== "ACTIVE" ||
+      !activeCategoryIdSet.has(product.categoryId)
+    ) {
       throw new CheckoutError(
         409,
         `"${product.name}" is no longer available.`,
         { productId: product.id },
       );
     }
-    // Multi-variant products require an explicit size+color selection.
-    if (!line.variantId && product.variants.length > 1) {
+    const activeVariants = product.variants.filter((variant) => variant.isActive);
+    // Multi-variant products require an explicit option selection.
+    if (!line.variantId && activeVariants.length > 1) {
       throw new CheckoutError(
         409,
-        `Please select a size and color for "${product.name}" before checkout.`,
+        `Please select product options for "${product.name}" before checkout.`,
         { productId: product.id, requiresVariantSelection: true },
       );
     }
     // Use the exact selected variant when provided, else the primary one.
     const variant = line.variantId
-      ? product.variants.find((v) => v.id === line.variantId)
-      : product.variants[0];
+      ? activeVariants.find((v) => v.id === line.variantId)
+      : activeVariants[0];
     if (!variant) {
       throw new CheckoutError(
         409,
@@ -244,12 +281,18 @@ async function priceLines(items: ResolvedItem[]): Promise<PricedLine[]> {
       );
     }
     const unitPrice = effectiveProductPrice(product);
+    const attributes = cleanVariantAttributes(variant.attributes);
     return {
       productId: product.id,
       variantId: variant.id,
       sku: variant.sku,
+      variantKey: variant.variantKey,
+      variantName: variant.name,
+      modelNumber: variant.modelNumber,
       color: variant.color,
       size: variant.size,
+      attributes,
+      attributeSummary: formatVariantAttributes(attributes),
       name: product.name,
       image: product.images[0]?.url ?? null,
       quantity: line.quantity,
@@ -467,8 +510,13 @@ export async function previewCheckout(
       productId: line.productId,
       variantId: line.variantId,
       sku: line.sku,
+      variantKey: line.variantKey,
+      variantName: line.variantName,
+      modelNumber: line.modelNumber,
       color: line.color,
       size: line.size,
+      attributes: line.attributes,
+      attributeSummary: line.attributeSummary,
       name: line.name,
       image: line.image,
       quantity: line.quantity,
@@ -495,6 +543,22 @@ type OrderPaymentOptions = {
   advancePayment?: number;
 };
 
+async function lockCheckoutCatalogRows(
+  tx: Prisma.TransactionClient,
+  items: readonly ResolvedItem[],
+): Promise<void> {
+  const productIds = [...new Set(items.map((item) => item.productId))].sort();
+  if (productIds.length === 0) return;
+
+  await tx.$queryRaw(
+    Prisma.sql`SELECT "id" FROM "Product" WHERE "id" IN (${Prisma.join(productIds)}) ORDER BY "id" FOR SHARE`,
+  );
+  await tx.$queryRaw(
+    Prisma.sql`SELECT "id" FROM "ProductVariant" WHERE "productId" IN (${Prisma.join(productIds)}) ORDER BY "id" FOR UPDATE`,
+  );
+  await tx.$queryRaw`SELECT "id" FROM "Category" ORDER BY "id" FOR SHARE`;
+}
+
 async function placeOrderInternal(
   userId: string | null,
   input: CheckoutInput,
@@ -513,30 +577,7 @@ async function placeOrderInternal(
     userId,
     input.items,
   );
-  const lines = await priceLines(resolved);
-
   const settings = settingsToSnapshot(await getStoreSettings());
-  const subtotal = sumDecimals(lines.map((line) => line.lineTotal));
-  const promo = await applyPromoCode(input.promoCode, subtotal);
-
-  if (input.promoCode && promo && !promo.ok) {
-    throw new CheckoutError(409, promo.reason);
-  }
-
-  const summary = summarize(lines, promo, settings, input.deliveryZone);
-  const advancePayment = toDecimal(round2(options.advancePayment ?? 0));
-  const totalAmount = toDecimal(summary.total);
-  if (advancePayment.isNegative()) {
-    throw new CheckoutError(400, "Advance payment cannot be negative.");
-  }
-  if (advancePayment.greaterThan(totalAmount)) {
-    throw new CheckoutError(
-      400,
-      "Advance payment cannot exceed the order total.",
-    );
-  }
-  const isPaidInFull =
-    totalAmount.greaterThan(0) && advancePayment.greaterThanOrEqualTo(totalAmount);
 
   // Account-backed orders always use the account email, never a client
   // override. Guest orders preserve the optional contact email entered by
@@ -575,6 +616,31 @@ async function placeOrderInternal(
 
   try {
     return await prisma.$transaction(async (tx) => {
+      await lockCheckoutCatalogRows(tx, resolved);
+      const lines = await priceLines(resolved, tx);
+      const subtotal = sumDecimals(lines.map((line) => line.lineTotal));
+      const promo = await applyPromoCode(input.promoCode, subtotal);
+
+      if (input.promoCode && promo && !promo.ok) {
+        throw new CheckoutError(409, promo.reason);
+      }
+
+      const summary = summarize(lines, promo, settings, input.deliveryZone);
+      const advancePayment = toDecimal(round2(options.advancePayment ?? 0));
+      const totalAmount = toDecimal(summary.total);
+      if (advancePayment.isNegative()) {
+        throw new CheckoutError(400, "Advance payment cannot be negative.");
+      }
+      if (advancePayment.greaterThan(totalAmount)) {
+        throw new CheckoutError(
+          400,
+          "Advance payment cannot exceed the order total.",
+        );
+      }
+      const isPaidInFull =
+        totalAmount.greaterThan(0) &&
+        advancePayment.greaterThanOrEqualTo(totalAmount);
+
       // Atomic stock decrement on the variant: the WHERE clause guards
       // against the last unit being sold twice.
       for (const line of lines) {
@@ -642,8 +708,10 @@ async function placeOrderInternal(
               productName: line.name,
               productImage: line.image,
               sku: line.sku,
+              variantName: line.variantName,
               color: line.color,
               size: line.size,
+              variantAttributes: line.attributes ?? Prisma.DbNull,
               quantity: line.quantity,
               unitPrice: round2(line.unitPrice),
               totalPrice: round2(line.lineTotal),

@@ -59,7 +59,9 @@ function buildVariantText(item: OrderItem): string {
     .filter(Boolean)
     .join(" / ");
   const segments: string[] = [];
+  if (item.variantName) segments.push(safeText(item.variantName));
   if (variant) segments.push(variant);
+  if (item.attributeSummary) segments.push(safeText(item.attributeSummary));
   if (item.sku) segments.push(`SKU: ${safeText(item.sku)}`);
   return segments.join("   ·   ") || "—";
 }
@@ -386,7 +388,7 @@ export async function generateOrderPdf(order: OrderDetail): Promise<jsPDF> {
 
   const note = safeText(order.customerNote);
   if (note) {
-    y = drawNoteCard(doc, y, note);
+    drawNoteCard(doc, y, note);
   }
 
   drawBrandFooter(doc, [

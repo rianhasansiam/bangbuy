@@ -4,7 +4,7 @@ import { unstable_cache } from "next/cache";
 
 import { prisma } from "@/lib/db/prisma";
 
-type HomeCategoryProduct = {
+export type HomeCategoryProduct = {
   id: string;
   slug: string;
   name: string;
@@ -19,7 +19,14 @@ type HomeCategoryProduct = {
   variantCount: number;
 };
 
-type HomeCategoryBanner = {
+export type HomeCategoryLink = {
+  id: string;
+  name: string;
+  path: string;
+  totalProductCount: number;
+};
+
+export type HomeCategoryBanner = {
   id: string;
   image: string;
   label: string;
@@ -29,11 +36,14 @@ type HomeCategoryBanner = {
   link: string | null;
 };
 
-type HomeCategory = {
+export type HomeCategory = {
   id: string;
   name: string;
   slug: string;
+  path: string;
   image: string | null;
+  totalProductCount: number;
+  children: HomeCategoryLink[];
   products: HomeCategoryProduct[];
   categoryBanner: HomeCategoryBanner | null;
 };
@@ -43,120 +53,247 @@ const FALLBACK_PRODUCT_IMAGE =
 const DEFAULT_CATEGORY_LIMIT = 6;
 const DEFAULT_PRODUCTS_PER_CATEGORY = 8;
 
+type CategoryRow = {
+  id: string;
+  parentId: string | null;
+  name: string;
+  slug: string;
+  path: string;
+  image: string | null;
+  status: "ACTIVE" | "INACTIVE";
+  position: number;
+};
+
+function effectivelyActiveIds(categories: CategoryRow[]): Set<string> {
+  const byId = new Map(categories.map((category) => [category.id, category]));
+  const memo = new Map<string, boolean>();
+
+  const isActive = (category: CategoryRow): boolean => {
+    const cached = memo.get(category.id);
+    if (cached !== undefined) return cached;
+
+    const visited = new Set<string>();
+    let current: CategoryRow = category;
+    while (true) {
+      if (visited.has(current.id) || current.status !== "ACTIVE") {
+        memo.set(category.id, false);
+        return false;
+      }
+      visited.add(current.id);
+      if (!current.parentId) break;
+      const parent = byId.get(current.parentId);
+      if (!parent) {
+        memo.set(category.id, false);
+        return false;
+      }
+      current = parent;
+    }
+
+    memo.set(category.id, true);
+    return true;
+  };
+
+  return new Set(categories.filter(isActive).map((category) => category.id));
+}
+
+function descendantsOf(
+  rootId: string,
+  childrenByParent: Map<string, CategoryRow[]>,
+): string[] {
+  const output: string[] = [];
+  const stack = [rootId];
+  while (stack.length > 0) {
+    const id = stack.pop();
+    if (!id) continue;
+    output.push(id);
+    for (const child of childrenByParent.get(id) ?? []) stack.push(child.id);
+  }
+  return output;
+}
+
+function bannerMeta(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
 const getCachedHomeCategories = unstable_cache(
   async (
     categoryLimit: number,
     productsPerCategory: number,
   ): Promise<HomeCategory[]> => {
-
-    
-    const categories = await prisma.category.findMany({
-      where: { status: "ACTIVE" },
-      orderBy: { createdAt: "desc" },
-      take: categoryLimit,
+    const categoryRows = await prisma.category.findMany({
       select: {
         id: true,
+        parentId: true,
         name: true,
         slug: true,
+        path: true,
         image: true,
-        products: {
-          where: { status: "ACTIVE" },
-          orderBy: { createdAt: "desc" },
-          take: productsPerCategory,
-          select: {
-            id: true,
-            slug: true,
-            name: true,
-            description: true,
-            salePrice: true,
-            discountPrice: true,
-            _count: { select: { variants: true } },
-            images: {
-              orderBy: { position: "asc" },
-              select: { url: true },
-            },
-          },
-        },
-        // Category banners now live in the unified Banner model,
-        // discriminated by `type` with label/heading/discount in metadata.
-        banners: {
-          where: { type: "CATEGORY", status: "ACTIVE" },
-          orderBy: { createdAt: "desc" },
-          take: 1,
-          select: {
-            id: true,
-            image: true,
-            description: true,
-            link: true,
-            metadata: true,
-          },
-        },
+        status: true,
+        position: true,
       },
+      orderBy: [{ position: "asc" }, { name: "asc" }],
     });
 
-    return categories
-      .map((category) => ({
-        id: category.id,
-        name: category.name,
-        slug: category.slug,
-        image: category.image,
-        products: category.products.map((product) => {
+    const categories = categoryRows as CategoryRow[];
+    const activeIds = effectivelyActiveIds(categories);
+    const active = categories.filter((category) => activeIds.has(category.id));
+    const childrenByParent = new Map<string, CategoryRow[]>();
+    for (const category of active) {
+      if (!category.parentId) continue;
+      const siblings = childrenByParent.get(category.parentId) ?? [];
+      siblings.push(category);
+      childrenByParent.set(category.parentId, siblings);
+    }
+
+    const roots = active
+      .filter((category) => category.parentId === null)
+      .slice(0, categoryLimit);
+    if (roots.length === 0) return [];
+
+    const subtreeByRoot = new Map(
+      roots.map((root) => [root.id, descendantsOf(root.id, childrenByParent)]),
+    );
+    const allSubtreeIds = Array.from(new Set([...subtreeByRoot.values()].flat()));
+
+    const [directCounts, banners, productsByRoot] = await Promise.all([
+      prisma.product.groupBy({
+        by: ["categoryId"],
+        where: { status: "ACTIVE", categoryId: { in: allSubtreeIds } },
+        _count: { _all: true },
+      }),
+      prisma.banner.findMany({
+        where: {
+          type: "CATEGORY",
+          status: "ACTIVE",
+          categoryId: { in: roots.map((root) => root.id) },
+        },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          categoryId: true,
+          image: true,
+          description: true,
+          link: true,
+          metadata: true,
+        },
+      }),
+      Promise.all(
+        roots.map(async (root) => ({
+          rootId: root.id,
+          rows: await prisma.product.findMany({
+            where: {
+              status: "ACTIVE",
+              categoryId: { in: subtreeByRoot.get(root.id) ?? [root.id] },
+            },
+            orderBy: { createdAt: "desc" },
+            take: productsPerCategory,
+            select: {
+              id: true,
+              slug: true,
+              name: true,
+              description: true,
+              salePrice: true,
+              discountPrice: true,
+              images: {
+                orderBy: { position: "asc" },
+                select: { url: true },
+              },
+              variants: { where: { isActive: true }, select: { id: true } },
+              reviews: { select: { rating: true } },
+            },
+          }),
+        })),
+      ),
+    ]);
+
+    const countByCategory = new Map(
+      directCounts.map((row) => [row.categoryId, row._count._all]),
+    );
+    const totalFor = (categoryId: string) =>
+      descendantsOf(categoryId, childrenByParent).reduce(
+        (sum, id) => sum + (countByCategory.get(id) ?? 0),
+        0,
+      );
+
+    const firstBannerByRoot = new Map<string, (typeof banners)[number]>();
+    for (const banner of banners) {
+      if (banner.categoryId && !firstBannerByRoot.has(banner.categoryId)) {
+        firstBannerByRoot.set(banner.categoryId, banner);
+      }
+    }
+    const productsMap = new Map(productsByRoot.map((entry) => [entry.rootId, entry.rows]));
+
+    return roots.map((root) => {
+      const banner = firstBannerByRoot.get(root.id);
+      const meta = bannerMeta(banner?.metadata);
+      const readMeta = (key: string) =>
+        typeof meta[key] === "string" ? (meta[key] as string) : "";
+
+      return {
+        id: root.id,
+        name: root.name,
+        slug: root.slug,
+        path: root.path,
+        image: root.image,
+        totalProductCount: totalFor(root.id),
+        children: (childrenByParent.get(root.id) ?? []).map((child) => ({
+          id: child.id,
+          name: child.name,
+          path: child.path,
+          totalProductCount: totalFor(child.id),
+        })),
+        products: (productsMap.get(root.id) ?? []).map((product) => {
           const price = product.salePrice.toNumber();
           const sale = product.discountPrice?.toNumber() ?? null;
-          const discountPrice = sale != null && sale < price ? sale : null;
-          const imageUrls = product.images.map((img) => img.url);
+          const ratings = product.reviews.map((review) => review.rating);
+          const imageUrls = product.images.map((image) => image.url);
           return {
             id: product.id,
             slug: product.slug,
             name: product.name,
             description: product.description,
             price,
-            discountPrice,
+            discountPrice: sale !== null && sale < price ? sale : null,
             image: imageUrls[0] ?? FALLBACK_PRODUCT_IMAGE,
             images: imageUrls,
-            variantCount: product._count.variants,
-            // rating/reviewCount/badge were dropped in the variant
-            // migration; default them so the UI keeps rendering.
-            rating: 0,
-            reviewCount: 0,
+            rating:
+              ratings.length > 0
+                ? ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length
+                : 0,
+            reviewCount: ratings.length,
             badge: null,
+            variantCount: product.variants.length,
           };
         }),
-        categoryBanner: (() => {
-          const banner = category.banners[0];
-          if (banner === undefined) return null;
-          const meta =
-            banner.metadata &&
-            typeof banner.metadata === "object" &&
-            !Array.isArray(banner.metadata)
-              ? (banner.metadata as Record<string, unknown>)
-              : {};
-          const str = (key: string) =>
-            typeof meta[key] === "string" ? (meta[key] as string) : "";
-          return {
-            id: banner.id,
-            image: banner.image ?? "",
-            label: str("label"),
-            heading: str("heading"),
-            discount: str("discount"),
-            description: banner.description ?? "",
-            link: banner.link,
-          };
-        })(),
-      }))
-      .filter((category) => category.products.length > 0);
+        categoryBanner: banner
+          ? {
+              id: banner.id,
+              image: banner.image ?? "",
+              label: readMeta("label"),
+              heading: readMeta("heading"),
+              discount: readMeta("discount"),
+              description: banner.description ?? "",
+              link: banner.link ?? `/categories/${root.path}`,
+            }
+          : null,
+      };
+    });
   },
   ["home-categories"],
-  { revalidate: 300, tags: ["home-categories"] },
+  {
+    revalidate: 300,
+    tags: ["home-categories", "categories", "products"],
+  },
 );
 
 export function getHomeCategories(options?: {
   categoryLimit?: number;
   productsPerCategory?: number;
 }) {
-  const categoryLimit = options?.categoryLimit ?? DEFAULT_CATEGORY_LIMIT;
-  const productsPerCategory =
-    options?.productsPerCategory ?? DEFAULT_PRODUCTS_PER_CATEGORY;
-
-  return getCachedHomeCategories(categoryLimit, productsPerCategory);
+  return getCachedHomeCategories(
+    options?.categoryLimit ?? DEFAULT_CATEGORY_LIMIT,
+    options?.productsPerCategory ?? DEFAULT_PRODUCTS_PER_CATEGORY,
+  );
 }

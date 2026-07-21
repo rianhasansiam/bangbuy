@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 
 import AboutHero from "./components/AboutHero";
-import AboutStats from "./components/AboutStats";
 import OurStory from "./components/OurStory";
 import WhyChooseUs from "./components/WhyChooseUs";
 import OurValues from "./components/OurValues";

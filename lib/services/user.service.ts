@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@/app/generated/prisma/client";
 import { unstable_cache } from "next/cache";
 
 import { hashPassword, verifyPassword } from "@/lib/auth/passwords";

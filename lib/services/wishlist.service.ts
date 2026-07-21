@@ -1,9 +1,13 @@
 import "server-only";
 
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "@/app/generated/prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
 import { ServiceError } from "@/lib/services/service-error";
+import {
+  getEffectiveActiveCategoryIds,
+  isCategoryEffectivelyActive,
+} from "@/lib/services/category.service";
 import type {
   AddWishlistItemInput,
   SyncWishlistInput,
@@ -36,11 +40,14 @@ const wishlistInclude = {
       },
       variants: {
         orderBy: { createdAt: "asc" },
-        select: { stock: true },
+        select: { stock: true, isActive: true },
       },
       category: {
-        select: { name: true },
+        select: { name: true, path: true },
       },
+      brand: { select: { name: true } },
+      manufacturer: { select: { name: true } },
+      reviews: { select: { rating: true } },
     },
   },
 } satisfies Prisma.WishlistInclude;
@@ -60,6 +67,7 @@ export type WishlistUiItem = {
   rating: number;
   reviewCount: number;
   category: string;
+  categoryPath: string;
   inStock: boolean;
   variantCount: number;
   addedAt: string;
@@ -84,30 +92,46 @@ function toWishlistUiItem(row: WishlistWithProduct): WishlistUiItem {
   const listPrice = product.salePrice.toNumber();
   const currentPrice = effectivePrice(product);
   const hasValidDiscount = currentPrice < listPrice;
-  const stock = product.variants.reduce((sum, v) => sum + v.stock, 0);
+  const stock = product.variants
+    .filter((variant) => variant.isActive)
+    .reduce((sum, variant) => sum + variant.stock, 0);
+  const reviewCount = product.reviews.length;
+  const rating =
+    reviewCount === 0
+      ? 0
+      : product.reviews.reduce((sum, review) => sum + review.rating, 0) /
+        reviewCount;
 
   return {
     id: row.product.id,
     slug: row.product.slug,
     name: row.product.name,
-    brand: row.product.category.name,
+    brand:
+      row.product.brand?.name ?? row.product.manufacturer?.name ?? "Unbranded",
     image: row.product.images[0]?.url ?? FALLBACK_PRODUCT_IMAGE,
     price: currentPrice,
     originalPrice: hasValidDiscount ? listPrice : undefined,
-    // rating/reviewCount/badge were dropped in the variant migration.
-    rating: 0,
-    reviewCount: 0,
+    rating,
+    reviewCount,
     category: row.product.category.name,
+    categoryPath: row.product.category.path,
     inStock: row.product.status === "ACTIVE" && stock > 0,
-    variantCount: row.product.variants.length,
+    variantCount: row.product.variants.filter((variant) => variant.isActive).length,
     addedAt: row.createdAt.toISOString(),
     badge: undefined,
   };
 }
 
 export async function getMyWishlist(userId: string): Promise<WishlistUiItem[]> {
+  const activeCategoryIds = await getEffectiveActiveCategoryIds();
   const rows = await prisma.wishlist.findMany({
-    where: { userId },
+    where: {
+      userId,
+      product: {
+        status: "ACTIVE",
+        categoryId: { in: activeCategoryIds },
+      },
+    },
     orderBy: { createdAt: "desc" },
     include: wishlistInclude,
   });
@@ -121,13 +145,16 @@ export async function addWishlistItem(
 ): Promise<WishlistUiItem> {
   const product = await prisma.product.findUnique({
     where: { id: input.productId },
-    select: { id: true, name: true, status: true },
+    select: { id: true, name: true, status: true, categoryId: true },
   });
 
   if (!product) {
     throw new WishlistError(404, "Product not found.");
   }
   if (product.status !== "ACTIVE") {
+    throw new WishlistError(409, `"${product.name}" is no longer available.`);
+  }
+  if (!(await isCategoryEffectivelyActive(product.categoryId))) {
     throw new WishlistError(409, `"${product.name}" is no longer available.`);
   }
 
@@ -181,10 +208,12 @@ export async function syncWishlistProducts(
     return getMyWishlist(userId);
   }
 
+  const activeCategoryIds = await getEffectiveActiveCategoryIds();
   const activeProducts = await prisma.product.findMany({
     where: {
       id: { in: productIds },
       status: "ACTIVE",
+      categoryId: { in: activeCategoryIds },
     },
     select: { id: true },
   });

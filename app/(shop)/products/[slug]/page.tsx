@@ -12,6 +12,7 @@ import {
   listProducts,
   type ProductWithCategory,
 } from "@/lib/services/product.service";
+import { cleanVariantAttributes } from "@/lib/catalog/variant-options";
 import JsonLd from "@/components/seo/JsonLd";
 import { buildMetadata, clampDescription } from "@/lib/seo/metadata";
 import { breadcrumbJsonLd, productJsonLd } from "@/lib/seo/json-ld";
@@ -99,10 +100,48 @@ function productStockCount(product: ProductWithCategory) {
 }
 
 function variantImageLabel(variant: ProductVariant) {
-  const parts = [variant.color, variant.size].filter(
+  const attributes = cleanVariantAttributes(variant.attributes);
+  const parts = [
+    variant.name,
+    ...Object.values(attributes ?? {}),
+    variant.color,
+    variant.size,
+  ].filter(
     (value): value is string => typeof value === "string" && value.trim().length > 0,
   );
-  return parts.length > 0 ? parts.join(" / ") : variant.sku ?? undefined;
+  return parts.length > 0
+    ? Array.from(new Set(parts)).join(" / ")
+    : variant.sku ?? undefined;
+}
+
+function productReviewMetrics(product: ProductWithCategory) {
+  const reviewCount = product.reviews.length;
+  const rating =
+    reviewCount > 0
+      ? product.reviews.reduce((total, review) => total + review.rating, 0) /
+        reviewCount
+      : 0;
+  return { rating, reviewCount };
+}
+
+function productSpecifications(
+  product: ProductWithCategory,
+): Record<string, string | number | boolean> | null {
+  if (
+    !product.specifications ||
+    typeof product.specifications !== "object" ||
+    Array.isArray(product.specifications)
+  ) {
+    return null;
+  }
+
+  const entries = Object.entries(product.specifications).filter(
+    (entry): entry is [string, string | number | boolean] =>
+      typeof entry[1] === "string" ||
+      typeof entry[1] === "number" ||
+      typeof entry[1] === "boolean",
+  );
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
 }
 
 function ProductCatalogMetaTags({
@@ -115,7 +154,7 @@ function ProductCatalogMetaTags({
   currentPrice,
   hasDiscount,
 }: {
-  brand: string;
+  brand: string | null;
   category: string;
   condition: string;
   availability: string;
@@ -126,7 +165,6 @@ function ProductCatalogMetaTags({
 }) {
   const tags: [string, string][] = [
     ["og:type", "product"],
-    ["product:brand", brand],
     ["product:category", category],
     ["product:retailer_item_id", productCode],
     ["product:condition", condition],
@@ -136,6 +174,8 @@ function ProductCatalogMetaTags({
     ["og:price:amount", currentPrice.toFixed(2)],
     ["og:price:currency", siteConfig.currency],
   ];
+
+  if (brand) tags.push(["product:brand", brand]);
 
   if (hasDiscount) {
     tags.push(
@@ -158,6 +198,8 @@ function ProductCrawlerFacts({
   description,
   category,
   categoryHref,
+  brand,
+  manufacturer,
   productUrl,
   imageUrls,
   regularPrice,
@@ -170,6 +212,8 @@ function ProductCrawlerFacts({
   description: string;
   category: string;
   categoryHref: string;
+  brand: string | null;
+  manufacturer: string | null;
   productUrl: string;
   imageUrls: string[];
   regularPrice: number;
@@ -182,7 +226,8 @@ function ProductCrawlerFacts({
     <section className="sr-only" aria-label={`${name} product summary`}>
       <h2>{name}</h2>
       <p>{description}</p>
-      <p>Brand: {siteConfig.name}</p>
+      {brand && <p>Brand: {brand}</p>}
+      {manufacturer && <p>Manufacturer: {manufacturer}</p>}
       <p>
         Category: <Link href={categoryHref}>{category}</Link>
       </p>
@@ -236,18 +281,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const imageUrl = absoluteUrl(product.images[0]?.url ?? FALLBACK_PRODUCT_IMAGE);
   const availability = productIsInStock(product) ? "in stock" : "out of stock";
   const title = `${product.name} | ${siteConfig.name}`;
+  const brandName = product.brand?.name ?? null;
+  const manufacturerName = product.manufacturer?.name ?? null;
 
   return {
-    title,
+    title: { absolute: title },
     description,
     keywords: [
       product.name,
       product.category.name,
+      brandName,
+      manufacturerName,
+      product.modelNumber,
+      product.series,
       siteConfig.name,
       "buy online",
       "online shopping",
       siteConfig.currency,
-    ],
+    ].filter((keyword): keyword is string => Boolean(keyword)),
     alternates: { canonical },
     openGraph: {
       url: canonical,
@@ -271,7 +322,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     category: product.category.name,
     other: {
-      "product:brand": siteConfig.name,
+      ...(brandName ? { "product:brand": brandName } : {}),
       "og:type": "product",
       "product:category": product.category.name,
       "product:retailer_item_id": product.productCode,
@@ -318,7 +369,7 @@ export default async function ProductDetailsPage({ params }: Props) {
     notFound();
   }
 
-  // Pull a generous batch from the same category so we can split it into
+  // Pull a generous batch from the same canonical category subtree so we can split it into
   // recent + related without hitting the DB twice. Banners come from
   // their own cached services so a marketing change shows up here on the
   // next request without a full deploy.
@@ -326,7 +377,7 @@ export default async function ProductDetailsPage({ params }: Props) {
     listProducts({
       page: 1,
       pageSize: 24,
-      categoryId: product.categoryId,
+      categoryPath: product.category.path,
       status: "ACTIVE",
       sort: "latest",
     }),
@@ -357,7 +408,10 @@ export default async function ProductDetailsPage({ params }: Props) {
 
   const productImageUrls = product.images.map((img: ProductImage) => img.url);
 
-  const variantGalleryImages = product.variants
+  const activeVariants = product.variants.filter(
+    (variant: ProductVariant) => variant.isActive,
+  );
+  const variantGalleryImages = activeVariants
     .map((variant: ProductVariant) => ({
       variantId: variant.id,
       url: variant.image,
@@ -389,24 +443,41 @@ export default async function ProductDetailsPage({ params }: Props) {
     variantGalleryImages[0]?.url ??
     FALLBACK_PRODUCT_IMAGE;
   const initialVariant =
-    product.variants.find((variant: ProductVariant) => variant.stock > 0) ??
-    product.variants[0] ??
+    activeVariants.find((variant: ProductVariant) => variant.stock > 0) ??
+    activeVariants[0] ??
     null;
-
+  const categoryPath = product.category.path || product.category.slug;
+  const categoryBreadcrumb =
+    product.categoryBreadcrumb.length > 0
+      ? product.categoryBreadcrumb
+      : [
+          {
+            id: product.category.id,
+            name: product.category.name,
+            slug: product.category.slug,
+            path: categoryPath,
+          },
+        ];
+  const categoryLabel = categoryBreadcrumb.map((item) => item.name).join(" › ");
   const breadcrumbItems = [
-    {
-      label: product.category.name,
-      href: `/categories/${product.category.slug}`,
-    },
+    { label: "Products", href: "/products" },
+    ...categoryBreadcrumb.map((item) => ({
+      label: item.name,
+      href: `/categories/${item.path}`,
+    })),
     { label: product.name },
   ];
+  const specifications = productSpecifications(product);
+  const { rating, reviewCount } = productReviewMetrics(product);
+  const brandName = product.brand?.name ?? null;
+  const manufacturerName = product.manufacturer?.name ?? null;
 
   // Structured data: only emit for publicly visible (ACTIVE) products so
   // crawlers never see schema for hidden/soft-deleted items. We use the
   // first real variant SKU when present, otherwise the public product code.
   const isPublic = product.status === "ACTIVE";
   const primarySku =
-    product.variants.find((variant: ProductVariant) => variant.sku)?.sku ??
+    activeVariants.find((variant: ProductVariant) => variant.sku)?.sku ??
     product.productCode;
   const productSchema = isPublic
     ? productJsonLd({
@@ -416,19 +487,23 @@ export default async function ProductDetailsPage({ params }: Props) {
         path: `/products/${product.slug}`,
         price: currentPrice,
         inStock,
-        category: product.category.name,
+        category: categoryLabel,
         sku: primarySku,
-        brand: siteConfig.name,
+        brand: brandName,
+        rating:
+          reviewCount > 0
+            ? { average: rating, count: reviewCount }
+            : undefined,
       })
     : null;
   const breadcrumbSchema = isPublic
     ? breadcrumbJsonLd([
         { name: "Home", path: "/" },
         { name: "Products", path: "/products" },
-        {
-          name: product.category.name,
-          path: `/categories/${product.category.slug}`,
-        },
+        ...categoryBreadcrumb.map((item) => ({
+          name: item.name,
+          path: `/categories/${item.path}`,
+        })),
         { name: product.name, path: `/products/${product.slug}` },
       ])
     : null;
@@ -437,8 +512,8 @@ export default async function ProductDetailsPage({ params }: Props) {
     <div className="min-h-screen bg-brand-light-bg">
       {isPublic && (
         <ProductCatalogMetaTags
-          brand={siteConfig.name}
-          category={product.category.name}
+          brand={brandName}
+          category={categoryLabel}
           condition={PRODUCT_CONDITION}
           availability={availabilityLabel}
           productCode={product.productCode}
@@ -456,8 +531,10 @@ export default async function ProductDetailsPage({ params }: Props) {
         <ProductCrawlerFacts
           name={product.name}
           description={shortDescription}
-          category={product.category.name}
-          categoryHref={`/categories/${product.category.slug}`}
+          category={categoryLabel}
+          categoryHref={`/categories/${categoryPath}`}
+          brand={brandName}
+          manufacturer={manufacturerName}
           productUrl={productUrl}
           imageUrls={seoImageUrls}
           regularPrice={regularPrice}
@@ -484,7 +561,7 @@ export default async function ProductDetailsPage({ params }: Props) {
             New Arrivals
           </Link>
           <Link
-            href={`/categories/${product.category.slug}`}
+            href={`/categories/${categoryPath}`}
             className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-gray-700 transition hover:border-brand-red hover:text-brand-red"
           >
             {product.category.name}
@@ -514,12 +591,19 @@ export default async function ProductDetailsPage({ params }: Props) {
             <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100">
               <ProductInfo
                 name={product.name}
-                specs={[]}
                 productCode={product.productCode}
+                modelNumber={product.modelNumber}
+                series={product.series}
+                brand={product.brand}
+                manufacturer={product.manufacturer}
+                rating={rating}
+                reviewCount={reviewCount}
               />
 
               <ProductActions
+                key={product.id}
                 productId={product.id}
+                productSlug={product.slug}
                 productName={product.name}
                 image={primaryDisplayImage}
                 salePrice={product.salePrice.toNumber()}
@@ -530,11 +614,16 @@ export default async function ProductDetailsPage({ params }: Props) {
                 }
                 variants={product.variants.map((v: ProductVariant) => ({
                   id: v.id,
+                  variantKey: v.variantKey,
+                  name: v.name,
+                  modelNumber: v.modelNumber,
                   sku: v.sku,
                   color: v.color,
                   size: v.size,
+                  attributes: cleanVariantAttributes(v.attributes),
                   stock: v.stock,
                   image: v.image,
+                  isActive: v.isActive,
                 }))}
               />
             </div>
@@ -545,9 +634,12 @@ export default async function ProductDetailsPage({ params }: Props) {
           </div>
         </div>
 
-        {product.description?.trim() && (
+        {(product.description?.trim() || specifications) && (
           <div className="mt-10">
-            <ProductTabs description={product.description} />
+            <ProductTabs
+              description={product.description}
+              specifications={specifications}
+            />
           </div>
         )}
 

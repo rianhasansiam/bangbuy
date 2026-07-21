@@ -19,6 +19,8 @@ type SavedItem = {
   image: string;
   price: number;
   originalPrice?: number;
+  variantName?: string | null;
+  attributeSummary?: string | null;
   inStock: boolean;
 };
 
@@ -102,6 +104,13 @@ export default function SavedForLater({
                 >
                   {item.name}
                 </Link>
+                {(item.variantName || item.attributeSummary) && (
+                  <p className="mt-0.5 line-clamp-2 text-[10px] text-gray-500">
+                    {[item.variantName, item.attributeSummary]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
                 <div className="mt-1 flex items-baseline gap-1.5">
                   <span className="text-sm font-bold text-brand-red">
                     BDT {item.price.toLocaleString()}

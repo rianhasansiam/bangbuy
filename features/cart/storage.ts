@@ -4,6 +4,18 @@ import type { CartItem } from "@/features/cart/api";
 export const CART_LOCAL_STORAGE_KEY = "enterfly:cart:v1";
 export const DEFAULT_CART_STOCK = 10;
 
+function normalizeAttributes(value: unknown): Record<string, string> | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const entries = Object.entries(record).filter(
+    (entry): entry is [string, string] =>
+      entry[0].trim().length > 0 &&
+      typeof entry[1] === "string" &&
+      entry[1].trim().length > 0,
+  );
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
+}
+
 /** A cart line is uniquely identified by its variant when present,
  * otherwise by its product (single-variant / legacy items). */
 export function cartItemKey(item: {
@@ -31,7 +43,7 @@ export function normalizeCartItem(
     typeof entry.quantity === "number" && Number.isFinite(entry.quantity)
       ? entry.quantity
       : 1;
-  const quantity = Math.max(1, Math.round(quantityRaw));
+  const requestedQuantity = Math.max(1, Math.round(quantityRaw));
 
   const unitPrice =
     typeof entry.unitPrice === "number" && Number.isFinite(entry.unitPrice)
@@ -52,15 +64,30 @@ export function normalizeCartItem(
         ? entry.maxQuantity
         : fallbackStock;
   const stock = Math.max(0, Math.round(stockRaw));
+  const quantity = stock > 0 ? Math.min(requestedQuantity, stock) : 1;
+
+  const attributes = normalizeAttributes(entry.attributes ?? entry.variantAttributes);
+  const attributeSummary =
+    typeof entry.attributeSummary === "string" && entry.attributeSummary.trim()
+      ? entry.attributeSummary
+      : attributes
+        ? Object.entries(attributes)
+            .map(([key, value]) => `${key}: ${value}`)
+            .join(" · ")
+        : null;
 
   return {
     id: id || `local:${productId}`,
     productId,
     slug: typeof entry.slug === "string" && entry.slug ? entry.slug : null,
     variantId: typeof entry.variantId === "string" ? entry.variantId : null,
+    variantName:
+      typeof entry.variantName === "string" ? entry.variantName : null,
     sku: typeof entry.sku === "string" ? entry.sku : null,
     color: typeof entry.color === "string" ? entry.color : null,
     size: typeof entry.size === "string" ? entry.size : null,
+    attributes,
+    attributeSummary,
     name,
     image: typeof entry.image === "string" && entry.image ? entry.image : null,
     quantity,
@@ -98,11 +125,16 @@ export function readLocalCart(options?: { dedupeByProductId?: boolean }): CartIt
         continue;
       }
 
-      const quantity = Math.max(1, existing.quantity + item.quantity);
+      const stock = Math.min(existing.stock, item.stock);
+      const quantity =
+        stock > 0
+          ? Math.min(existing.quantity + item.quantity, stock)
+          : 1;
       deduped.set(key, {
         ...existing,
         quantity,
         lineTotal: existing.unitPrice * quantity,
+        stock,
       });
     }
 
@@ -118,21 +150,36 @@ export function writeLocalCart(items: CartItem[]) {
 }
 
 export function upsertLocalCartItem(list: CartItem[], item: CartItem): CartItem[] {
+  const availableStock = Math.max(0, Math.round(item.stock));
+  if (availableStock === 0) return list;
+
   const key = cartItemKey(item);
   const index = list.findIndex((entry) => cartItemKey(entry) === key);
   if (index === -1) {
-    return [item, ...list];
+    const quantity = Math.min(Math.max(1, item.quantity), availableStock);
+    return [
+      {
+        ...item,
+        quantity,
+        lineTotal: item.unitPrice * quantity,
+        stock: availableStock,
+      },
+      ...list,
+    ];
   }
 
   const existing = list[index];
-  const quantity = existing.quantity + item.quantity;
+  const quantity = Math.min(
+    existing.quantity + Math.max(1, item.quantity),
+    availableStock,
+  );
   const next: CartItem = {
     ...existing,
     ...item,
     image: item.image ?? existing.image,
     quantity,
     lineTotal: item.unitPrice * quantity,
-    stock: Math.max(existing.stock, item.stock),
+    stock: availableStock,
   };
 
   const merged = [...list];

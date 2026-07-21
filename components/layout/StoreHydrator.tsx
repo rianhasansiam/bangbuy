@@ -2,13 +2,22 @@
 
 import { useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/use-app-session";
 
 import type { AppDispatch, RootState } from "@/store";
-import { setCartData, resetCartState } from "@/store/slices/cart.slice";
 import {
-  setWishlistItems,
+  resetCartState,
+  setCartData,
+  setCartError,
+  setCartLoading,
+  setCartMode,
+} from "@/store/slices/cart.slice";
+import {
   resetWishlistState,
+  setWishlistError,
+  setWishlistItems,
+  setWishlistLoading,
+  setWishlistMode,
 } from "@/store/slices/wishlist.slice";
 import { readLocalCart, writeLocalCart } from "@/features/cart/storage";
 import { CART_LOCAL_STORAGE_KEY } from "@/features/cart/storage";
@@ -54,10 +63,11 @@ export default function StoreHydrator() {
 
   // Guards against React Strict Mode double-mount
   const didLocalHydrateRef = useRef(false);
-  // Track previous session status for transition detection
-  const prevStatusRef = useRef<string>(status);
   // Prevent concurrent server-sync operations
   const serverSyncInProgressRef = useRef(false);
+  // Invalidate stale responses when the authenticated user changes or logs out.
+  const serverSyncGenerationRef = useRef(0);
+  const authenticatedUserKeyRef = useRef<string | null>(null);
 
   /* ═══════════════════════════════════════════════════════════════════
    * Phase 1: Immediate localStorage hydration
@@ -95,20 +105,19 @@ export default function StoreHydrator() {
    *   • authenticated → unauthenticated (logout)  → reset
    * ═══════════════════════════════════════════════════════════════════ */
   useEffect(() => {
-    const prevStatus = prevStatusRef.current;
-    prevStatusRef.current = status;
-
     // Still loading — nothing to do yet.
     if (status === "loading") return;
 
     /* ── Logout: authenticated → unauthenticated ──────────────────── */
-    if (prevStatus === "authenticated" && status === "unauthenticated") {
-      // Reset Redux to empty state
-      dispatch(resetCartState());
-      dispatch(resetWishlistState());
+    if (status === "unauthenticated") {
+      const wasAuthenticated = authenticatedUserKeyRef.current !== null;
+      authenticatedUserKeyRef.current = null;
+      serverSyncGenerationRef.current += 1;
+      serverSyncInProgressRef.current = false;
 
-      // Clear localStorage
-      if (typeof window !== "undefined") {
+      if (wasAuthenticated) {
+        dispatch(resetCartState());
+        dispatch(resetWishlistState());
         window.localStorage.removeItem(CART_LOCAL_STORAGE_KEY);
         window.localStorage.removeItem(WISHLIST_LOCAL_STORAGE_KEY);
       }
@@ -116,62 +125,135 @@ export default function StoreHydrator() {
     }
 
     /* ── Authenticated: fetch/merge from server ───────────────────── */
-    if (status === "authenticated") {
-      if (serverSyncInProgressRef.current) return;
-      serverSyncInProgressRef.current = true;
+    const role = session?.user?.role;
+    const currentUserKey =
+      session?.user?.id ?? session?.user?.email ?? "authenticated";
+    const previousUserKey = authenticatedUserKeyRef.current;
+    const userChanged =
+      previousUserKey !== null && previousUserKey !== currentUserKey;
 
-      const role = session?.user?.role;
-      const isLogin = prevStatus === "unauthenticated";
+    if (userChanged) {
+      serverSyncGenerationRef.current += 1;
+      serverSyncInProgressRef.current = false;
+      dispatch(resetCartState());
+      dispatch(resetWishlistState());
+      window.localStorage.removeItem(CART_LOCAL_STORAGE_KEY);
+      window.localStorage.removeItem(WISHLIST_LOCAL_STORAGE_KEY);
+    }
+    authenticatedUserKeyRef.current = currentUserKey;
 
-      // Read guest data BEFORE async operations
-      const guestCartItems = readLocalCart();
-      const guestWishlistItems = readLocalWishlist();
-      const hasGuestCart = guestCartItems.length > 0;
-      const hasGuestWishlist = guestWishlistItems.length > 0;
+    if (serverSyncInProgressRef.current) return;
 
-      // Decide whether to merge or just fetch
-      const shouldMergeCart = isLogin && hasGuestCart;
-      const shouldMergeWishlist = isLogin && hasGuestWishlist;
+    const canSyncCart = canUseServerCart(role, status);
+    const canSyncWishlist = canUseServerWishlist(role, status);
+    if (!canSyncCart && !canSyncWishlist) return;
 
-      // Cart: merge or fetch
-      if (canUseServerCart(role, status)) {
-        const cartPromise = shouldMergeCart
-          ? mergeGuestCartToServer(guestCartItems)
-          : fetchServerCartSnapshot();
+    const localCartItems = readLocalCart();
+    const localWishlistItems = readLocalWishlist();
+    const shouldMergeCart = localCartItems.some((item) =>
+      item.id.startsWith("local:"),
+    );
+    const shouldMergeWishlist =
+      previousUserKey === null && localWishlistItems.length > 0;
+    const syncGeneration = ++serverSyncGenerationRef.current;
+    const isCurrentSync = () =>
+      serverSyncGenerationRef.current === syncGeneration;
+    const operations: Promise<void>[] = [];
 
+    serverSyncInProgressRef.current = true;
+
+    // Cart: merge or fetch
+    if (canSyncCart) {
+      dispatch(setCartError(null));
+      dispatch(setCartLoading(true));
+      dispatch(setCartMode("server"));
+
+      const cartPromise = shouldMergeCart
+        ? mergeGuestCartToServer(localCartItems)
+        : fetchServerCartSnapshot();
+
+      operations.push(
         cartPromise
           .then((snapshot) => {
+            if (!isCurrentSync()) return;
             writeLocalCart(snapshot.items);
             dispatch(setCartData(snapshot));
           })
-          .catch(() => {
-            // Fail silently — localStorage data is already in Redux
-          });
-      }
+          .catch((error: unknown) => {
+            if (!isCurrentSync()) return;
+            dispatch(setCartMode("local"));
+            dispatch(
+              setCartError(
+                error instanceof Error
+                  ? error.message
+                  : "Failed to load cart from server.",
+              ),
+            );
+            // Keep the already-hydrated local snapshot as the fallback.
+          })
+          .finally(() => {
+            if (isCurrentSync()) dispatch(setCartLoading(false));
+          }),
+      );
+    }
 
-      // Wishlist: merge or fetch
-      if (canUseServerWishlist(role, status)) {
-        const wishlistPromise = shouldMergeWishlist
-          ? mergeGuestWishlistToServer(
-              guestWishlistItems.map((item) => item.id),
-            )
-          : fetchServerWishlist();
+    // Wishlist: merge or fetch
+    if (canSyncWishlist) {
+      dispatch(setWishlistError(null));
+      dispatch(setWishlistLoading(true));
+      dispatch(setWishlistMode("server"));
 
+      const wishlistPromise = shouldMergeWishlist
+        ? mergeGuestWishlistToServer(localWishlistItems.map((item) => item.id))
+        : fetchServerWishlist();
+
+      operations.push(
         wishlistPromise
           .then((items) => {
+            if (!isCurrentSync()) return;
             writeLocalWishlist(items);
             dispatch(setWishlistItems(items));
           })
-          .catch(() => {
-            // Fail silently — localStorage data is already in Redux
-          });
-      }
+          .catch((error: unknown) => {
+            if (!isCurrentSync()) return;
+            dispatch(setWishlistMode("local"));
+            dispatch(
+              setWishlistError(
+                error instanceof Error
+                  ? error.message
+                  : "Failed to load wishlist from server.",
+              ),
+            );
+            // Keep the already-hydrated local snapshot as the fallback.
+          })
+          .finally(() => {
+            if (isCurrentSync()) dispatch(setWishlistLoading(false));
+          }),
+      );
     }
+
+    void Promise.allSettled(operations).finally(() => {
+      if (isCurrentSync()) serverSyncInProgressRef.current = false;
+    });
 
     /* ── Unauthenticated (guest): localStorage is already loaded ── */
     // Phase 1 already populated Redux from localStorage.
     // Nothing more to do for guests.
-  }, [status, session, dispatch]);
+  }, [
+    status,
+    session?.user?.email,
+    session?.user?.id,
+    session?.user?.role,
+    dispatch,
+  ]);
+
+  useEffect(
+    () => () => {
+      serverSyncGenerationRef.current += 1;
+      serverSyncInProgressRef.current = false;
+    },
+    [],
+  );
 
   return null;
 }

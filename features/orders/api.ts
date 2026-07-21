@@ -32,8 +32,11 @@ export type OrderItem = {
   productName: string;
   productImage: string | null;
   sku: string | null;
+  variantName: string | null;
   color: string | null;
   size: string | null;
+  variantAttributes: Record<string, string> | null;
+  attributeSummary: string | null;
   quantity: number;
   unitPrice: number;
   totalPrice: number;
@@ -122,8 +125,11 @@ export type MyOrderSummary = {
     productName: string;
     productImage: string | null;
     sku: string | null;
+    variantName: string | null;
     color: string | null;
     size: string | null;
+    variantAttributes: Record<string, string> | null;
+    attributeSummary: string | null;
     product: {
       id: string;
       name: string;

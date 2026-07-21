@@ -26,6 +26,7 @@ import {
   buildDealForm,
   buildPromoForm,
   buildTopForm,
+  categoryBannerHref,
   createCarouselBanner,
   createCategoryBanner,
   createDealBanner,
@@ -41,6 +42,7 @@ import {
   EMPTY_DEAL_FORM,
   EMPTY_PROMO_FORM,
   EMPTY_TOP_FORM,
+  fetchActiveRootBannerCategories,
   fetchAllBanners,
   parseIntSafe,
   updateCarouselBanner,
@@ -52,6 +54,7 @@ import {
   type CarouselBannerRow,
   type CarouselFormState,
   type CategoryBannerFormState,
+  type CategoryBannerCategoryOption,
   type CategoryBannerRow,
   type DealBannerRow,
   type DealFormState,
@@ -60,10 +63,6 @@ import {
   type TopBannerRow,
   type TopFormState,
 } from "@/features/admin-banners/api";
-import {
-  fetchActiveCategories,
-  type CategoryOption,
-} from "@/features/admin-products/api";
 import {
   confirmMajorAction,
   notifyActionError,
@@ -112,7 +111,9 @@ export default function AdminBannersPage() {
   const [promoForm, setPromoForm] = useState<PromoFormState>(EMPTY_PROMO_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [categories, setCategories] = useState<
+    CategoryBannerCategoryOption[]
+  >([]);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
 
   const { visibleItems: visibleCarousel, queueRemoval: queueCarouselRemoval } =
@@ -167,7 +168,7 @@ export default function AdminBannersPage() {
     let ignore = false;
     const run = async () => {
       try {
-        const rows = await fetchActiveCategories();
+        const rows = await fetchActiveRootBannerCategories();
         if (!ignore) {
           setCategories(rows);
           setCategoriesError(null);
@@ -214,6 +215,7 @@ export default function AdminBannersPage() {
       setCategoryForm({
         ...EMPTY_CATEGORY_BANNER_FORM,
         categoryId: categories[0]?.id ?? "",
+        link: categories[0] ? categoryBannerHref(categories[0].path) : "",
       });
     if (kind === "top") setTopForm(EMPTY_TOP_FORM);
     if (kind === "deal") setDealForm(EMPTY_DEAL_FORM);

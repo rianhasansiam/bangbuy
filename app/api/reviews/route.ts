@@ -1,10 +1,10 @@
 import type { NextRequest } from "next/server";
-import { revalidateTag } from "next/cache";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/api/guards";
 import { hasUserOrAdminAccess } from "@/lib/auth/access";
 import { created, jsonError, ok } from "@/lib/api/response";
+import { revalidateCacheTagsImmediately } from "@/lib/cache/revalidation";
 import {
   createCustomerReview,
   listProductReviews,
@@ -76,7 +76,11 @@ export async function POST(request: NextRequest) {
       guard.session.user.id,
       parsed.data,
     );
-    revalidateTag("admin-reviews", "max");
+    revalidateCacheTagsImmediately([
+      "admin-reviews",
+      "home-categories",
+      "products",
+    ]);
     return created(review);
   } catch (error) {
     return handleServiceError("reviews.POST", error);

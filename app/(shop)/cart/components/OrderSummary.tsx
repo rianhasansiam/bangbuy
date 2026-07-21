@@ -1,57 +1,71 @@
 "use client";
 
 import {
-  ShieldCheck,
-  Lock,
-  Sparkles,
   ChevronRight,
+  Lock,
+  ShieldCheck,
+  Sparkles,
 } from "lucide-react";
-import PromoCodeInput from "./PromoCodeInput";
+
 import { ButtonLoader } from "@/components/ui/loading";
+import type { CheckoutSummary } from "@/features/checkout/api";
+
+import PromoCodeInput from "./PromoCodeInput";
 
 type AppliedPromo = {
   code: string;
   discount: number;
-  description: string;
+  description: string | null;
 };
 
 type OrderSummaryProps = {
-  subtotal: number;
-  discount: number;
-  shipping: number;
-  tax: number;
-  total: number;
-  totalSavings: number;
+  summary: CheckoutSummary | null;
+  fallbackSubtotal: number;
   itemCount: number;
   promo: AppliedPromo | null;
-  onApplyPromo: (code: string) => AppliedPromo | null;
+  promoError: string | null;
+  onApplyPromo: (code: string) => void;
   onRemovePromo: () => void;
+  onPromoErrorClear: () => void;
   onCheckout: () => void;
+  isApplyingPromo?: boolean;
   isCheckingOut?: boolean;
+  isPricingLoading?: boolean;
 };
 
 export default function OrderSummary({
-  subtotal,
-  discount,
-  shipping,
-  tax,
-  total,
-  totalSavings,
+  summary,
+  fallbackSubtotal,
   itemCount,
   promo,
+  promoError,
   onApplyPromo,
   onRemovePromo,
+  onPromoErrorClear,
   onCheckout,
+  isApplyingPromo = false,
   isCheckingOut = false,
+  isPricingLoading = false,
 }: OrderSummaryProps) {
-  const totalSaved = totalSavings + discount;
+  const verifiedSummary = isPricingLoading ? null : summary;
+  const subtotal = verifiedSummary?.subtotal ?? fallbackSubtotal;
+  const totalSaved = verifiedSummary
+    ? verifiedSummary.totalSavings + verifiedSummary.discount
+    : 0;
 
   return (
-    <aside className="sticky top-[88px] flex flex-col gap-4 rounded-3xl border border-brand-border bg-brand-white p-5 shadow-sm sm:p-6">
-      <div className="flex items-center justify-between">
+    <aside
+      className="sticky top-[88px] flex flex-col gap-4 rounded-3xl border border-brand-border bg-brand-white p-5 shadow-sm sm:p-6"
+      aria-busy={isPricingLoading || isCheckingOut}
+    >
+      <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-gray-900">Order Summary</h2>
         <span className="rounded-full bg-brand-light-bg px-2.5 py-0.5 text-xs font-semibold text-brand-black">
-          {itemCount} {itemCount === 1 ? "item" : "items"}
+          {verifiedSummary
+            ? "Server-priced"
+            : isPricingLoading
+              ? "Verifying..."
+              : `${itemCount} ${itemCount === 1 ? "item" : "items"}`}
         </span>
       </div>
 
@@ -59,36 +73,70 @@ export default function OrderSummary({
         applied={promo}
         onApply={onApplyPromo}
         onRemove={onRemovePromo}
+        onErrorClear={onPromoErrorClear}
+        error={promoError}
+        isApplying={isApplyingPromo}
       />
 
       <div className="space-y-2.5 border-t border-dashed border-brand-border pt-4 text-sm">
         <SummaryRow label="Subtotal" value={subtotal} />
-        {discount > 0 && (
+        {verifiedSummary?.discount && promo ? (
           <SummaryRow
-            label={`Promo (${promo?.code})`}
-            value={-discount}
+            label={`Promo (${promo.code})`}
+            value={-verifiedSummary.discount}
             tone="success"
           />
+        ) : null}
+        {verifiedSummary ? (
+          <>
+            <SummaryRow
+              label={
+                verifiedSummary.isOutsideDhaka
+                  ? "Delivery outside Dhaka"
+                  : "Delivery inside Dhaka"
+              }
+              value={verifiedSummary.shipping}
+              freeLabel={
+                verifiedSummary.shipping === 0 ? "FREE" : undefined
+              }
+            />
+            <SummaryRow
+              label={`Tax (${Math.round(verifiedSummary.taxRate * 100)}%)`}
+              value={verifiedSummary.tax}
+            />
+          </>
+        ) : (
+          <>
+            <SummaryTextRow
+              label="Shipping"
+              value={isPricingLoading ? "Calculating..." : "At checkout"}
+            />
+            <SummaryTextRow
+              label="Tax"
+              value={isPricingLoading ? "Calculating..." : "At checkout"}
+            />
+          </>
         )}
-        <SummaryRow
-          label="Shipping"
-          value={shipping}
-          freeLabel={shipping === 0 ? "FREE" : undefined}
-        />
-        <SummaryRow label="Tax (5%)" value={tax} />
       </div>
 
       <div className="rounded-2xl border border-brand-border bg-brand-light-bg p-4">
-        <div className="flex items-baseline justify-between">
-          <span className="text-sm font-semibold text-gray-700">Total</span>
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-sm font-semibold text-gray-700">
+            {verifiedSummary ? "Total" : "Subtotal"}
+          </span>
           <span className="text-2xl font-extrabold text-brand-red sm:text-3xl">
-            BDT {total.toLocaleString()}
+            BDT {(verifiedSummary?.total ?? subtotal).toLocaleString()}
           </span>
         </div>
-        {totalSaved > 0 && (
+        {verifiedSummary && totalSaved > 0 && (
           <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
             <Sparkles className="h-3 w-3" />
             You&apos;re saving BDT {totalSaved.toLocaleString()} today
+          </p>
+        )}
+        {!verifiedSummary && (
+          <p className="mt-1 text-[11px] text-gray-500">
+            Shipping, tax, and promotions are verified before checkout.
           </p>
         )}
       </div>
@@ -98,7 +146,7 @@ export default function OrderSummary({
         onClick={onCheckout}
         disabled={isCheckingOut}
         aria-busy={isCheckingOut}
-        className="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-brand-red px-5 text-base font-bold text-brand-white shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl"
+        className="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-brand-red px-5 text-base font-bold text-brand-white shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isCheckingOut ? (
           <ButtonLoader label="Opening checkout..." />
@@ -113,9 +161,18 @@ export default function OrderSummary({
 
       <div className="flex items-center justify-center gap-1.5 text-[11px] text-gray-500">
         <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-        SSL encrypted • Buyer protection included
+        Pricing verified by server · Buyer protection included
       </div>
     </aside>
+  );
+}
+
+function SummaryTextRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-gray-600">{label}</span>
+      <span className="font-semibold text-gray-500">{value}</span>
+    </div>
   );
 }
 
