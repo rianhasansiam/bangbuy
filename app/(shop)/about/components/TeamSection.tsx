@@ -1,5 +1,3 @@
-"use client";
-
 import Image from "next/image";
 import { Users } from "lucide-react";
 
@@ -7,8 +5,7 @@ const team = [
   {
     name: "Rian Hasan Siam",
     role: "Founder & CTO",
-    image:
-      "/images/RianDP.png",
+    image: "/images/RianDp.png",
   },
   {
     name: "Md Nafiz Islam Nayan",

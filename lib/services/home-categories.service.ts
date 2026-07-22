@@ -2,6 +2,7 @@ import "server-only";
 
 import { unstable_cache } from "next/cache";
 
+import { catalogCacheTags } from "@/lib/cache/catalog-tags";
 import { prisma } from "@/lib/db/prisma";
 
 export type HomeCategoryProduct = {
@@ -283,8 +284,11 @@ const getCachedHomeCategories = unstable_cache(
   },
   ["home-categories"],
   {
-    revalidate: 300,
-    tags: ["home-categories", "categories", "products"],
+    revalidate: 600,
+    tags: [
+      catalogCacheTags.homepage,
+      catalogCacheTags.categoryTree,
+    ],
   },
 );
 

@@ -3,7 +3,15 @@ import "server-only";
 import type { Prisma } from "@/app/generated/prisma/client";
 import { unstable_cache } from "next/cache";
 
+import { catalogCacheTags } from "@/lib/cache/catalog-tags";
+import { cleanOptionalText } from "@/lib/catalog/catalog-entity";
 import { prisma } from "@/lib/db/prisma";
+import {
+  catalogRoutePath,
+  deleteCatalogRedirectsForEntity,
+  getCatalogRedirectByPath,
+  releaseCatalogRedirectSources,
+} from "@/lib/services/catalog-redirect.service";
 import { ServiceError } from "@/lib/services/service-error";
 import type {
   CategoryQueryInput,
@@ -12,7 +20,8 @@ import type {
   UpdateCategoryInput,
 } from "@/lib/validations/category.validation";
 
-const CATEGORY_CACHE_SECONDS = 300;
+const CATEGORY_CACHE_SECONDS = 1800;
+const CATEGORY_LANDING_PRODUCT_LIMIT = 40;
 const CATEGORY_TREE_LOCK_KEY = "bangbuy:category-tree:v1";
 
 const categoryRecordSelect = {
@@ -22,6 +31,9 @@ const categoryRecordSelect = {
   path: true,
   description: true,
   image: true,
+  seoTitle: true,
+  metaDescription: true,
+  ogImage: true,
   status: true,
   position: true,
   depth: true,
@@ -95,7 +107,35 @@ export function slugify(input: string): string {
 }
 
 export function normalizeCategoryPath(path: string): string {
-  return path.trim().replace(/^\/+|\/+$/g, "");
+  return path
+    .trim()
+    .toLowerCase()
+    .replace(/^\/+|\/+$/g, "");
+}
+
+function categoryRoutePath(path: string): string {
+  return `/categories/${normalizeCategoryPath(path)}`;
+}
+
+export type CategoryRedirectDto = {
+  sourcePath: string;
+  destinationPath: string;
+  entityType: "CATEGORY";
+  entityId: string;
+  permanent: boolean;
+};
+
+/**
+ * Resolve an old category URL recorded during a hierarchy move. The input may
+ * be either a category-relative path or a full `/categories/...` path.
+ */
+export function getCategoryRedirectByPath(
+  path: string,
+): Promise<CategoryRedirectDto | null> {
+  const sourcePath = catalogRoutePath("categories", path);
+  return sourcePath
+    ? getCatalogRedirectByPath(sourcePath, "CATEGORY")
+    : Promise.resolve(null);
 }
 
 export function isCategoryPathInSubtree(
@@ -204,7 +244,10 @@ function buildCategoryGraph(
   for (const record of records) {
     if (!eligible(record.id) || record.parentId === null) continue;
     if (!eligible(record.parentId)) continue;
-    childCounts.set(record.parentId, (childCounts.get(record.parentId) ?? 0) + 1);
+    childCounts.set(
+      record.parentId,
+      (childCounts.get(record.parentId) ?? 0) + 1,
+    );
   }
 
   const totalProductCounts = new Map<string, number>();
@@ -227,7 +270,9 @@ function buildCategoryGraph(
 
   const dtoById = new Map<string, CategoryDto>();
   for (const record of records) {
-    const parent = record.parentId ? recordById.get(record.parentId) : undefined;
+    const parent = record.parentId
+      ? recordById.get(record.parentId)
+      : undefined;
     const directProductCount = eligible(record.id)
       ? (directProductCounts.get(record.id) ?? 0)
       : 0;
@@ -280,16 +325,22 @@ function compareCategories(
     case "name":
       return a.name.localeCompare(b.name) || a.id.localeCompare(b.id);
     case "latest":
-      return b.createdAt.getTime() - a.createdAt.getTime() ||
-        a.id.localeCompare(b.id);
+      return (
+        b.createdAt.getTime() - a.createdAt.getTime() ||
+        a.id.localeCompare(b.id)
+      );
     case "oldest":
-      return a.createdAt.getTime() - b.createdAt.getTime() ||
-        a.id.localeCompare(b.id);
+      return (
+        a.createdAt.getTime() - b.createdAt.getTime() ||
+        a.id.localeCompare(b.id)
+      );
     case "position":
     default:
-      return a.position - b.position ||
+      return (
+        a.position - b.position ||
         a.name.localeCompare(b.name) ||
-        a.id.localeCompare(b.id);
+        a.id.localeCompare(b.id)
+      );
   }
 }
 
@@ -336,10 +387,7 @@ export async function listCategories(
   let items = [...graph.dtoById.values()].filter((category) => {
     if (options?.effectiveActiveOnly && !category.effectiveActive) return false;
     if (query.status && category.status !== query.status) return false;
-    if (
-      query.parentId !== undefined &&
-      category.parentId !== query.parentId
-    ) {
+    if (query.parentId !== undefined && category.parentId !== query.parentId) {
       return false;
     }
     if (!search) return true;
@@ -388,10 +436,16 @@ const getCachedCategoryList = unstable_cache(
     query: CategoryQueryInput,
     effectiveActiveOnly: boolean,
     activeProductsOnly: boolean,
-  ) =>
-    listCategories(query, { effectiveActiveOnly, activeProductsOnly }),
+  ) => listCategories(query, { effectiveActiveOnly, activeProductsOnly }),
   ["categories-list-v2"],
-  { revalidate: CATEGORY_CACHE_SECONDS, tags: ["categories", "products"] },
+  {
+    revalidate: CATEGORY_CACHE_SECONDS,
+    tags: [
+      catalogCacheTags.catalog,
+      catalogCacheTags.listings,
+      catalogCacheTags.categoryTree,
+    ],
+  },
 );
 
 export function listCategoriesCached(
@@ -454,7 +508,10 @@ async function loadActiveCategoryTree(): Promise<CategoryDto[]> {
 const getCachedActiveCategoryTree = unstable_cache(
   loadActiveCategoryTree,
   ["active-category-tree-v2"],
-  { revalidate: CATEGORY_CACHE_SECONDS, tags: ["categories", "products"] },
+  {
+    revalidate: CATEGORY_CACHE_SECONDS,
+    tags: [catalogCacheTags.categoryTree],
+  },
 );
 
 export function getActiveCategoryTree(): Promise<CategoryDto[]> {
@@ -492,6 +549,7 @@ async function loadActiveCategoryByPath(
   const products = await prisma.product.findMany({
     where: { categoryId: { in: subtreeIds }, status: "ACTIVE" },
     orderBy: { createdAt: "desc" },
+    take: CATEGORY_LANDING_PRODUCT_LIMIT,
     select: {
       id: true,
       slug: true,
@@ -504,14 +562,33 @@ async function loadActiveCategoryByPath(
         take: 1,
         select: { url: true },
       },
-      variants: {
-        where: { isActive: true },
-        orderBy: { createdAt: "asc" },
-        select: { stock: true },
-      },
-      reviews: { select: { rating: true } },
     },
   });
+
+  const productIds = products.map((product) => product.id);
+  const [variantStats, reviewStats] =
+    productIds.length > 0
+      ? await Promise.all([
+          prisma.productVariant.groupBy({
+            by: ["productId"],
+            where: { productId: { in: productIds }, isActive: true },
+            _count: { _all: true },
+            _sum: { stock: true },
+          }),
+          prisma.review.groupBy({
+            by: ["productId"],
+            where: { productId: { in: productIds } },
+            _count: { _all: true },
+            _avg: { rating: true },
+          }),
+        ])
+      : [[], []];
+  const variantsByProduct = new Map(
+    variantStats.map((row) => [row.productId, row]),
+  );
+  const reviewsByProduct = new Map(
+    reviewStats.map((row) => [row.productId, row]),
+  );
 
   return {
     ...category,
@@ -523,18 +600,12 @@ async function loadActiveCategoryByPath(
         candidateDiscount !== null && candidateDiscount < price
           ? candidateDiscount
           : null;
-      const stock = product.variants.reduce(
-        (sum, variant) => sum + variant.stock,
-        0,
-      );
-      const reviewCount = product.reviews.length;
-      const rating =
-        reviewCount > 0
-          ? product.reviews.reduce(
-              (sum, review) => sum + review.rating,
-              0,
-            ) / reviewCount
-          : 0;
+      const variantSummary = variantsByProduct.get(product.id);
+      const reviewSummary = reviewsByProduct.get(product.id);
+      const stock = variantSummary?._sum.stock ?? 0;
+      const variantCount = variantSummary?._count._all ?? 0;
+      const reviewCount = reviewSummary?._count._all ?? 0;
+      const rating = reviewSummary?._avg.rating ?? 0;
       return {
         id: product.id,
         slug: product.slug,
@@ -544,7 +615,7 @@ async function loadActiveCategoryByPath(
         discountPrice,
         image: product.images[0]?.url ?? null,
         inStock: stock > 0,
-        variantCount: product.variants.length,
+        variantCount,
         rating,
         reviewCount,
       };
@@ -552,16 +623,23 @@ async function loadActiveCategoryByPath(
   };
 }
 
-const getCachedActiveCategoryByPath = unstable_cache(
-  loadActiveCategoryByPath,
-  ["active-category-by-path-v2"],
-  { revalidate: CATEGORY_CACHE_SECONDS, tags: ["categories", "products"] },
-);
-
 export function getActiveCategoryByPath(
   path: string,
 ): Promise<PublicCategory | null> {
-  return getCachedActiveCategoryByPath(normalizeCategoryPath(path));
+  const normalizedPath = normalizeCategoryPath(path);
+  if (!normalizedPath) return Promise.resolve(null);
+
+  return unstable_cache(
+    () => loadActiveCategoryByPath(normalizedPath),
+    ["active-category-by-path-v3", normalizedPath],
+    {
+      revalidate: CATEGORY_CACHE_SECONDS,
+      tags: [
+        catalogCacheTags.categoryTree,
+        catalogCacheTags.categoryPath(normalizedPath),
+      ],
+    },
+  )();
 }
 
 /** Compatibility for the former root-only `/categories/[slug]` page. */
@@ -598,8 +676,7 @@ export async function isCategoryEffectivelyActive(
 }
 
 export type CategoryIdentifier =
-  | { id: string; path?: never }
-  | { path: string; id?: never };
+  { id: string; path?: never } | { path: string; id?: never };
 
 export async function getCategorySubtreeIds(
   identifier: CategoryIdentifier,
@@ -662,6 +739,63 @@ export function categoryHasProducts(id: string): Promise<boolean> {
 }
 
 type CategoryTransaction = Prisma.TransactionClient;
+
+type CategoryPathMove = {
+  entityId: string;
+  oldPath: string;
+  newPath: string;
+};
+
+async function recordCategoryPathMoves(
+  tx: CategoryTransaction,
+  moves: readonly CategoryPathMove[],
+): Promise<void> {
+  const redirects = moves
+    .map((move) => ({
+      entityId: move.entityId,
+      sourcePath: categoryRoutePath(move.oldPath),
+      destinationPath: categoryRoutePath(move.newPath),
+    }))
+    .filter((move) => move.sourcePath !== move.destinationPath);
+  if (redirects.length === 0) return;
+
+  // A destination may be a historical source when a category moves back to
+  // an earlier location. It is live again, so it must no longer redirect.
+  await tx.catalogRedirect.deleteMany({
+    where: {
+      sourcePath: { in: redirects.map((redirect) => redirect.destinationPath) },
+      entityType: "CATEGORY",
+    },
+  });
+
+  for (const redirect of redirects) {
+    // Collapse earlier hops that pointed at the path being moved now.
+    await tx.catalogRedirect.updateMany({
+      where: {
+        destinationPath: redirect.sourcePath,
+        entityType: "CATEGORY",
+      },
+      data: { destinationPath: redirect.destinationPath },
+    });
+
+    await tx.catalogRedirect.upsert({
+      where: { sourcePath: redirect.sourcePath },
+      update: {
+        destinationPath: redirect.destinationPath,
+        entityType: "CATEGORY",
+        entityId: redirect.entityId,
+        permanent: true,
+      },
+      create: {
+        sourcePath: redirect.sourcePath,
+        destinationPath: redirect.destinationPath,
+        entityType: "CATEGORY",
+        entityId: redirect.entityId,
+        permanent: true,
+      },
+    });
+  }
+}
 
 async function withCategoryTreeLock<T>(
   operation: (tx: CategoryTransaction) => Promise<T>,
@@ -790,10 +924,14 @@ export async function createCategory(
         position: desiredPosition,
         description: input.description ?? null,
         image: input.image ?? null,
+        seoTitle: cleanOptionalText(input.seoTitle) ?? null,
+        metaDescription: cleanOptionalText(input.metaDescription) ?? null,
+        ogImage: cleanOptionalText(input.ogImage) ?? null,
         status: input.status,
       },
       select: { id: true },
     });
+    await releaseCatalogRedirectSources(tx, [`/categories/${path}`]);
 
     const orderedIds = siblings.map((sibling) => sibling.id);
     orderedIds.splice(desiredPosition, 0, created.id);
@@ -861,10 +999,7 @@ export async function updateCategory(
       );
     }
 
-    if (
-      nextParent &&
-      isCategoryPathInSubtree(nextParent.path, existing.path)
-    ) {
+    if (nextParent && isCategoryPathInSubtree(nextParent.path, existing.path)) {
       throw new CategoryServiceError(
         "CATEGORY_CYCLE",
         "A category cannot be moved below one of its descendants.",
@@ -876,10 +1011,20 @@ export async function updateCategory(
     if (input.name !== undefined) data.name = input.name;
     if (input.description !== undefined) data.description = input.description;
     if (input.image !== undefined) data.image = input.image;
+    if (input.seoTitle !== undefined) {
+      data.seoTitle = cleanOptionalText(input.seoTitle);
+    }
+    if (input.metaDescription !== undefined) {
+      data.metaDescription = cleanOptionalText(input.metaDescription);
+    }
+    if (input.ogImage !== undefined) {
+      data.ogImage = cleanOptionalText(input.ogImage);
+    }
     if (input.status !== undefined) data.status = input.status;
     if (hasParentUpdate) data.parentId = nextParentId;
 
     let descendants: Array<{ id: string; path: string; depth: number }> = [];
+    let pathMoves: CategoryPathMove[] = [];
     let newRootPath = existing.path;
     let newRootDepth = existing.depth;
 
@@ -917,6 +1062,15 @@ export async function updateCategory(
         );
       }
 
+      pathMoves = [
+        { entityId: id, oldPath: existing.path, newPath: newRootPath },
+        ...descendants.map((descendant) => ({
+          entityId: descendant.id,
+          oldPath: descendant.path,
+          newPath: newRootPath + descendant.path.slice(existing.path.length),
+        })),
+      ];
+
       data.path = newRootPath;
       data.depth = newRootDepth;
     }
@@ -941,6 +1095,7 @@ export async function updateCategory(
           select: { id: true },
         });
       }
+      await recordCategoryPathMoves(tx, pathMoves);
       await normalizeSiblingPositions(tx, existing.parentId);
     }
 
@@ -1018,7 +1173,10 @@ export async function deleteCategory(id: string): Promise<CategoryDto> {
   return withCategoryTreeLock(async (tx) => {
     const existing = await tx.category.findUnique({
       where: { id },
-      select: { ...categoryRecordSelect, _count: { select: { children: true } } },
+      select: {
+        ...categoryRecordSelect,
+        _count: { select: { children: true } },
+      },
     });
     if (!existing) {
       throw new CategoryServiceError(
@@ -1030,10 +1188,7 @@ export async function deleteCategory(id: string): Promise<CategoryDto> {
 
     const subtree = await tx.category.findMany({
       where: {
-        OR: [
-          { id },
-          { path: { startsWith: `${existing.path}/` } },
-        ],
+        OR: [{ id }, { path: { startsWith: `${existing.path}/` } }],
       },
       select: { id: true },
     });
@@ -1066,6 +1221,7 @@ export async function deleteCategory(id: string): Promise<CategoryDto> {
     ).dtoById.get(id)!;
 
     await tx.category.delete({ where: { id }, select: { id: true } });
+    await deleteCatalogRedirectsForEntity(tx, "CATEGORY", id);
     await normalizeSiblingPositions(tx, existing.parentId);
     return snapshot;
   });

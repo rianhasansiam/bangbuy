@@ -97,7 +97,9 @@ export default function AdminCategoriesPage() {
           !normalizedQuery ||
           category.name.toLowerCase().includes(normalizedQuery) ||
           category.path.toLowerCase().includes(normalizedQuery) ||
-          (category.description ?? "").toLowerCase().includes(normalizedQuery);
+          (category.description ?? "").toLowerCase().includes(normalizedQuery) ||
+          (category.seoTitle ?? "").toLowerCase().includes(normalizedQuery) ||
+          (category.metaDescription ?? "").toLowerCase().includes(normalizedQuery);
         const matchesStatus = statusFilter === "ALL" || category.status === statusFilter;
         if (!matchesQuery || !matchesStatus) continue;
         included.add(category.id);
@@ -175,6 +177,9 @@ export default function AdminCategoriesPage() {
       name,
       description: form.description.trim() || null,
       image: form.image.trim() || null,
+      seoTitle: form.seoTitle.trim() || null,
+      metaDescription: form.metaDescription.trim() || null,
+      ogImage: form.ogImage.trim() || null,
       status: form.status,
       parentId: form.parentId || null,
       position: parsedPosition,
@@ -192,6 +197,11 @@ export default function AdminCategoriesPage() {
         if (body.name !== editing.name) patch.name = body.name;
         if (body.description !== editing.description) patch.description = body.description;
         if (body.image !== editing.image) patch.image = body.image;
+        if (body.seoTitle !== editing.seoTitle) patch.seoTitle = body.seoTitle;
+        if (body.metaDescription !== editing.metaDescription) {
+          patch.metaDescription = body.metaDescription;
+        }
+        if (body.ogImage !== editing.ogImage) patch.ogImage = body.ogImage;
         if (body.status !== editing.status) patch.status = body.status;
         if (body.parentId !== editing.parentId) patch.parentId = body.parentId;
         if (body.position !== editing.position) patch.position = body.position;

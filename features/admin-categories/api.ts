@@ -15,6 +15,9 @@ export type AdminCategoryRow = {
   path: string;
   description: string | null;
   image: string | null;
+  seoTitle: string | null;
+  metaDescription: string | null;
+  ogImage: string | null;
   status: CategoryStatus;
   effectiveActive: boolean;
   parentId: string | null;
@@ -54,6 +57,9 @@ export type CategoryFormState = {
   name: string;
   description: string;
   image: string;
+  seoTitle: string;
+  metaDescription: string;
+  ogImage: string;
   status: CategoryStatus;
   parentId: string;
   position: string;
@@ -63,6 +69,9 @@ export const EMPTY_FORM: CategoryFormState = {
   name: "",
   description: "",
   image: "",
+  seoTitle: "",
+  metaDescription: "",
+  ogImage: "",
   status: "ACTIVE",
   parentId: "",
   position: "0",
@@ -115,6 +124,9 @@ function parseRow(entry: unknown): AdminCategoryRow {
     path: asString(item.path) || asString(item.slug),
     description: asNullableString(item.description),
     image: asNullableString(item.image),
+    seoTitle: asNullableString(item.seoTitle),
+    metaDescription: asNullableString(item.metaDescription),
+    ogImage: asNullableString(item.ogImage),
     status,
     effectiveActive:
       typeof item.effectiveActive === "boolean"
@@ -191,6 +203,9 @@ type CategoryMutationBody = {
   name: string;
   description: string | null;
   image: string | null;
+  seoTitle: string | null;
+  metaDescription: string | null;
+  ogImage: string | null;
   status: CategoryStatus;
   parentId: string | null;
   position: number;
@@ -258,6 +273,9 @@ export function buildFormFromCategory(category: AdminCategoryRow): CategoryFormS
     name: category.name,
     description: category.description ?? "",
     image: category.image ?? "",
+    seoTitle: category.seoTitle ?? "",
+    metaDescription: category.metaDescription ?? "",
+    ogImage: category.ogImage ?? "",
     status: category.status,
     parentId: category.parentId ?? "",
     position: String(category.position),

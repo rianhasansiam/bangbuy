@@ -4,7 +4,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/api/guards";
 import { hasUserOrAdminAccess } from "@/lib/auth/access";
 import { created, jsonError, ok } from "@/lib/api/response";
-import { revalidateCacheTagsImmediately } from "@/lib/cache/revalidation";
+import { invalidateProductsById } from "@/lib/cache/catalog-invalidation";
 import {
   createCustomerReview,
   listProductReviews,
@@ -76,11 +76,10 @@ export async function POST(request: NextRequest) {
       guard.session.user.id,
       parsed.data,
     );
-    revalidateCacheTagsImmediately([
-      "admin-reviews",
-      "home-categories",
-      "products",
-    ]);
+    await invalidateProductsById([review.productId], {
+      reason: `customer review created: ${review.id}`,
+      reviews: true,
+    });
     return created(review);
   } catch (error) {
     return handleServiceError("reviews.POST", error);

@@ -17,6 +17,7 @@ export function CategoriesBanner({ saleBanner }: { saleBanner: SaleBanner }) {
         src={saleBanner.image}
         alt={saleBanner.heading}
         fill
+        sizes="208px"
         className="object-cover opacity-80 transition-all duration-500 group-hover:scale-110 group-hover:opacity-50"
       />
       <div className="absolute right-0 top-0 h-24 w-24 -translate-y-1/2 translate-x-1/2 rounded-full bg-brand-white/10" />

@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { isAdminRequest, requireAdmin } from "@/lib/api/guards";
 import { created, jsonError, ok } from "@/lib/api/response";
-import { revalidateCacheTagsImmediately } from "@/lib/cache/revalidation";
+import { invalidateBrandMutation } from "@/lib/cache/catalog-invalidation";
 import { logAdminActivity } from "@/lib/services/admin-activity.service";
 import { createBrand, listBrands } from "@/lib/services/brand.service";
 import { handleServiceError } from "@/lib/services/service-error";
@@ -13,15 +13,6 @@ import {
 } from "@/lib/validations/brand.validation";
 
 export const dynamic = "force-dynamic";
-
-const BRAND_TAGS = [
-  "brands",
-  "categories",
-  "products",
-  "home-categories",
-  "catalog-facets",
-  "catalog-search",
-] as const;
 
 /** Public reads expose ACTIVE brands; admins can read every status. */
 export async function GET(request: NextRequest) {
@@ -80,7 +71,11 @@ export async function POST(request: NextRequest) {
       href: "/admin/brands",
       actor: guard.session.user,
     });
-    revalidateCacheTagsImmediately(BRAND_TAGS);
+    await invalidateBrandMutation({
+      id: brand.id,
+      slugs: [brand.slug],
+      reason: `brand created: ${brand.id}`,
+    });
     return created(brand);
   } catch (error) {
     return handleServiceError("brands.POST", error);

@@ -1,6 +1,7 @@
 import type { z } from "zod";
 
 import { adminJsonRoute, adminRoute } from "@/lib/api/handlers";
+import { invalidateProductsById } from "@/lib/cache/catalog-invalidation";
 import { placeOrderForCustomer } from "@/lib/services/checkout.service";
 import {
   getOrderForAdmin,
@@ -43,18 +44,19 @@ export const GET = adminRoute({
 export const POST = adminJsonRoute({
   scope: "admin.orders.POST",
   schema: adminCheckoutSchema,
-  revalidate: [
-    "admin-orders",
-    "home-categories",
-    "categories",
-    "promo-codes",
-  ],
+  revalidate: ["admin-orders", "promo-codes"],
   handler: async ({ body }) => {
     const { customerId, advancePayment, ...checkoutInput } = body;
     const result = await placeOrderForCustomer(customerId, {
       ...checkoutInput,
       clearCart: false,
     }, { advancePayment });
+    await invalidateProductsById(
+      result.order.items.flatMap((item) =>
+        item.productId ? [item.productId] : [],
+      ),
+      { reason: `admin order stock decrement: ${result.order.id}` },
+    );
     const order = await getOrderForAdmin(result.order.id);
 
     if (!order) {

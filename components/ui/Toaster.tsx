@@ -12,7 +12,6 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, XCircle, Info, AlertTriangle, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -57,14 +56,9 @@ function ToastCard({
   }, [item.id, item.duration, onDismiss]);
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 40, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 20, scale: 0.95 }}
-      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+    <div
       className={cn(
-        "flex w-full max-w-sm items-start gap-3 rounded-2xl border px-4 py-3 shadow-lg",
+        "flex w-full max-w-sm animate-in items-start gap-3 rounded-2xl border px-4 py-3 shadow-lg fade-in slide-in-from-bottom-4 duration-300 motion-reduce:animate-none",
         STYLES[item.type],
       )}
       role="alert"
@@ -80,7 +74,7 @@ function ToastCard({
       >
         <X className="h-4 w-4" />
       </button>
-    </motion.div>
+    </div>
   );
 }
 
@@ -105,16 +99,15 @@ export default function Toaster() {
 
   return (
     <div
+      role="region"
       aria-label="Notifications"
       className="pointer-events-none fixed bottom-6 right-4 z-9999 flex flex-col items-end gap-2 sm:right-6"
     >
-      <AnimatePresence mode="popLayout">
-        {toasts.map((t) => (
-          <div key={t.id} className="pointer-events-auto w-full max-w-sm">
-            <ToastCard item={t} onDismiss={dismiss} />
-          </div>
-        ))}
-      </AnimatePresence>
+      {toasts.map((t) => (
+        <div key={t.id} className="pointer-events-auto w-full max-w-sm">
+          <ToastCard item={t} onDismiss={dismiss} />
+        </div>
+      ))}
     </div>
   );
 }

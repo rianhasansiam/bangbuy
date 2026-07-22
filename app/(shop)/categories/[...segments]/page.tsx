@@ -2,18 +2,28 @@ import type { Metadata } from "next";
 import { ArrowRight, Boxes } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
+import { cache } from "react";
 
 import ProductCard from "@/components/product/ProductCard";
 import JsonLd from "@/components/seo/JsonLd";
 import { breadcrumbJsonLd, collectionPageJsonLd } from "@/lib/seo/json-ld";
-import { buildMetadata } from "@/lib/seo/metadata";
-import { siteConfig } from "@/lib/seo/site";
+import {
+  categoryFallbackDescription,
+  categoryFallbackTitle,
+} from "@/lib/seo/catalog-metadata";
+import { buildMetadata, noIndexMetadata } from "@/lib/seo/metadata";
 import {
   getActiveCategoryByPath,
+  getActiveCategoryTree,
+  getCategoryRedirectByPath,
   normalizeCategoryPath,
+  type CategoryDto,
   type PublicCategoryProduct,
 } from "@/lib/services/category.service";
+
+export const revalidate = 1800;
+export const dynamicParams = true;
 
 type Props = {
   params: Promise<{ segments: string[] }>;
@@ -21,42 +31,89 @@ type Props = {
 
 const FALLBACK_PRODUCT_IMAGE =
   "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400";
+const CATEGORY_STATIC_PARAM_LIMIT = 100;
+
+const getCategoryPageData = cache(getActiveCategoryByPath);
 
 function pathFromSegments(segments: string[]): string {
   return normalizeCategoryPath(segments.join("/"));
 }
 
+function collectCategoryParams(
+  categories: CategoryDto[],
+): { segments: string[]; productCount: number }[] {
+  return categories.flatMap((category) => [
+    {
+      segments: category.path.split("/").filter(Boolean),
+      productCount: category.totalProductCount,
+    },
+    ...collectCategoryParams(category.children ?? []),
+  ]);
+}
+
+export async function generateStaticParams() {
+  return collectCategoryParams(await getActiveCategoryTree())
+    .sort((left, right) => right.productCount - left.productCount)
+    .slice(0, CATEGORY_STATIC_PARAM_LIMIT)
+    .map(({ segments }) => ({ segments }));
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { segments } = await params;
+  const rawRequestedPath = segments.join("/");
   const requestedPath = pathFromSegments(segments);
-  const category = await getActiveCategoryByPath(requestedPath);
+  const category = await getCategoryPageData(requestedPath);
 
   if (!category) {
-    return buildMetadata({
-      title: "Category Not Found",
-      description: "The requested category could not be found.",
-      path: `/categories/${requestedPath}`,
-      index: false,
-    });
+    const redirectRecord = await getCategoryRedirectByPath(requestedPath);
+    if (redirectRecord) permanentRedirect(redirectRecord.destinationPath);
+    return noIndexMetadata(
+      "Category unavailable",
+      "This category is unavailable or no longer published.",
+    );
+  }
+  if (rawRequestedPath !== category.path) {
+    permanentRedirect(`/categories/${category.path}`);
   }
 
   const description =
-    category.description?.trim() ||
-    `Shop ${category.name} at ${siteConfig.name}. Browse ${category.totalProductCount} products from this category and its active subcategories.`;
+    category.metaDescription?.trim() ||
+    categoryFallbackDescription({
+      name: category.name,
+      path: category.path,
+      breadcrumb: category.breadcrumb,
+      description: category.description,
+      totalProductCount: category.totalProductCount,
+    });
 
   return buildMetadata({
-    title: `${category.name} - Shop Online`,
+    title:
+      category.seoTitle?.trim() ||
+      categoryFallbackTitle({
+        name: category.name,
+        path: category.path,
+        breadcrumb: category.breadcrumb,
+      }),
     description,
     path: `/categories/${category.path}`,
-    image: category.image,
+    image: category.ogImage?.trim() || category.image,
     keywords: [category.name, ...category.breadcrumb.map((item) => item.name)],
   });
 }
 
 export default async function CategoryPage({ params }: Props) {
   const { segments } = await params;
-  const category = await getActiveCategoryByPath(pathFromSegments(segments));
-  if (!category) notFound();
+  const rawRequestedPath = segments.join("/");
+  const requestedPath = pathFromSegments(segments);
+  const category = await getCategoryPageData(requestedPath);
+  if (!category) {
+    const redirectRecord = await getCategoryRedirectByPath(requestedPath);
+    if (redirectRecord) permanentRedirect(redirectRecord.destinationPath);
+    notFound();
+  }
+  if (rawRequestedPath !== category.path) {
+    permanentRedirect(`/categories/${category.path}`);
+  }
 
   const categoryPath = `/categories/${category.path}`;
   const crumbs = [
@@ -91,7 +148,10 @@ export default async function CategoryPage({ params }: Props) {
                 <li key={crumb.path} className="flex items-center gap-1.5">
                   {index > 0 && <span aria-hidden>/</span>}
                   {current ? (
-                    <span aria-current="page" className="font-medium text-gray-800">
+                    <span
+                      aria-current="page"
+                      className="font-medium text-gray-800"
+                    >
                       {crumb.name}
                     </span>
                   ) : (
@@ -120,17 +180,21 @@ export default async function CategoryPage({ params }: Props) {
                 </p>
               )}
               <p className="mt-3 text-sm font-semibold text-gray-700">
-                {category.totalProductCount} {category.totalProductCount === 1 ? "product" : "products"}
-                {category.childCount > 0 ? ` across ${category.childCount} immediate subcategories` : ""}
+                {category.totalProductCount}{" "}
+                {category.totalProductCount === 1 ? "product" : "products"}
+                {category.childCount > 0
+                  ? ` across ${category.childCount} immediate subcategories`
+                  : ""}
               </p>
             </div>
             {category.image ? (
               <div className="relative h-32 w-full shrink-0 overflow-hidden rounded-xl bg-brand-light-bg sm:w-56">
                 <Image
                   src={category.image}
-                  alt=""
+                  alt={`${category.name} category`}
                   fill
-                  sizes="224px"
+                  sizes="(min-width: 640px) 224px, calc(100vw - 4.5rem)"
+                  preload
                   className="object-cover"
                 />
               </div>
@@ -145,7 +209,10 @@ export default async function CategoryPage({ params }: Props) {
         {category.children.length > 0 && (
           <section aria-labelledby="subcategory-heading" className="mb-9">
             <div className="mb-4 flex items-center justify-between">
-              <h2 id="subcategory-heading" className="text-xl font-extrabold text-gray-950">
+              <h2
+                id="subcategory-heading"
+                className="text-xl font-extrabold text-gray-950"
+              >
                 Explore {category.name}
               </h2>
               <Link
@@ -167,7 +234,8 @@ export default async function CategoryPage({ params }: Props) {
                       {child.name}
                     </h3>
                     <p className="mt-1 text-xs text-gray-500">
-                      {child.totalProductCount} {child.totalProductCount === 1 ? "product" : "products"}
+                      {child.totalProductCount}{" "}
+                      {child.totalProductCount === 1 ? "product" : "products"}
                     </p>
                   </div>
                   <ArrowRight className="h-4 w-4 shrink-0 text-brand-red transition group-hover:translate-x-1" />
@@ -181,7 +249,8 @@ export default async function CategoryPage({ params }: Props) {
           <div className="rounded-2xl border border-brand-border bg-white p-10 text-center shadow-sm">
             <h2 className="text-lg font-bold text-gray-900">No products yet</h2>
             <p className="mt-2 text-sm text-gray-600">
-              There are no visible products in this category or its subcategories right now.
+              There are no visible products in this category or its
+              subcategories right now.
             </p>
             <Link
               href="/products"
@@ -194,10 +263,15 @@ export default async function CategoryPage({ params }: Props) {
           <section aria-labelledby="category-products-heading">
             <div className="mb-4 flex items-end justify-between gap-3">
               <div>
-                <h2 id="category-products-heading" className="text-xl font-extrabold text-gray-950">
+                <h2
+                  id="category-products-heading"
+                  className="text-xl font-extrabold text-gray-950"
+                >
                   Products in {category.name}
                 </h2>
-                <p className="mt-1 text-xs text-gray-500">Includes active descendant categories.</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Includes active descendant categories.
+                </p>
               </div>
               <Link
                 href={`/products?categoryPath=${encodeURIComponent(category.path)}`}
@@ -214,7 +288,9 @@ export default async function CategoryPage({ params }: Props) {
                   slug={product.slug}
                   name={product.name}
                   price={product.discountPrice ?? product.price}
-                  originalPrice={product.discountPrice !== null ? product.price : undefined}
+                  originalPrice={
+                    product.discountPrice !== null ? product.price : undefined
+                  }
                   image={product.image ?? FALLBACK_PRODUCT_IMAGE}
                   variantCount={product.variantCount}
                   rating={product.rating}

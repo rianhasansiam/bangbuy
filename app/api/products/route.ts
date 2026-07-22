@@ -4,7 +4,10 @@ import { z } from "zod";
 
 import { isAdminRequest, requireAdmin } from "@/lib/api/guards";
 import { jsonError, created, ok } from "@/lib/api/response";
-import { revalidateCacheTagsImmediately } from "@/lib/cache/revalidation";
+import {
+  invalidateProductSnapshots,
+  productInvalidationSnapshot,
+} from "@/lib/cache/catalog-invalidation";
 import { logAdminActivity } from "@/lib/services/admin-activity.service";
 import {
   createProduct,
@@ -108,15 +111,11 @@ export async function POST(request: NextRequest) {
       href: "/admin/products",
       actor: guard.session.user,
     });
-    // No dedicated "products" cache exists; the catalog read is uncached.
-    // Bust the cached surfaces that embed product data.
-    revalidateCacheTagsImmediately([
-      "home-categories",
-      "categories",
-      "products",
-      "catalog-facets",
-      "catalog-search",
-    ]);
+    invalidateProductSnapshots([productInvalidationSnapshot(product)], {
+      reason: `product created: ${product.id}`,
+      sitemap: true,
+      categoryTree: true,
+    });
     return created(serializeProduct(product, { includeBuyingPrice: true }));
   } catch (error) {
     if (error instanceof ProductError) {

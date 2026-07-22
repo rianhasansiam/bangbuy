@@ -4,7 +4,10 @@ import { z } from "zod";
 
 import { isAdminRequest, requireAdmin } from "@/lib/api/guards";
 import { jsonError, ok } from "@/lib/api/response";
-import { revalidateCacheTagsImmediately } from "@/lib/cache/revalidation";
+import {
+  invalidateProductSnapshots,
+  productInvalidationSnapshot,
+} from "@/lib/cache/catalog-invalidation";
 import { logAdminActivity } from "@/lib/services/admin-activity.service";
 import {
   getProductById,
@@ -102,6 +105,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   try {
+    const previousSnapshot = productInvalidationSnapshot(existing);
     const product = await updateProduct(id, parsed.data);
     await logAdminActivity({
       kind: "product",
@@ -111,13 +115,16 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       href: "/admin/products",
       actor: guard.session.user,
     });
-    revalidateCacheTagsImmediately([
-      "home-categories",
-      "categories",
-      "products",
-      "catalog-facets",
-      "catalog-search",
-    ]);
+    invalidateProductSnapshots(
+      [previousSnapshot, productInvalidationSnapshot(product)],
+      {
+        reason: `product updated: ${product.id}`,
+        sitemap: true,
+        categoryTree:
+          parsed.data.status !== undefined ||
+          parsed.data.categoryId !== undefined,
+      },
+    );
     return ok(serializeProduct(product, { includeBuyingPrice: true }));
   } catch (error) {
     if (error instanceof ProductError) {
@@ -176,6 +183,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
   if (!existing) return jsonError(404, "Product not found.");
 
   try {
+    const previousSnapshot = productInvalidationSnapshot(existing);
     await hardDeleteProduct(id);
     await logAdminActivity({
       kind: "product",
@@ -185,13 +193,11 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       href: "/admin/products",
       actor: guard.session.user,
     });
-    revalidateCacheTagsImmediately([
-      "home-categories",
-      "categories",
-      "products",
-      "catalog-facets",
-      "catalog-search",
-    ]);
+    invalidateProductSnapshots([previousSnapshot], {
+      reason: `product deleted: ${existing.id}`,
+      sitemap: true,
+      categoryTree: true,
+    });
     return ok(serializeProduct(existing));
   } catch (error) {
     if (

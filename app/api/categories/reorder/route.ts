@@ -4,7 +4,7 @@ import { z } from "zod";
 import { handleCategoryApiError } from "@/lib/api/category-error";
 import { requireAdmin } from "@/lib/api/guards";
 import { jsonError, ok } from "@/lib/api/response";
-import { revalidateCategoryCaches } from "@/lib/cache/category-revalidation";
+import { invalidateCategoryMutation } from "@/lib/cache/catalog-invalidation";
 import { logAdminActivity } from "@/lib/services/admin-activity.service";
 import { reorderCategories } from "@/lib/services/category.service";
 import { reorderCategoriesSchema } from "@/lib/validations/category.validation";
@@ -42,7 +42,10 @@ export async function PATCH(request: NextRequest) {
       href: "/admin/categories",
       actor: guard.session.user,
     });
-    revalidateCategoryCaches();
+    invalidateCategoryMutation({
+      reason: `categories reordered under ${parsed.data.parentId ?? "root"}`,
+      categoryIds: parsed.data.orderedIds,
+    });
     return ok(categories);
   } catch (error) {
     return handleCategoryApiError("categories/reorder.PATCH", error);

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { handleCategoryApiError } from "@/lib/api/category-error";
 import { isAdminRequest, requireAdmin } from "@/lib/api/guards";
 import { created, jsonError, ok } from "@/lib/api/response";
-import { revalidateCategoryCaches } from "@/lib/cache/category-revalidation";
+import { invalidateCategoryMutation } from "@/lib/cache/catalog-invalidation";
 import { logAdminActivity } from "@/lib/services/admin-activity.service";
 import {
   createCategory,
@@ -78,7 +78,11 @@ export async function POST(request: NextRequest) {
       href: "/admin/categories",
       actor: guard.session.user,
     });
-    revalidateCategoryCaches();
+    invalidateCategoryMutation({
+      reason: `category created: ${category.id}`,
+      categoryIds: [category.id],
+      newPaths: [category.path],
+    });
     return created(category);
   } catch (error) {
     return handleCategoryApiError("categories.POST", error);

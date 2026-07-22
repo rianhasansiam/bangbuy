@@ -42,6 +42,12 @@ describe("createProductSchema flexible variants", () => {
       ...baseProduct,
       modelNumber: "MTR-220",
       series: "Pro",
+      seoTitle: "Industrial Motor MTR-220",
+      metaDescription: "A compact industrial motor for automation systems.",
+      ogImage: "/images/mtr-220.webp",
+      gtin: "0123456789012",
+      itemCondition: "REFURBISHED",
+      primaryImageAlt: "Industrial motor viewed from the front",
       brandId: "brand-1",
       manufacturerId: "manufacturer-1",
       specifications: { Power: "2 kW", ThreePhase: true },
@@ -56,10 +62,34 @@ describe("createProductSchema flexible variants", () => {
       ],
     });
     expect(parsed.success).toBe(true);
+    if (!parsed.success) throw parsed.error;
+    expect(parsed.data).toMatchObject({
+      gtin: "0123456789012",
+      itemCondition: "REFURBISHED",
+      primaryImageAlt: "Industrial motor viewed from the front",
+    });
+  });
+
+  it("rejects unsupported item conditions", () => {
+    expect(
+      createProductSchema.safeParse({
+        ...baseProduct,
+        itemCondition: "OPEN_BOX",
+      }).success,
+    ).toBe(false);
   });
 });
 
 describe("updateProductSchema variant identity", () => {
+  it("accepts canonical slug changes and rejects non-canonical slugs", () => {
+    expect(
+      updateProductSchema.parse({ slug: "industrial-motor-v2" }),
+    ).toEqual({ slug: "industrial-motor-v2" });
+    expect(
+      updateProductSchema.safeParse({ slug: "Industrial Motor V2" }).success,
+    ).toBe(false);
+  });
+
   it("rejects a repeated existing variant id", () => {
     const parsed = updateProductSchema.safeParse({
       variants: [

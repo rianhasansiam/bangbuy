@@ -449,7 +449,7 @@ const getCachedActiveCarouselBanners = unstable_cache(
     return rows.map(toCarouselRow);
   },
   ["carousel-banners-active"],
-  { revalidate: 300, tags: ["carousel-banners"] },
+  { revalidate: 600, tags: ["carousel-banners"] },
 );
 
 export function getActiveCarouselBanners() {
@@ -735,7 +735,7 @@ const getCachedActiveDealBanners = unstable_cache(
     return rows.map(toDealRow);
   },
   ["deal-banners-active"],
-  { revalidate: 300, tags: ["deal-banners"] },
+  { revalidate: 900, tags: ["deal-banners"] },
 );
 
 export function getActiveDealBanners() {
@@ -752,7 +752,7 @@ const getCachedActivePromoBanners = unstable_cache(
     return rows.map(toPromoRow);
   },
   ["promo-banners-active"],
-  { revalidate: 300, tags: ["promo-banners"] },
+  { revalidate: 900, tags: ["promo-banners"] },
 );
 
 export function getActivePromoBanners() {
@@ -773,7 +773,7 @@ const getCachedActiveTopBanners = unstable_cache(
     return rows.map(toTopRow);
   },
   ["top-banners-active"],
-  { revalidate: 300, tags: ["top-banners"] },
+  { revalidate: 1800, tags: ["top-banners"] },
 );
 
 export function getActiveTopBanners() {

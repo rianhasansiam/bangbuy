@@ -17,7 +17,6 @@
  */
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { AlertTriangle, Trash2, CheckCircle2, Info } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -66,33 +65,22 @@ function Dialog({
   }, [onClose]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.18 }}
-      className="fixed inset-0 z-10000 flex items-center justify-center p-4"
+    <div
+      className="fixed inset-0 z-10000 flex animate-in items-center justify-center p-4 fade-in duration-200 motion-reduce:animate-none"
       aria-modal="true"
       role="dialog"
       aria-labelledby="confirm-title"
       aria-describedby="confirm-desc"
     >
       {/* Backdrop */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+      <div
         className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={() => onClose(false)}
       />
 
       {/* Panel */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.92, y: 16 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.92, y: 16 }}
-        transition={{ type: "spring", stiffness: 400, damping: 32 }}
-        className="relative z-10 w-full max-w-md rounded-3xl border border-gray-100 bg-white p-6 shadow-2xl"
+      <div
+        className="relative z-10 w-full max-w-md animate-in rounded-3xl border border-gray-100 bg-white p-6 shadow-2xl zoom-in-95 slide-in-from-bottom-4 duration-200 motion-reduce:animate-none"
       >
         {/* Icon */}
         <div
@@ -140,8 +128,8 @@ function Dialog({
             {dialog.confirmLabel ?? "Confirm"}
           </button>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }
 
@@ -161,9 +149,5 @@ export default function ConfirmDialog() {
     setActive(null);
   };
 
-  return (
-    <AnimatePresence>
-      {active && <Dialog key="dialog" dialog={active} onClose={handleClose} />}
-    </AnimatePresence>
-  );
+  return active ? <Dialog dialog={active} onClose={handleClose} /> : null;
 }

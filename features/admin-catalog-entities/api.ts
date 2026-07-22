@@ -8,6 +8,9 @@ export type AdminCatalogEntityRow = {
   name: string;
   slug: string;
   description: string | null;
+  seoTitle: string | null;
+  metaDescription: string | null;
+  ogImage: string | null;
   logo: string | null;
   website: string | null;
   country: string | null;
@@ -19,7 +22,11 @@ export type AdminCatalogEntityRow = {
 
 export type CatalogEntityFormState = {
   name: string;
+  slug: string;
   description: string;
+  seoTitle: string;
+  metaDescription: string;
+  ogImage: string;
   logo: string;
   website: string;
   country: string;
@@ -28,7 +35,11 @@ export type CatalogEntityFormState = {
 
 export const EMPTY_CATALOG_ENTITY_FORM: CatalogEntityFormState = {
   name: "",
+  slug: "",
   description: "",
+  seoTitle: "",
+  metaDescription: "",
+  ogImage: "",
   logo: "",
   website: "",
   country: "",
@@ -78,6 +89,9 @@ export function parseCatalogEntityRow(
     name: asString(item.name),
     slug: asString(item.slug),
     description: asNullableString(item.description),
+    seoTitle: asNullableString(item.seoTitle),
+    metaDescription: asNullableString(item.metaDescription),
+    ogImage: asNullableString(item.ogImage),
     logo: asNullableString(item.logo),
     website: asNullableString(item.website),
     country: asNullableString(item.country),
@@ -178,7 +192,11 @@ export function fetchActiveManufacturerOptions() {
 
 export type CatalogEntityWriteBody = {
   name: string;
+  slug?: string;
   description: string | null;
+  seoTitle?: string | null;
+  metaDescription?: string | null;
+  ogImage?: string | null;
   logo: string | null;
   website: string | null;
   country?: string | null;
@@ -240,7 +258,11 @@ export function buildCatalogEntityForm(
 ): CatalogEntityFormState {
   return {
     name: row.name,
+    slug: row.slug,
     description: row.description ?? "",
+    seoTitle: row.seoTitle ?? "",
+    metaDescription: row.metaDescription ?? "",
+    ogImage: row.ogImage ?? "",
     logo: row.logo ?? "",
     website: row.website ?? "",
     country: row.country ?? "",

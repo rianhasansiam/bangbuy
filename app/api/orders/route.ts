@@ -1,9 +1,10 @@
 import type { NextRequest } from "next/server";
-import { revalidateTag } from "next/cache";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/api/guards";
 import { created, jsonError } from "@/lib/api/response";
+import { invalidateProductsById } from "@/lib/cache/catalog-invalidation";
+import { revalidateCacheTags } from "@/lib/cache/revalidation";
 import { placeOrder } from "@/lib/services/checkout.service";
 import { handleServiceError } from "@/lib/services/service-error";
 import { checkoutSchema } from "@/lib/validations/checkout.validation";
@@ -48,10 +49,13 @@ export async function POST(request: NextRequest) {
   try {
     const result = await placeOrder(guard.session.user.id, parsed.data);
     // Order creation changes stock and (optionally) empties the cart.
-    revalidateTag("admin-orders", "max");
-    revalidateTag("home-categories", "max");
-    revalidateTag("categories", "max");
-    revalidateTag("promo-codes", "max");
+    await invalidateProductsById(
+      result.order.items.flatMap((item) =>
+        item.productId ? [item.productId] : [],
+      ),
+      { reason: `order stock decrement: ${result.order.id}` },
+    );
+    revalidateCacheTags(["admin-orders", "promo-codes"]);
     return created(result.order);
   } catch (error) {
     return handleServiceError("orders.POST", error);

@@ -7,6 +7,8 @@ const mocks = vi.hoisted(() => ({
   listProducts: vi.fn(),
   serializeProduct: vi.fn(),
   createProduct: vi.fn(),
+  invalidateProductSnapshots: vi.fn(),
+  productInvalidationSnapshot: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -23,8 +25,9 @@ vi.mock("@/lib/services/product.service", () => ({
 vi.mock("@/lib/services/admin-activity.service", () => ({
   logAdminActivity: vi.fn(),
 }));
-vi.mock("@/lib/cache/revalidation", () => ({
-  revalidateCacheTagsImmediately: vi.fn(),
+vi.mock("@/lib/cache/catalog-invalidation", () => ({
+  invalidateProductSnapshots: mocks.invalidateProductSnapshots,
+  productInvalidationSnapshot: mocks.productInvalidationSnapshot,
 }));
 
 import { GET } from "@/app/api/products/route";

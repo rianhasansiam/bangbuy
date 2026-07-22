@@ -12,6 +12,8 @@ import { getActiveTestimonials } from "@/lib/services/testimonial.service";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { siteConfig } from "@/lib/seo/site";
 
+export const revalidate = 3600;
+
 export const metadata: Metadata = buildMetadata({
   title: "About Us",
   description: `Learn about ${siteConfig.name} — our story, values, and the team behind your trusted online shopping destination for quality products at great prices.`,

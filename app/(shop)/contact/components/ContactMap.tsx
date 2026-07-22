@@ -1,5 +1,3 @@
-"use client";
-
 import { MapPin, Navigation, Building2 } from "lucide-react";
 
 import { siteConfig } from "@/lib/seo/site";

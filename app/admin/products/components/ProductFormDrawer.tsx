@@ -222,6 +222,28 @@ export default function ProductFormDrawer({
                     />
                   </Field>
                 </div>
+                {mode === "edit" && (
+                  <div className="sm:col-span-2">
+                    <Field label="Canonical URL slug" required>
+                      <input
+                        value={form.slug}
+                        onChange={(event) => onChange((current) => ({
+                          ...current,
+                          slug: event.target.value,
+                        }))}
+                        className={inputClass}
+                        placeholder="industrial-air-compressor"
+                        maxLength={160}
+                        pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                      />
+                    </Field>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Changing this moves the product URL and keeps the previous URL as a permanent redirect.
+                    </p>
+                  </div>
+                )}
                 <Field label="Category" required>
                   <select
                     value={form.categoryId}
@@ -298,6 +320,33 @@ export default function ProductFormDrawer({
                     className={inputClass}
                     placeholder="ProLine"
                   />
+                </Field>
+                <Field label="GTIN">
+                  <input
+                    value={form.gtin}
+                    onChange={(event) => onChange((current) => ({
+                      ...current,
+                      gtin: event.target.value,
+                    }))}
+                    className={inputClass}
+                    placeholder="0123456789012"
+                    maxLength={32}
+                    inputMode="numeric"
+                  />
+                </Field>
+                <Field label="Item condition">
+                  <select
+                    value={form.itemCondition}
+                    onChange={(event) => onChange((current) => ({
+                      ...current,
+                      itemCondition: event.target.value as ProductFormState["itemCondition"],
+                    }))}
+                    className={inputClass}
+                  >
+                    <option value="NEW">New</option>
+                    <option value="REFURBISHED">Refurbished</option>
+                    <option value="USED">Used</option>
+                  </select>
                 </Field>
               </div>
             </Section>
@@ -390,7 +439,64 @@ export default function ProductFormDrawer({
             <Section title="Media" description="The first gallery image is used as the storefront card image.">
               <div className="space-y-4">
                 <Field label="Primary image"><ImageUploader value={form.image} onChange={(image) => onChange((current) => ({ ...current, image }))} disabled={isSubmitting} /></Field>
+                <Field label="Primary image alt text">
+                  <input
+                    value={form.primaryImageAlt}
+                    onChange={(event) => onChange((current) => ({
+                      ...current,
+                      primaryImageAlt: event.target.value,
+                    }))}
+                    className={inputClass}
+                    placeholder="Industrial air compressor viewed from the front"
+                    maxLength={250}
+                  />
+                </Field>
                 <Field label="Gallery images"><MultiImageUploader value={normalizeImagesInput(form.images)} onChange={(images) => onChange((current) => ({ ...current, images: images.join("\n") }))} disabled={isSubmitting} /></Field>
+              </div>
+            </Section>
+
+            <Section title="Search and sharing" description="Optional overrides for search result snippets and social previews.">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <Field label="SEO title">
+                    <input
+                      value={form.seoTitle}
+                      onChange={(event) => onChange((current) => ({
+                        ...current,
+                        seoTitle: event.target.value,
+                      }))}
+                      className={inputClass}
+                      placeholder="Industrial Air Compressor | BangBuy"
+                      maxLength={70}
+                    />
+                  </Field>
+                </div>
+                <div className="sm:col-span-2">
+                  <Field label="Meta description">
+                    <textarea
+                      value={form.metaDescription}
+                      onChange={(event) => onChange((current) => ({
+                        ...current,
+                        metaDescription: event.target.value,
+                      }))}
+                      className="min-h-24 w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-red"
+                      placeholder="Summarize the product for search results."
+                      maxLength={320}
+                    />
+                  </Field>
+                </div>
+                <div className="sm:col-span-2">
+                  <Field label="Social preview image">
+                    <ImageUploader
+                      value={form.ogImage}
+                      onChange={(ogImage) => onChange((current) => ({
+                        ...current,
+                        ogImage,
+                      }))}
+                      disabled={isSubmitting}
+                    />
+                  </Field>
+                </div>
               </div>
             </Section>
 

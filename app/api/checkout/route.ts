@@ -1,9 +1,10 @@
 import type { NextRequest } from "next/server";
-import { revalidateTag } from "next/cache";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/api/guards";
 import { created, jsonError } from "@/lib/api/response";
+import { invalidateProductsById } from "@/lib/cache/catalog-invalidation";
+import { revalidateCacheTags } from "@/lib/cache/revalidation";
 import { placeOrder } from "@/lib/services/checkout.service";
 import { handleServiceError } from "@/lib/services/service-error";
 import { checkoutSchema } from "@/lib/validations/checkout.validation";
@@ -44,10 +45,13 @@ export async function POST(request: NextRequest) {
     // Order placement decrements stock and empties the cart. Bust the
     // cached surfaces that embed product/stock data. (The cart itself is
     // uncached and refetched fresh by the client.)
-    revalidateTag("admin-orders", "max");
-    revalidateTag("home-categories", "max");
-    revalidateTag("categories", "max");
-    revalidateTag("promo-codes", "max");
+    await invalidateProductsById(
+      result.order.items.flatMap((item) =>
+        item.productId ? [item.productId] : [],
+      ),
+      { reason: `checkout stock decrement: ${result.order.id}` },
+    );
+    revalidateCacheTags(["admin-orders", "promo-codes"]);
     return created(result);
   } catch (error) {
     return handleServiceError("checkout.POST", error);

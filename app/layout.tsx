@@ -30,7 +30,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
-    default: `${siteConfig.name} - Online Shopping for Electronics, Fashion & More`,
+    default: "Shop Industrial Automation, Electronics & More Online",
     template: `%s | ${siteConfig.name}`,
   },
   description: siteConfig.description,

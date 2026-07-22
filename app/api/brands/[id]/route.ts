@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { isAdminRequest, requireAdmin } from "@/lib/api/guards";
 import { jsonError, ok } from "@/lib/api/response";
-import { revalidateCacheTagsImmediately } from "@/lib/cache/revalidation";
+import { invalidateBrandMutation } from "@/lib/cache/catalog-invalidation";
 import { logAdminActivity } from "@/lib/services/admin-activity.service";
 import {
   deleteBrand,
@@ -14,15 +14,6 @@ import { handleServiceError } from "@/lib/services/service-error";
 import { updateBrandSchema } from "@/lib/validations/brand.validation";
 
 export const dynamic = "force-dynamic";
-
-const BRAND_TAGS = [
-  "brands",
-  "categories",
-  "products",
-  "home-categories",
-  "catalog-facets",
-  "catalog-search",
-] as const;
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -66,6 +57,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   const { id } = await context.params;
   try {
+    const previous = await getBrandById(id);
+    if (!previous) return jsonError(404, "Brand not found.");
     const brand = await updateBrand(id, parsed.data);
     await logAdminActivity({
       kind: "product",
@@ -75,7 +68,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       href: "/admin/brands",
       actor: guard.session.user,
     });
-    revalidateCacheTagsImmediately(BRAND_TAGS);
+    await invalidateBrandMutation({
+      id: brand.id,
+      slugs: [previous.slug, brand.slug],
+      reason: `brand updated: ${brand.id}`,
+    });
     return ok(brand);
   } catch (error) {
     return handleServiceError("brands/[id].PATCH", error);
@@ -100,7 +97,11 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       href: "/admin/brands",
       actor: guard.session.user,
     });
-    revalidateCacheTagsImmediately(BRAND_TAGS);
+    await invalidateBrandMutation({
+      id: existing.id,
+      slugs: [existing.slug],
+      reason: `brand deleted: ${existing.id}`,
+    });
     return ok(result);
   } catch (error) {
     return handleServiceError("brands/[id].DELETE", error);

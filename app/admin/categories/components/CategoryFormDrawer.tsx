@@ -182,6 +182,56 @@ export default function CategoryFormDrawer({
                 />
               </Field>
 
+              <div className="rounded-xl border border-brand-border p-4">
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold text-brand-black">Search and social</h3>
+                  <p className="mt-1 text-xs text-brand-text-muted">
+                    Optional overrides for search results and shared links. Storefront defaults are
+                    used when these fields are empty.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <Field label="SEO title">
+                    <input
+                      value={form.seoTitle}
+                      maxLength={70}
+                      onChange={(event) =>
+                        onChange((prev) => ({ ...prev, seoTitle: event.target.value }))
+                      }
+                      className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
+                      placeholder="Category title for search results"
+                    />
+                    <p className="mt-1 text-right text-xs text-brand-text-muted">
+                      {form.seoTitle.length}/70
+                    </p>
+                  </Field>
+
+                  <Field label="Meta description">
+                    <textarea
+                      value={form.metaDescription}
+                      maxLength={320}
+                      onChange={(event) =>
+                        onChange((prev) => ({ ...prev, metaDescription: event.target.value }))
+                      }
+                      className="min-h-24 w-full rounded-xl border border-brand-border px-3 py-2 text-sm outline-none transition focus:border-brand-red"
+                      placeholder="Summary shown by search engines"
+                    />
+                    <p className="mt-1 text-right text-xs text-brand-text-muted">
+                      {form.metaDescription.length}/320
+                    </p>
+                  </Field>
+
+                  <Field label="Social image">
+                    <ImageUploader
+                      value={form.ogImage}
+                      onChange={(url) => onChange((prev) => ({ ...prev, ogImage: url }))}
+                      disabled={isSubmitting}
+                    />
+                  </Field>
+                </div>
+              </div>
+
               <div className="rounded-xl border border-brand-border bg-brand-light-bg p-3 text-xs text-brand-text-muted">
                 <p className="font-semibold text-brand-black">Canonical path preview</p>
                 <p className="mt-1 break-all font-mono">/categories/{pathPreview}</p>

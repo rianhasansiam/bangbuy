@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { isAdminRequest, requireAdmin } from "@/lib/api/guards";
 import { jsonError, ok } from "@/lib/api/response";
-import { revalidateCacheTagsImmediately } from "@/lib/cache/revalidation";
+import { invalidateManufacturerMutation } from "@/lib/cache/catalog-invalidation";
 import { logAdminActivity } from "@/lib/services/admin-activity.service";
 import {
   deleteManufacturer,
@@ -14,15 +14,6 @@ import { handleServiceError } from "@/lib/services/service-error";
 import { updateManufacturerSchema } from "@/lib/validations/manufacturer.validation";
 
 export const dynamic = "force-dynamic";
-
-const MANUFACTURER_TAGS = [
-  "manufacturers",
-  "categories",
-  "products",
-  "home-categories",
-  "catalog-facets",
-  "catalog-search",
-] as const;
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -75,7 +66,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       href: "/admin/manufacturers",
       actor: guard.session.user,
     });
-    revalidateCacheTagsImmediately(MANUFACTURER_TAGS);
+    await invalidateManufacturerMutation({
+      id: manufacturer.id,
+      reason: `manufacturer updated: ${manufacturer.id}`,
+    });
     return ok(manufacturer);
   } catch (error) {
     return handleServiceError("manufacturers/[id].PATCH", error);
@@ -100,7 +94,10 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       href: "/admin/manufacturers",
       actor: guard.session.user,
     });
-    revalidateCacheTagsImmediately(MANUFACTURER_TAGS);
+    await invalidateManufacturerMutation({
+      id: existing.id,
+      reason: `manufacturer deleted: ${existing.id}`,
+    });
     return ok(result);
   } catch (error) {
     return handleServiceError("manufacturers/[id].DELETE", error);

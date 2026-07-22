@@ -8,6 +8,8 @@ import { breadcrumbJsonLd, collectionPageJsonLd } from "@/lib/seo/json-ld";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { getActiveCategoryTree, type CategoryDto } from "@/lib/services/category.service";
 
+export const revalidate = 1800;
+
 export const metadata: Metadata = buildMetadata({
   title: "Shop All Categories",
   description:
@@ -94,7 +96,7 @@ export default async function CategoryDirectoryPage() {
                   <div className="relative aspect-[16/7] overflow-hidden bg-brand-light-bg">
                     <Image
                       src={root.image}
-                      alt=""
+                      alt={`${root.name} category`}
                       fill
                       sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                       className="object-cover transition duration-500 hover:scale-105"

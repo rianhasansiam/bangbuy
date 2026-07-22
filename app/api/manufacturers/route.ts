@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { isAdminRequest, requireAdmin } from "@/lib/api/guards";
 import { created, jsonError, ok } from "@/lib/api/response";
-import { revalidateCacheTagsImmediately } from "@/lib/cache/revalidation";
+import { invalidateManufacturerMutation } from "@/lib/cache/catalog-invalidation";
 import { logAdminActivity } from "@/lib/services/admin-activity.service";
 import {
   createManufacturer,
@@ -16,15 +16,6 @@ import {
 } from "@/lib/validations/manufacturer.validation";
 
 export const dynamic = "force-dynamic";
-
-const MANUFACTURER_TAGS = [
-  "manufacturers",
-  "categories",
-  "products",
-  "home-categories",
-  "catalog-facets",
-  "catalog-search",
-] as const;
 
 /** Public reads expose ACTIVE manufacturers; admins can read every status. */
 export async function GET(request: NextRequest) {
@@ -82,7 +73,10 @@ export async function POST(request: NextRequest) {
       href: "/admin/manufacturers",
       actor: guard.session.user,
     });
-    revalidateCacheTagsImmediately(MANUFACTURER_TAGS);
+    await invalidateManufacturerMutation({
+      id: manufacturer.id,
+      reason: `manufacturer created: ${manufacturer.id}`,
+    });
     return created(manufacturer);
   } catch (error) {
     return handleServiceError("manufacturers.POST", error);

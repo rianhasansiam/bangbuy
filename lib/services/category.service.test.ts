@@ -12,6 +12,12 @@ const mocks = vi.hoisted(() => ({
   productFindMany: vi.fn(),
   productCount: vi.fn(),
   productGroupBy: vi.fn(),
+  productVariantGroupBy: vi.fn(),
+  reviewGroupBy: vi.fn(),
+  catalogRedirectFindMany: vi.fn(),
+  catalogRedirectDeleteMany: vi.fn(),
+  catalogRedirectUpdateMany: vi.fn(),
+  catalogRedirectUpsert: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -36,6 +42,11 @@ vi.mock("@/lib/db/prisma", () => ({
       count: mocks.productCount,
       groupBy: mocks.productGroupBy,
     },
+    productVariant: { groupBy: mocks.productVariantGroupBy },
+    review: { groupBy: mocks.reviewGroupBy },
+    catalogRedirect: {
+      findMany: mocks.catalogRedirectFindMany,
+    },
   },
 }));
 
@@ -43,6 +54,7 @@ import {
   createCategory,
   deleteCategory,
   getActiveCategoryByPath,
+  getCategoryRedirectByPath,
   listCategories,
   reorderCategories,
   updateCategory,
@@ -93,8 +105,13 @@ const state = {
   nextId: 1,
 };
 
-function row(input: Partial<CategoryRow> & Pick<CategoryRow, "id" | "name" | "slug" | "path">): CategoryRow {
-  const now = new Date(`2026-01-${String(state.nextId).padStart(2, "0")}T00:00:00.000Z`);
+function row(
+  input: Partial<CategoryRow> &
+    Pick<CategoryRow, "id" | "name" | "slug" | "path">,
+): CategoryRow {
+  const now = new Date(
+    `2026-01-${String(state.nextId).padStart(2, "0")}T00:00:00.000Z`,
+  );
   return {
     description: null,
     image: null,
@@ -109,7 +126,10 @@ function row(input: Partial<CategoryRow> & Pick<CategoryRow, "id" | "name" | "sl
 }
 
 function matchesWhere(record: CategoryRow, where: CategoryWhere = {}): boolean {
-  if (where.OR && !where.OR.some((candidate) => matchesWhere(record, candidate))) {
+  if (
+    where.OR &&
+    !where.OR.some((candidate) => matchesWhere(record, candidate))
+  ) {
     return false;
   }
   if (
@@ -123,9 +143,13 @@ function matchesWhere(record: CategoryRow, where: CategoryWhere = {}): boolean {
     if (where.id.not && record.id === where.id.not) return false;
     if (where.id.notIn?.includes(record.id)) return false;
   }
-  if (typeof where.path === "string" && record.path !== where.path) return false;
+  if (typeof where.path === "string" && record.path !== where.path)
+    return false;
   if (where.path && typeof where.path === "object") {
-    if (where.path.startsWith && !record.path.startsWith(where.path.startsWith)) {
+    if (
+      where.path.startsWith &&
+      !record.path.startsWith(where.path.startsWith)
+    ) {
       return false;
     }
     if (where.path.in && !where.path.in.includes(record.path)) return false;
@@ -157,56 +181,83 @@ beforeEach(() => {
   state.nextId = 1;
 
   mocks.executeRaw.mockResolvedValue(0);
-  mocks.categoryFindMany.mockImplementation(async (args: CategoryReadArgs = {}) =>
-    sortRows(state.records.filter((record) => matchesWhere(record, args.where))),
+  mocks.categoryFindMany.mockImplementation(
+    async (args: CategoryReadArgs = {}) =>
+      sortRows(
+        state.records.filter((record) => matchesWhere(record, args.where)),
+      ),
   );
-  mocks.categoryFindUnique.mockImplementation(async (args: CategoryReadArgs & {
-    where: { id?: string; path?: string };
-  }) => {
-    const found = state.records.find((record) =>
-      args.where.id ? record.id === args.where.id : record.path === args.where.path,
-    );
-    if (!found) return null;
-    return args.select?._count
-      ? { ...found, _count: { children: childCount(found.id) } }
-      : found;
-  });
-  mocks.categoryFindFirst.mockImplementation(async (args: CategoryReadArgs = {}) =>
-    state.records.find((record) => matchesWhere(record, args.where)) ?? null,
+  mocks.categoryFindUnique.mockImplementation(
+    async (
+      args: CategoryReadArgs & {
+        where: { id?: string; path?: string };
+      },
+    ) => {
+      const found = state.records.find((record) =>
+        args.where.id
+          ? record.id === args.where.id
+          : record.path === args.where.path,
+      );
+      if (!found) return null;
+      return args.select?._count
+        ? { ...found, _count: { children: childCount(found.id) } }
+        : found;
+    },
   );
-  mocks.categoryCreate.mockImplementation(async ({ data }: { data: Omit<CategoryRow, "id" | "createdAt" | "updatedAt"> }) => {
-    const id = `category-${state.nextId++}`;
-    const created = row({ id, ...data });
-    state.records.push(created);
-    return created;
-  });
-  mocks.categoryUpdate.mockImplementation(async ({ where, data }: CategoryWriteArgs) => {
-    const index = state.records.findIndex((record) => record.id === where.id);
-    if (index < 0) throw new Error(`Missing category ${where.id}`);
-    state.records[index] = {
-      ...state.records[index],
-      ...data,
-      updatedAt: new Date("2026-02-01T00:00:00.000Z"),
-    };
-    return state.records[index];
-  });
-  mocks.categoryDelete.mockImplementation(async ({ where }: { where: { id: string } }) => {
-    const index = state.records.findIndex((record) => record.id === where.id);
-    if (index < 0) throw new Error(`Missing category ${where.id}`);
-    return state.records.splice(index, 1)[0];
-  });
-  mocks.productCount.mockImplementation(async ({ where }: {
-    where: { categoryId: string | { in: string[] } };
-  }) => {
-    const ids = typeof where.categoryId === "string"
-      ? [where.categoryId]
-      : where.categoryId.in;
-    return ids.reduce(
-      (total, id) => total + (state.productsByCategory.get(id) ?? 0),
-      0,
-    );
-  });
+  mocks.categoryFindFirst.mockImplementation(
+    async (args: CategoryReadArgs = {}) =>
+      state.records.find((record) => matchesWhere(record, args.where)) ?? null,
+  );
+  mocks.categoryCreate.mockImplementation(
+    async ({
+      data,
+    }: {
+      data: Omit<CategoryRow, "id" | "createdAt" | "updatedAt">;
+    }) => {
+      const id = `category-${state.nextId++}`;
+      const created = row({ id, ...data });
+      state.records.push(created);
+      return created;
+    },
+  );
+  mocks.categoryUpdate.mockImplementation(
+    async ({ where, data }: CategoryWriteArgs) => {
+      const index = state.records.findIndex((record) => record.id === where.id);
+      if (index < 0) throw new Error(`Missing category ${where.id}`);
+      state.records[index] = {
+        ...state.records[index],
+        ...data,
+        updatedAt: new Date("2026-02-01T00:00:00.000Z"),
+      };
+      return state.records[index];
+    },
+  );
+  mocks.categoryDelete.mockImplementation(
+    async ({ where }: { where: { id: string } }) => {
+      const index = state.records.findIndex((record) => record.id === where.id);
+      if (index < 0) throw new Error(`Missing category ${where.id}`);
+      return state.records.splice(index, 1)[0];
+    },
+  );
+  mocks.productCount.mockImplementation(
+    async ({ where }: { where: { categoryId: string | { in: string[] } } }) => {
+      const ids =
+        typeof where.categoryId === "string"
+          ? [where.categoryId]
+          : where.categoryId.in;
+      return ids.reduce(
+        (total, id) => total + (state.productsByCategory.get(id) ?? 0),
+        0,
+      );
+    },
+  );
   mocks.productFindMany.mockResolvedValue([]);
+  mocks.productVariantGroupBy.mockResolvedValue([]);
+  mocks.reviewGroupBy.mockResolvedValue([]);
+  mocks.catalogRedirectFindMany.mockResolvedValue([]);
+  mocks.catalogRedirectDeleteMany.mockResolvedValue({ count: 0 });
+  mocks.catalogRedirectUpdateMany.mockResolvedValue({ count: 0 });
+  mocks.catalogRedirectUpsert.mockImplementation(async ({ create }) => create);
   mocks.productGroupBy.mockImplementation(async () =>
     [...state.productsByCategory].map(([categoryId, count]) => ({
       categoryId,
@@ -225,12 +276,18 @@ beforeEach(() => {
       delete: mocks.categoryDelete,
     },
     product: { count: mocks.productCount },
+    catalogRedirect: {
+      deleteMany: mocks.catalogRedirectDeleteMany,
+      updateMany: mocks.catalogRedirectUpdateMany,
+      upsert: mocks.catalogRedirectUpsert,
+    },
   };
   mocks.transaction.mockImplementation(async (operation: unknown) => {
-    if (typeof operation !== "function") throw new Error("Expected a transaction callback.");
-    return (operation as (client: typeof transactionClient) => Promise<unknown>)(
-      transactionClient,
-    );
+    if (typeof operation !== "function")
+      throw new Error("Expected a transaction callback.");
+    return (
+      operation as (client: typeof transactionClient) => Promise<unknown>
+    )(transactionClient);
   });
 });
 
@@ -247,8 +304,15 @@ describe("category hierarchy mutations", () => {
       position: 0,
     });
     expect(mocks.executeRaw).toHaveBeenCalledTimes(1);
+    expect(mocks.catalogRedirectDeleteMany).toHaveBeenCalledWith({
+      where: {
+        sourcePath: { in: ["/categories/power-tools"] },
+      },
+    });
 
-    const renamed = await updateCategory(created.id, { name: "Workshop Tools" });
+    const renamed = await updateCategory(created.id, {
+      name: "Workshop Tools",
+    });
     expect(renamed).toMatchObject({
       name: "Workshop Tools",
       slug: "power-tools",
@@ -257,8 +321,12 @@ describe("category hierarchy mutations", () => {
   });
 
   it("allows the same slug in separate branches but rejects a move path collision", async () => {
-    const tools = await createCategory(createCategorySchema.parse({ name: "Tools" }));
-    const home = await createCategory(createCategorySchema.parse({ name: "Home" }));
+    const tools = await createCategory(
+      createCategorySchema.parse({ name: "Tools" }),
+    );
+    const home = await createCategory(
+      createCategorySchema.parse({ name: "Home" }),
+    );
     const toolDrills = await createCategory(
       createCategorySchema.parse({ name: "Drills", parentId: tools.id }),
     );
@@ -277,8 +345,12 @@ describe("category hierarchy mutations", () => {
   });
 
   it("moves a complete subtree, preserves slugs, and applies explicit sibling order", async () => {
-    const tools = await createCategory(createCategorySchema.parse({ name: "Tools" }));
-    const home = await createCategory(createCategorySchema.parse({ name: "Home" }));
+    const tools = await createCategory(
+      createCategorySchema.parse({ name: "Tools" }),
+    );
+    const home = await createCategory(
+      createCategorySchema.parse({ name: "Home" }),
+    );
     const power = await createCategory(
       createCategorySchema.parse({ name: "Power Tools", parentId: tools.id }),
     );
@@ -289,7 +361,10 @@ describe("category hierarchy mutations", () => {
       createCategorySchema.parse({ name: "Lighting", parentId: home.id }),
     );
 
-    const moved = await updateCategory(power.id, { parentId: home.id, position: 0 });
+    const moved = await updateCategory(power.id, {
+      parentId: home.id,
+      position: 0,
+    });
     const movedSaws = state.records.find((record) => record.id === saws.id);
     expect(moved).toMatchObject({
       slug: "power-tools",
@@ -302,19 +377,43 @@ describe("category hierarchy mutations", () => {
       path: "home/power-tools/saws",
       depth: 2,
     });
+    expect(
+      mocks.catalogRedirectUpsert.mock.calls.map(
+        ([argument]) => argument.create,
+      ),
+    ).toEqual([
+      {
+        sourcePath: "/categories/tools/power-tools",
+        destinationPath: "/categories/home/power-tools",
+        entityType: "CATEGORY",
+        entityId: power.id,
+        permanent: true,
+      },
+      {
+        sourcePath: "/categories/tools/power-tools/saws",
+        destinationPath: "/categories/home/power-tools/saws",
+        entityType: "CATEGORY",
+        entityId: saws.id,
+        permanent: true,
+      },
+    ]);
 
     const reordered = await reorderCategories({
       parentId: home.id,
       orderedIds: [lighting.id, power.id],
     });
-    expect(reordered.map((category) => [category.id, category.position])).toEqual([
+    expect(
+      reordered.map((category) => [category.id, category.position]),
+    ).toEqual([
       [lighting.id, 0],
       [power.id, 1],
     ]);
   });
 
   it("prevents moving a category below its descendant", async () => {
-    const tools = await createCategory(createCategorySchema.parse({ name: "Tools" }));
+    const tools = await createCategory(
+      createCategorySchema.parse({ name: "Tools" }),
+    );
     const power = await createCategory(
       createCategorySchema.parse({ name: "Power", parentId: tools.id }),
     );
@@ -325,6 +424,52 @@ describe("category hierarchy mutations", () => {
     await expect(
       updateCategory(tools.id, { parentId: saws.id }),
     ).rejects.toMatchObject({ code: "CATEGORY_CYCLE", status: 400 });
+  });
+});
+
+describe("category redirect lookup", () => {
+  it("normalizes relative category paths and ignores other entity types", async () => {
+    mocks.catalogRedirectFindMany.mockResolvedValueOnce([
+      {
+        sourcePath: "/categories/tools/power-tools",
+        destinationPath: "/categories/home/power-tools",
+        entityType: "CATEGORY",
+        entityId: "power-tools",
+        permanent: true,
+      },
+    ]);
+
+    await expect(
+      getCategoryRedirectByPath("tools/power-tools"),
+    ).resolves.toEqual({
+      sourcePath: "/categories/tools/power-tools",
+      destinationPath: "/categories/home/power-tools",
+      entityType: "CATEGORY",
+      entityId: "power-tools",
+      permanent: true,
+    });
+    expect(mocks.catalogRedirectFindMany).toHaveBeenCalledWith({
+      select: {
+        sourcePath: true,
+        destinationPath: true,
+        entityType: true,
+        entityId: true,
+        permanent: true,
+      },
+    });
+
+    mocks.catalogRedirectFindMany.mockResolvedValueOnce([
+      {
+        sourcePath: "/categories/not-a-category",
+        destinationPath: "/products/example",
+        entityType: "PRODUCT",
+        entityId: "product-1",
+        permanent: true,
+      },
+    ]);
+    await expect(
+      getCategoryRedirectByPath("/categories/not-a-category"),
+    ).resolves.toBeNull();
   });
 });
 
@@ -340,9 +485,13 @@ describe("category visibility, counts, and deletion", () => {
         salePrice: { toNumber: () => 500 },
         discountPrice: { toNumber: () => 450 },
         images: [{ url: "/drill.webp" }],
-        variants: [{ stock: 3 }, { stock: 2 }],
-        reviews: [{ rating: 5 }, { rating: 4 }, { rating: 3 }],
       },
+    ]);
+    mocks.productVariantGroupBy.mockResolvedValue([
+      { productId: "product-1", _count: { _all: 2 }, _sum: { stock: 5 } },
+    ]);
+    mocks.reviewGroupBy.mockResolvedValue([
+      { productId: "product-1", _count: { _all: 3 }, _avg: { rating: 4 } },
     ]);
 
     const category = await getActiveCategoryByPath("tools");
@@ -350,12 +499,21 @@ describe("category visibility, counts, and deletion", () => {
     expect(mocks.productFindMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { categoryId: { in: ["tools"] }, status: "ACTIVE" },
-        select: expect.objectContaining({
-          variants: expect.objectContaining({ where: { isActive: true } }),
-          reviews: { select: { rating: true } },
-        }),
+        take: 40,
       }),
     );
+    expect(mocks.productVariantGroupBy).toHaveBeenCalledWith({
+      by: ["productId"],
+      where: { productId: { in: ["product-1"] }, isActive: true },
+      _count: { _all: true },
+      _sum: { stock: true },
+    });
+    expect(mocks.reviewGroupBy).toHaveBeenCalledWith({
+      by: ["productId"],
+      where: { productId: { in: ["product-1"] } },
+      _count: { _all: true },
+      _avg: { rating: true },
+    });
     expect(category?.products[0]).toMatchObject({
       id: "product-1",
       price: 500,
@@ -369,7 +527,13 @@ describe("category visibility, counts, and deletion", () => {
 
   it("inherits visibility from every ancestor and aggregates descendant products once", async () => {
     seed(
-      row({ id: "hidden", name: "Hidden", slug: "hidden", path: "hidden", status: "INACTIVE" }),
+      row({
+        id: "hidden",
+        name: "Hidden",
+        slug: "hidden",
+        path: "hidden",
+        status: "INACTIVE",
+      }),
       row({
         id: "hidden-child",
         name: "Hidden child",
@@ -378,7 +542,13 @@ describe("category visibility, counts, and deletion", () => {
         parentId: "hidden",
         depth: 1,
       }),
-      row({ id: "tools", name: "Tools", slug: "tools", path: "tools", position: 1 }),
+      row({
+        id: "tools",
+        name: "Tools",
+        slug: "tools",
+        path: "tools",
+        position: 1,
+      }),
       row({
         id: "power",
         name: "Power",
@@ -394,9 +564,14 @@ describe("category visibility, counts, and deletion", () => {
 
     const query = categoryQuerySchema.parse({ pageSize: 100 });
     const admin = await listCategories(query, { effectiveActiveOnly: false });
-    const hiddenChild = admin.items.find((category) => category.id === "hidden-child");
+    const hiddenChild = admin.items.find(
+      (category) => category.id === "hidden-child",
+    );
     const tools = admin.items.find((category) => category.id === "tools");
-    expect(hiddenChild).toMatchObject({ status: "ACTIVE", effectiveActive: false });
+    expect(hiddenChild).toMatchObject({
+      status: "ACTIVE",
+      effectiveActive: false,
+    });
     expect(tools).toMatchObject({
       directProductCount: 2,
       totalProductCount: 5,
@@ -451,6 +626,19 @@ describe("category visibility, counts, and deletion", () => {
         directProductCount: 2,
         totalProductCount: 2,
       },
+    });
+  });
+
+  it("removes category-owned redirect history on a successful hard delete", async () => {
+    seed(row({ id: "tools", name: "Tools", slug: "tools", path: "tools" }));
+
+    await expect(deleteCategory("tools")).resolves.toMatchObject({
+      id: "tools",
+      path: "tools",
+    });
+
+    expect(mocks.catalogRedirectDeleteMany).toHaveBeenCalledWith({
+      where: { entityType: "CATEGORY", entityId: "tools" },
     });
   });
 });

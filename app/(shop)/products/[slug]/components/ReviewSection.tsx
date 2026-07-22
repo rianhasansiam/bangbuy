@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import Image from 'next/image'
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import {
   Star,
   CheckCircle,
@@ -9,31 +9,31 @@ import {
   ChevronDown,
   PenLine,
   X,
-} from 'lucide-react'
-import { toast } from '@/lib/feedback'
-import { ButtonLoader, SectionLoader } from '@/components/ui/loading'
+} from "lucide-react";
+import { toast } from "@/lib/feedback";
+import { ButtonLoader, SectionLoader } from "@/components/ui/loading";
 
 import {
   createReview,
   fetchProductReviews,
   type Review,
   type ReviewSummary,
-} from '@/features/reviews/api'
+} from "@/features/reviews/api";
 
 function avatarFor(review: Review): string {
-  if (review.authorImage) return review.authorImage
-  const seed = encodeURIComponent(review.authorName || 'Customer')
-  return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}`
+  if (review.authorImage) return review.authorImage;
+  const seed = encodeURIComponent(review.authorName || "Customer");
+  return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}`;
 }
 
 function formatDate(value: string): string {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 const EMPTY_SUMMARY: ReviewSummary = {
@@ -44,9 +44,9 @@ const EMPTY_SUMMARY: ReviewSummary = {
     count: 0,
     percentage: 0,
   })),
-}
+};
 
-type SortKey = 'newest' | 'rating'
+type SortKey = "newest" | "rating";
 
 /**
  * Customer reviews for a product. Self-contained client component:
@@ -56,54 +56,54 @@ type SortKey = 'newest' | 'rating'
  * so eligibility errors surface inline here.
  */
 export default function ReviewSection({ productId }: { productId: string }) {
-  const [reviews, setReviews] = useState<Review[]>([])
-  const [summary, setSummary] = useState<ReviewSummary>(EMPTY_SUMMARY)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [summary, setSummary] = useState<ReviewSummary>(EMPTY_SUMMARY);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [filterRating, setFilterRating] = useState<number | null>(null)
-  const [sortBy, setSortBy] = useState<SortKey>('newest')
-  const [showForm, setShowForm] = useState(false)
+  const [filterRating, setFilterRating] = useState<number | null>(null);
+  const [sortBy, setSortBy] = useState<SortKey>("newest");
+  const [showForm, setShowForm] = useState(false);
 
   const loadReviews = useCallback(async () => {
-    await Promise.resolve()
-    setLoading(true)
-    setLoadError(null)
+    await Promise.resolve();
+    setLoading(true);
+    setLoadError(null);
     try {
-      const page = await fetchProductReviews(productId, { pageSize: 100 })
-      setReviews(page.items)
-      setSummary(page.summary)
+      const page = await fetchProductReviews(productId, { pageSize: 100 });
+      setReviews(page.items);
+      setSummary(page.summary);
     } catch (error) {
       setLoadError(
-        error instanceof Error ? error.message : 'Failed to load reviews.',
-      )
+        error instanceof Error ? error.message : "Failed to load reviews.",
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [productId])
+  }, [productId]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      void loadReviews()
-    }, 0)
-    return () => window.clearTimeout(timer)
-  }, [loadReviews])
+      void loadReviews();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loadReviews]);
 
   const visibleReviews = useMemo(() => {
     const filtered = filterRating
       ? reviews.filter((review) => review.rating === filterRating)
-      : reviews
-    const sorted = [...filtered]
-    if (sortBy === 'rating') {
-      sorted.sort((a, b) => b.rating - a.rating)
+      : reviews;
+    const sorted = [...filtered];
+    if (sortBy === "rating") {
+      sorted.sort((a, b) => b.rating - a.rating);
     } else {
       sorted.sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-      )
+      );
     }
-    return sorted
-  }, [filterRating, reviews, sortBy])
+    return sorted;
+  }, [filterRating, reviews, sortBy]);
 
   return (
     <div className="space-y-8">
@@ -116,8 +116,12 @@ export default function ReviewSection({ productId }: { productId: string }) {
           onClick={() => setShowForm((open) => !open)}
           className="inline-flex items-center gap-2 px-4 py-2 bg-brand-red text-brand-white text-sm font-medium rounded-xl hover:bg-brand-red-hover transition-all shadow-lg"
         >
-          {showForm ? <X className="w-4 h-4" /> : <PenLine className="w-4 h-4" />}
-          {showForm ? 'Close' : 'Write a Review'}
+          {showForm ? (
+            <X className="w-4 h-4" />
+          ) : (
+            <PenLine className="w-4 h-4" />
+          )}
+          {showForm ? "Close" : "Write a Review"}
         </button>
       </div>
 
@@ -125,8 +129,8 @@ export default function ReviewSection({ productId }: { productId: string }) {
         <WriteReviewForm
           productId={productId}
           onSubmitted={() => {
-            setShowForm(false)
-            void loadReviews()
+            setShowForm(false);
+            void loadReviews();
           }}
         />
       )}
@@ -145,15 +149,15 @@ export default function ReviewSection({ productId }: { productId: string }) {
                   key={star}
                   className={`w-5 h-5 ${
                     star <= Math.round(summary.averageRating)
-                      ? 'fill-brand-gold text-brand-gold'
-                      : 'text-gray-200'
+                      ? "fill-brand-gold text-brand-gold"
+                      : "text-gray-200"
                   }`}
                 />
               ))}
             </div>
             <p className="text-sm text-gray-500">
               Based on {summary.totalReviews.toLocaleString()} review
-              {summary.totalReviews === 1 ? '' : 's'}
+              {summary.totalReviews === 1 ? "" : "s"}
             </p>
           </div>
 
@@ -163,10 +167,14 @@ export default function ReviewSection({ productId }: { productId: string }) {
               <button
                 key={item.stars}
                 onClick={() =>
-                  setFilterRating(filterRating === item.stars ? null : item.stars)
+                  setFilterRating(
+                    filterRating === item.stars ? null : item.stars,
+                  )
                 }
                 className={`w-full flex items-center gap-3 p-1.5 rounded-lg transition-all ${
-                  filterRating === item.stars ? 'bg-brand-red/10' : 'hover:bg-gray-50'
+                  filterRating === item.stars
+                    ? "bg-brand-red/10"
+                    : "hover:bg-gray-50"
                 }`}
               >
                 <span className="text-sm text-gray-600 w-8">{item.stars}★</span>
@@ -205,6 +213,7 @@ export default function ReviewSection({ productId }: { productId: string }) {
         </div>
         <div className="relative">
           <select
+            aria-label="Sort reviews"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortKey)}
             className="appearance-none pl-3 pr-8 py-2 bg-white border border-brand-border rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-red"
@@ -226,8 +235,8 @@ export default function ReviewSection({ productId }: { productId: string }) {
       ) : visibleReviews.length === 0 ? (
         <div className="rounded-xl border border-brand-border bg-white p-10 text-center text-sm text-gray-600">
           {reviews.length === 0
-            ? 'No reviews yet. Be the first to review this product after it is delivered.'
-            : 'No reviews match the current filter.'}
+            ? "No reviews yet. Be the first to review this product after it is delivered."
+            : "No reviews match the current filter."}
         </div>
       ) : (
         <div className="space-y-4">
@@ -239,7 +248,7 @@ export default function ReviewSection({ productId }: { productId: string }) {
               <div className="flex items-start gap-4">
                 <div
                   className="relative w-10 h-10 rounded-full overflow-hidden shrink-0 bg-brand-light-bg"
-                  style={{ position: 'relative' }}
+                  style={{ position: "relative" }}
                 >
                   <Image
                     src={avatarFor(review)}
@@ -269,8 +278,8 @@ export default function ReviewSection({ productId }: { productId: string }) {
                           key={star}
                           className={`w-3.5 h-3.5 ${
                             star <= review.rating
-                              ? 'fill-brand-gold text-brand-gold'
-                              : 'text-gray-200'
+                              ? "fill-brand-gold text-brand-gold"
+                              : "text-gray-200"
                           }`}
                         />
                       ))}
@@ -285,7 +294,9 @@ export default function ReviewSection({ productId }: { productId: string }) {
               {(review.title || review.comment) && (
                 <div className="mt-3">
                   {review.title && (
-                    <h4 className="font-medium text-gray-900">{review.title}</h4>
+                    <h4 className="font-medium text-gray-900">
+                      {review.title}
+                    </h4>
                   )}
                   {review.comment && (
                     <p className="text-sm text-gray-600 mt-1 leading-relaxed">
@@ -299,49 +310,50 @@ export default function ReviewSection({ productId }: { productId: string }) {
         </div>
       )}
     </div>
-  )
+  );
 }
 
 function WriteReviewForm({
   productId,
   onSubmitted,
 }: {
-  productId: string
-  onSubmitted: () => void
+  productId: string;
+  onSubmitted: () => void;
 }) {
-  const [rating, setRating] = useState(5)
-  const [hover, setHover] = useState(0)
-  const [title, setTitle] = useState('')
-  const [comment, setComment] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState(false)
+  const [rating, setRating] = useState(5);
+  const [hover, setHover] = useState(0);
+  const [title, setTitle] = useState("");
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
 
   const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault()
-    setError(null)
-    setSubmitting(true)
+    event.preventDefault();
+    setError(null);
+    setSubmitting(true);
     try {
       await createReview({
         productId,
         rating,
         title: title.trim() || undefined,
         comment: comment.trim() || undefined,
-      })
-      setDone(true)
-      toast.success('Review submitted — thanks!')
+      });
+      setDone(true);
+      toast.success("Review submitted — thanks!");
       // Give the success note a beat before refreshing the list.
-      setTimeout(onSubmitted, 800)
+      setTimeout(onSubmitted, 800);
     } catch (submitError) {
-      const msg = submitError instanceof Error
-        ? submitError.message
-        : 'Failed to submit your review.'
-      setError(msg)
-      toast.error(msg)
+      const msg =
+        submitError instanceof Error
+          ? submitError.message
+          : "Failed to submit your review.";
+      setError(msg);
+      toast.error(msg);
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   if (done) {
     return (
@@ -351,7 +363,7 @@ function WriteReviewForm({
           Thanks! Your review has been posted.
         </span>
       </div>
-    )
+    );
   }
 
   return (
@@ -359,7 +371,9 @@ function WriteReviewForm({
       onSubmit={handleSubmit}
       className="rounded-2xl border border-brand-border bg-white p-5"
     >
-      <h3 className="text-base font-bold text-gray-900">Share your experience</h3>
+      <h3 className="text-base font-bold text-gray-900">
+        Share your experience
+      </h3>
       <p className="mt-0.5 text-xs text-gray-500">
         You can review a product once it has been delivered to you.
       </p>
@@ -373,13 +387,13 @@ function WriteReviewForm({
             onMouseEnter={() => setHover(star)}
             onMouseLeave={() => setHover(0)}
             className="p-0.5"
-            aria-label={`${star} star${star === 1 ? '' : 's'}`}
+            aria-label={`${star} star${star === 1 ? "" : "s"}`}
           >
             <Star
               className={`w-6 h-6 transition-colors ${
                 star <= (hover || rating)
-                  ? 'fill-brand-gold text-brand-gold'
-                  : 'text-gray-300'
+                  ? "fill-brand-gold text-brand-gold"
+                  : "text-gray-300"
               }`}
             />
           </button>
@@ -418,9 +432,13 @@ function WriteReviewForm({
           aria-busy={submitting}
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-red text-brand-white text-sm font-medium rounded-xl hover:bg-brand-red-hover transition-all shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {submitting ? <ButtonLoader label="Submitting..." /> : 'Submit review'}
+          {submitting ? (
+            <ButtonLoader label="Submitting..." />
+          ) : (
+            "Submit review"
+          )}
         </button>
       </div>
     </form>
-  )
+  );
 }

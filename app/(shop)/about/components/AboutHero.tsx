@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { ChevronRight, Sparkles, PackageCheck } from "lucide-react";
 

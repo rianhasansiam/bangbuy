@@ -235,7 +235,7 @@ export function PageLoader({
           </span>
         </div>
         <LoadingSpinner size="lg" className="text-brand-red" label={title} />
-        <h1 className="mt-5 text-lg font-extrabold text-brand-black">{title}</h1>
+        <p className="mt-5 text-lg font-extrabold text-brand-black">{title}</p>
         <p className="mt-1 text-sm text-brand-text-muted">{message}</p>
       </div>
     </div>

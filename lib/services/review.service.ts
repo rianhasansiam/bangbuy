@@ -329,11 +329,15 @@ export async function listReviewsForAdmin(query: AdminReviewQueryInput) {
   };
 }
 
-/** Hard-delete a review by id. Admin only. */
-export async function deleteReview(id: string): Promise<{ id: string }> {
+/** Hard-delete a review by id. Admin only. Keep productId for cache invalidation. */
+export async function deleteReview(
+  id: string,
+): Promise<{ id: string; productId: string }> {
   try {
-    await prisma.review.delete({ where: { id } });
-    return { id };
+    return await prisma.review.delete({
+      where: { id },
+      select: { id: true, productId: true },
+    });
   } catch (error) {
     if (
       error instanceof PrismaClientKnownRequestError &&

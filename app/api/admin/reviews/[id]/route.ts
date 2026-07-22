@@ -1,5 +1,5 @@
 import { adminRoute } from "@/lib/api/handlers";
-import { revalidateCacheTagsImmediately } from "@/lib/cache/revalidation";
+import { invalidateProductsById } from "@/lib/cache/catalog-invalidation";
 import { deleteReview } from "@/lib/services/review.service";
 
 type Params = { id: string };
@@ -13,11 +13,10 @@ export const DELETE = adminRoute<unknown, Params>({
   scope: "admin.reviews/[id].DELETE",
   handler: async ({ params }) => {
     const result = await deleteReview(params.id);
-    revalidateCacheTagsImmediately([
-      "admin-reviews",
-      "home-categories",
-      "products",
-    ]);
+    await invalidateProductsById([result.productId], {
+      reason: `review deleted: ${result.id}`,
+      reviews: true,
+    });
     return { data: result };
   },
 });

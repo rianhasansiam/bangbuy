@@ -23,6 +23,7 @@ import {
   rowsToStringMap,
   type AdminProduct,
   type CategoryOption,
+  type ProductCondition,
   type ProductFormState,
   type ProductStatus,
 } from "@/features/admin-products/api";
@@ -43,6 +44,12 @@ import type { AppDispatch, RootState } from "@/store";
 type ProductWriteBody = {
   name: string;
   description: string | null;
+  seoTitle: string | null;
+  metaDescription: string | null;
+  ogImage: string | null;
+  gtin: string | null;
+  itemCondition: ProductCondition;
+  primaryImageAlt: string | null;
   modelNumber: string | null;
   series: string | null;
   specifications: Record<string, string> | null;
@@ -171,7 +178,11 @@ export default function AdminProductsPage() {
     return products.filter((product) => {
       const searchable = [
         product.name,
+        product.slug,
         product.productCode,
+        product.seoTitle,
+        product.metaDescription,
+        product.gtin,
         product.modelNumber,
         product.series,
         categoryLabel(product),
@@ -226,6 +237,14 @@ export default function AdminProductsPage() {
   const buildBody = (): ProductWriteBody => {
     const name = form.name.trim();
     if (!name) throw new Error("Product name is required.");
+    if (
+      panelMode === "edit" &&
+      !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(form.slug.trim())
+    ) {
+      throw new Error(
+        "Canonical slug must use lowercase letters, numbers, and single hyphens.",
+      );
+    }
     if (!form.categoryId) throw new Error("Category is required.");
     const buyingPrice = parseNumericField(form.buyingPrice, "Buying price");
     const salePrice = parseNumericField(form.salePrice, "Sale price");
@@ -279,6 +298,12 @@ export default function AdminProductsPage() {
     return {
       name,
       description: optional(form.description),
+      seoTitle: optional(form.seoTitle),
+      metaDescription: optional(form.metaDescription),
+      ogImage: optional(form.ogImage),
+      gtin: optional(form.gtin),
+      itemCondition: form.itemCondition,
+      primaryImageAlt: optional(form.primaryImageAlt),
       modelNumber: optional(form.modelNumber),
       series: optional(form.series),
       specifications: rowsToStringMap(form.specifications),
@@ -309,8 +334,12 @@ export default function AdminProductsPage() {
 
     setIsSubmitting(true);
     try {
-      const requestBody: Partial<ProductWriteBody> = { ...body };
+      const requestBody: Partial<ProductWriteBody> & { slug?: string } = {
+        ...body,
+      };
       if (panelMode === "edit" && editingProduct) {
+        const slug = form.slug.trim();
+        if (slug !== editingProduct.slug) requestBody.slug = slug;
         if (body.brandId === editingProduct.brandId) delete requestBody.brandId;
         if (body.manufacturerId === editingProduct.manufacturerId) {
           delete requestBody.manufacturerId;

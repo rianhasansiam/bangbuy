@@ -230,7 +230,7 @@ export default function Navbar({
 
           <Link
             href="/"
-            aria-label={`${siteConfig.name} home`}
+            aria-label={`${siteConfig.name} - Good Quality. Good Service. - home`}
             className="group flex shrink-0 items-center rounded-xl px-1 py-1.5 transition-transform duration-300 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2"
           >
             {/* Logo retained for future use.
@@ -320,6 +320,7 @@ export default function Navbar({
           {!user && (
             <Link
               href="/login"
+              aria-label="Sign in"
               className="flex items-center gap-1 px-2 py-1.5 text-sm font-semibold text-brand-black transition-colors duration-200 hover:text-brand-red lg:hidden"
             >
               <span className="hidden sm:inline">Sign in</span>

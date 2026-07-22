@@ -11,6 +11,49 @@ import { absoluteUrl, siteConfig, socialProfiles } from "./site";
 
 export type JsonLd = Record<string, unknown>;
 
+type ProductCondition = "NEW" | "REFURBISHED" | "USED";
+
+function plainJsonLdText(value: string): string {
+  return value
+    .replace(/<[^>]*>/g, " ")
+    .replace(/[<>]/g, " ")
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function productConditionUrl(condition: ProductCondition = "NEW") {
+  return {
+    NEW: "https://schema.org/NewCondition",
+    REFURBISHED: "https://schema.org/RefurbishedCondition",
+    USED: "https://schema.org/UsedCondition",
+  }[condition];
+}
+
+function offerJsonLd(input: {
+  url: string;
+  price: number;
+  currency?: string;
+  inStock: boolean;
+  itemCondition?: ProductCondition;
+}) {
+  return prune({
+    "@type": "Offer",
+    url: input.url,
+    priceCurrency: input.currency ?? siteConfig.currency,
+    price: Number.isFinite(input.price) ? input.price.toFixed(2) : undefined,
+    availability: input.inStock
+      ? "https://schema.org/InStock"
+      : "https://schema.org/OutOfStock",
+    itemCondition: productConditionUrl(input.itemCondition),
+    seller: {
+      "@type": "Organization",
+      name: siteConfig.name,
+      url: siteConfig.url,
+    },
+  });
+}
+
 /** Remove `undefined`/`null` values so we never emit empty JSON-LD fields. */
 function prune<T extends JsonLd>(obj: T): T {
   return Object.fromEntries(
@@ -87,6 +130,14 @@ export type ProductJsonLdInput = {
   sku?: string | null;
   /** Real brand name if available — omitted entirely when absent. */
   brand?: string | null;
+  /** Real manufacturer part number if available; never synthesized. */
+  mpn?: string | null;
+  /** Real Global Trade Item Number if available; never synthesized. */
+  gtin?: string | null;
+  /** Real manufacturer name if available; omitted entirely when absent. */
+  manufacturer?: string | null;
+  /** Persisted product condition. Defaults to NEW for legacy callers. */
+  itemCondition?: ProductCondition;
   /** Aggregate backed by persisted reviews; omitted when no reviews exist. */
   rating?: {
     average: number;
@@ -101,6 +152,9 @@ export type ProductJsonLdInput = {
  */
 export function productJsonLd(input: ProductJsonLdInput): JsonLd {
   const url = absoluteUrl(input.path);
+  const mpn = input.mpn?.trim();
+  const gtin = input.gtin?.trim();
+  const manufacturer = input.manufacturer?.trim();
   const images = (input.images ?? [])
     .filter((src) => typeof src === "string" && src.length > 0)
     .map((src) => absoluteUrl(src));
@@ -109,11 +163,16 @@ export function productJsonLd(input: ProductJsonLdInput): JsonLd {
     "@context": "https://schema.org",
     "@type": "Product",
     name: input.name,
-    description: input.description.replace(/\s+/g, " ").trim(),
+    description: plainJsonLdText(input.description),
     url,
     image: images.length > 0 ? images : undefined,
     sku: input.sku ?? undefined,
     brand: input.brand ? { "@type": "Brand", name: input.brand } : undefined,
+    mpn: mpn || undefined,
+    gtin: gtin || undefined,
+    manufacturer: manufacturer
+      ? { "@type": "Organization", name: manufacturer }
+      : undefined,
     category: input.category ?? undefined,
     aggregateRating:
       input.rating &&
@@ -130,20 +189,101 @@ export function productJsonLd(input: ProductJsonLdInput): JsonLd {
             worstRating: 1,
           }
         : undefined,
-    offers: prune({
-      "@type": "Offer",
+    offers: offerJsonLd({
       url,
-      priceCurrency: input.currency ?? siteConfig.currency,
-      price: Number.isFinite(input.price) ? input.price.toFixed(2) : undefined,
-      availability: input.inStock
-        ? "https://schema.org/InStock"
-        : "https://schema.org/OutOfStock",
-      itemCondition: "https://schema.org/NewCondition",
-      seller: {
-        "@type": "Organization",
-        name: siteConfig.name,
-        url: siteConfig.url,
-      },
+      price: input.price,
+      currency: input.currency,
+      inStock: input.inStock,
+      itemCondition: input.itemCondition,
+    }),
+  });
+}
+
+export type ProductGroupVariantJsonLdInput = {
+  name: string;
+  sku?: string | null;
+  mpn?: string | null;
+  image?: string | null;
+  color?: string | null;
+  size?: string | null;
+  attributes?: Record<string, string> | null;
+  inStock: boolean;
+};
+
+export type ProductGroupJsonLdInput = Omit<
+  ProductJsonLdInput,
+  "sku" | "inStock"
+> & {
+  productGroupId: string;
+  variesBy: string[];
+  variants: ProductGroupVariantJsonLdInput[];
+};
+
+/** Emit variant markup only for a genuine multi-variant product group. */
+export function productGroupJsonLd(input: ProductGroupJsonLdInput): JsonLd {
+  const url = absoluteUrl(input.path);
+  const images = (input.images ?? [])
+    .filter((src) => typeof src === "string" && src.length > 0)
+    .map((src) => absoluteUrl(src));
+  const aggregateRating =
+    input.rating &&
+    Number.isFinite(input.rating.average) &&
+    input.rating.average >= 1 &&
+    input.rating.average <= 5 &&
+    Number.isInteger(input.rating.count) &&
+    input.rating.count > 0
+      ? {
+          "@type": "AggregateRating",
+          ratingValue: Number(input.rating.average.toFixed(2)),
+          reviewCount: input.rating.count,
+          bestRating: 5,
+          worstRating: 1,
+        }
+      : undefined;
+
+  return prune({
+    "@context": "https://schema.org",
+    "@type": "ProductGroup",
+    productGroupID: input.productGroupId,
+    name: input.name,
+    description: plainJsonLdText(input.description),
+    url,
+    image: images.length > 0 ? images : undefined,
+    variesBy: input.variesBy.length > 0 ? input.variesBy : undefined,
+    brand: input.brand ? { "@type": "Brand", name: input.brand } : undefined,
+    manufacturer: input.manufacturer
+      ? { "@type": "Organization", name: input.manufacturer }
+      : undefined,
+    category: input.category ?? undefined,
+    mpn: input.mpn?.trim() || undefined,
+    gtin: input.gtin?.trim() || undefined,
+    aggregateRating,
+    hasVariant: input.variants.map((variant) => {
+      const attributes = Object.entries(variant.attributes ?? {})
+        .filter(([key, value]) => key.trim() && value.trim())
+        .map(([name, value]) => ({
+          "@type": "PropertyValue",
+          name,
+          value,
+        }));
+      return prune({
+        "@type": "Product",
+        name: variant.name,
+        url,
+        sku: variant.sku?.trim() || undefined,
+        mpn: variant.mpn?.trim() || undefined,
+        image: variant.image ? absoluteUrl(variant.image) : undefined,
+        color: variant.color?.trim() || undefined,
+        size: variant.size?.trim() || undefined,
+        additionalProperty: attributes.length > 0 ? attributes : undefined,
+        offers: offerJsonLd({
+          url,
+          price: input.price,
+          currency: input.currency,
+          inStock: variant.inStock,
+          itemCondition: input.itemCondition,
+        }),
+      });
     }),
   });
 }
@@ -159,7 +299,7 @@ export function collectionPageJsonLd(input: {
     "@type": "CollectionPage",
     name: input.name,
     description: input.description
-      ? input.description.replace(/\s+/g, " ").trim()
+      ? plainJsonLdText(input.description)
       : undefined,
     url: absoluteUrl(input.path),
   });

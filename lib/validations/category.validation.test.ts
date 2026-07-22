@@ -14,12 +14,18 @@ describe("category validation", () => {
         name: "Power Tools",
         parentId: "parent-id",
         position: 2,
+        seoTitle: "Power Tools for Industrial Work",
+        metaDescription: "Browse industrial power tools and workshop equipment.",
+        ogImage: "/images/power-tools.webp",
       }),
     ).toMatchObject({
       name: "Power Tools",
       parentId: "parent-id",
       position: 2,
       status: "ACTIVE",
+      seoTitle: "Power Tools for Industrial Work",
+      metaDescription: "Browse industrial power tools and workshop equipment.",
+      ogImage: "/images/power-tools.webp",
     });
 
     expect(

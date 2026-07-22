@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
   updateCategory: vi.fn(),
   reorderCategories: vi.fn(),
   logAdminActivity: vi.fn(),
-  revalidateCategoryCaches: vi.fn(),
+  invalidateCategoryMutation: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -32,8 +32,8 @@ vi.mock("@/lib/services/category.service", () => ({
 vi.mock("@/lib/services/admin-activity.service", () => ({
   logAdminActivity: mocks.logAdminActivity,
 }));
-vi.mock("@/lib/cache/category-revalidation", () => ({
-  revalidateCategoryCaches: mocks.revalidateCategoryCaches,
+vi.mock("@/lib/cache/catalog-invalidation", () => ({
+  invalidateCategoryMutation: mocks.invalidateCategoryMutation,
 }));
 
 import { DELETE as deleteCategoryRoute } from "@/app/api/categories/[id]/route";
@@ -207,6 +207,6 @@ describe("category API conflict mapping", () => {
         totalProductCount: 4,
       },
     });
-    expect(mocks.revalidateCategoryCaches).not.toHaveBeenCalled();
+    expect(mocks.invalidateCategoryMutation).not.toHaveBeenCalled();
   });
 });

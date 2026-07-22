@@ -19,17 +19,34 @@ export type ApiMeta = {
   [key: string]: unknown;
 };
 
+const PRIVATE_JSON_HEADERS = {
+  "Cache-Control": "private, no-cache, no-store, max-age=0, must-revalidate",
+  Expires: "0",
+  Pragma: "no-cache",
+  Vary: "Cookie, Authorization",
+  "X-Content-Type-Options": "nosniff",
+} as const;
+
+function privateJson(body: unknown, status: number, headers?: HeadersInit) {
+  const responseHeaders = new Headers(PRIVATE_JSON_HEADERS);
+  new Headers(headers).forEach((value, name) => {
+    responseHeaders.set(name, value);
+  });
+
+  return NextResponse.json(body, { status, headers: responseHeaders });
+}
+
 /** 200 OK with `{ success: true, data, meta? }`. */
 export function ok<T>(data: T, meta?: ApiMeta) {
-  return NextResponse.json(
+  return privateJson(
     { success: true, data, ...(meta ? { meta } : {}) },
-    { status: 200 },
+    200,
   );
 }
 
 /** 201 Created with `{ success: true, data }`. */
 export function created<T>(data: T) {
-  return NextResponse.json({ success: true, data }, { status: 201 });
+  return privateJson({ success: true, data }, 201);
 }
 
 /** Plain JSON error response with a stable shape. */
@@ -38,18 +55,16 @@ export function jsonError(
   error: string,
   extra?: Record<string, unknown>,
 ) {
-  return NextResponse.json({ error, ...extra }, { status });
+  return privateJson({ error, ...extra }, status);
 }
 
 /** 429 with a Retry-After header so well-behaved clients can back off. */
 export function tooManyRequests(resetMs: number) {
-  return NextResponse.json(
+  return privateJson(
     { error: "Too many attempts. Please try again later." },
+    429,
     {
-      status: 429,
-      headers: {
-        "Retry-After": Math.max(1, Math.ceil(resetMs / 1000)).toString(),
-      },
+      "Retry-After": Math.max(1, Math.ceil(resetMs / 1000)).toString(),
     },
   );
 }

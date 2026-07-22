@@ -17,6 +17,24 @@ const description = z
   .nullable();
 
 const image = z.string().trim().max(2048).optional().nullable();
+const seoTitle = z
+  .string()
+  .trim()
+  .max(70, "SEO title is too long.")
+  .optional()
+  .nullable();
+const metaDescription = z
+  .string()
+  .trim()
+  .max(320, "Meta description is too long.")
+  .optional()
+  .nullable();
+const ogImage = z
+  .string()
+  .trim()
+  .max(2048, "Open Graph image URL is too long.")
+  .optional()
+  .nullable();
 const parentId = z.string().trim().min(1).max(191).nullable();
 const position = z.number().int().min(0).max(1_000_000);
 
@@ -25,6 +43,9 @@ export const createCategorySchema = z
     name,
     description,
     image,
+    seoTitle,
+    metaDescription,
+    ogImage,
     status: z.enum(CATEGORY_STATUS).default("ACTIVE"),
     parentId: parentId.optional().default(null),
     position: position.optional(),
@@ -36,6 +57,9 @@ export const updateCategorySchema = z
     name: name.optional(),
     description,
     image,
+    seoTitle,
+    metaDescription,
+    ogImage,
     status: z.enum(CATEGORY_STATUS).optional(),
     parentId: parentId.optional(),
     position: position.optional(),

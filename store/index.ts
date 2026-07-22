@@ -11,16 +11,12 @@ import adminReviewsReducer from "@/store/slices/admin-reviews.slice";
 import adminSettingsReducer from "@/store/slices/admin-settings.slice";
 import adminTestimonialsReducer from "@/store/slices/admin-testimonials.slice";
 import adminUsersReducer from "@/store/slices/admin-users.slice";
-import allProductsReducer from "@/store/slices/all-products.slice";
 import cartReducer from "@/store/slices/cart.slice";
-import homeCategoriesReducer from "@/store/slices/home-categories.slice";
 import wishlistReducer from "@/store/slices/wishlist.slice";
 
 export function makeStore() {
   return configureStore({
     reducer: {
-      homeCategories: homeCategoriesReducer,
-      allProducts: allProductsReducer,
       wishlist: wishlistReducer,
       cart: cartReducer,
       adminProducts: adminProductsReducer,

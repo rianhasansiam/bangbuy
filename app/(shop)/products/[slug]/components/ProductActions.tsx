@@ -91,7 +91,9 @@ function variantLabel(variant: ProductVariantOption): string {
   const values = variantDisplayOptions(variant).map((option) => option.value);
   if (values.length > 0) return values.join(" / ");
 
-  return variant.modelNumber?.trim() || variant.sku?.trim() || "Standard option";
+  return (
+    variant.modelNumber?.trim() || variant.sku?.trim() || "Standard option"
+  );
 }
 
 function genericAttributeSummary(
@@ -133,8 +135,8 @@ const ProductActions = ({
     [variants],
   );
   const requiresExplicitSelection = activeVariants.length > 1;
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(() =>
-    initialVariantSelectionId(variants),
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
+    () => initialVariantSelectionId(variants),
   );
   const [quantity, setQuantity] = useState(1);
   const [isCartBusy, setIsCartBusy] = useState(false);
@@ -146,7 +148,9 @@ const ProductActions = ({
   const isPurchasable = selectedVariant != null && stockCount > 0;
   const currentListPrice = salePrice;
   const unitPrice =
-    discountPrice != null && discountPrice < salePrice ? discountPrice : salePrice;
+    discountPrice != null && discountPrice < salePrice
+      ? discountPrice
+      : salePrice;
   const discount =
     currentListPrice > unitPrice
       ? Math.round(((currentListPrice - unitPrice) / currentListPrice) * 100)
@@ -195,7 +199,9 @@ const ProductActions = ({
         toast.success(`${productName} added to cart`);
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "Failed to add item to cart.";
+          error instanceof Error
+            ? error.message
+            : "Failed to add item to cart.";
         dispatch(setCartErrorAction(message));
         toast.error(message);
       } finally {
@@ -259,10 +265,10 @@ const ProductActions = ({
         </span>
         {discount > 0 && (
           <>
-            <span className="text-lg text-gray-400 line-through">
+            <span className="text-lg text-gray-600 line-through">
               {currentListPrice.toLocaleString()} BDT
             </span>
-            <span className="rounded-full bg-brand-red/10 px-2 py-0.5 text-xs font-bold text-brand-red">
+            <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-bold text-red-700">
               -{discount}%
             </span>
           </>
@@ -270,12 +276,16 @@ const ProductActions = ({
       </div>
 
       {activeVariants.length > 1 && (
-        <fieldset className="space-y-3" aria-describedby="variant-selection-help">
+        <fieldset
+          className="space-y-3"
+          aria-describedby="variant-selection-help"
+        >
           <legend className="text-sm font-semibold text-gray-900">
             Choose an option combination
           </legend>
           <p id="variant-selection-help" className="text-xs text-gray-500">
-            Select one complete combination before adding this product to your cart.
+            Select one complete combination before adding this product to your
+            cart.
           </p>
           <div className="grid gap-2 sm:grid-cols-2">
             {activeVariants.map((variant) => {
@@ -304,10 +314,12 @@ const ProductActions = ({
                     </span>
                     <span
                       className={`shrink-0 text-xs font-medium ${
-                        isOutOfStock ? "text-rose-600" : "text-emerald-600"
+                        isOutOfStock ? "text-rose-600" : "text-emerald-700"
                       }`}
                     >
-                      {isOutOfStock ? "Out of stock" : `${variant.stock} available`}
+                      {isOutOfStock
+                        ? "Out of stock"
+                        : `${variant.stock} available`}
                     </span>
                   </span>
                   {options.length > 0 && (
@@ -333,7 +345,9 @@ const ProductActions = ({
                   )}
                   {(variant.modelNumber || variant.sku) && (
                     <span className="mt-2 block text-xs text-gray-500">
-                      {[variant.modelNumber, variant.sku].filter(Boolean).join(" · ")}
+                      {[variant.modelNumber, variant.sku]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </span>
                   )}
                 </button>
@@ -343,7 +357,8 @@ const ProductActions = ({
         </fieldset>
       )}
 
-      {activeVariants.length === 1 && selectedVariant &&
+      {activeVariants.length === 1 &&
+        selectedVariant &&
         variantDisplayOptions(selectedVariant).length > 0 && (
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -362,14 +377,18 @@ const ProductActions = ({
 
       <p className="text-xs font-medium text-gray-500" aria-live="polite">
         {activeVariants.length === 0 ? (
-          <span className="text-rose-600">This product is currently unavailable.</span>
+          <span className="text-rose-600">
+            This product is currently unavailable.
+          </span>
         ) : requiresExplicitSelection && !selectedVariant ? (
           "Choose an option combination to see its availability."
         ) : isPurchasable ? (
           <>
-            <span className="text-emerald-600">In stock</span>
+            <span className="text-emerald-700">In stock</span>
             {stockCount <= 5 && (
-              <span className="ml-1 text-amber-600">· only {stockCount} left</span>
+              <span className="ml-1 text-amber-600">
+                · only {stockCount} left
+              </span>
             )}
           </>
         ) : (

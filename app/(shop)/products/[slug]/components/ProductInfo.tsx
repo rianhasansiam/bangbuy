@@ -11,6 +11,8 @@ type ProductInfoProps = {
   name: string;
   productCode?: string | null;
   modelNumber?: string | null;
+  gtin?: string | null;
+  condition: string;
   series?: string | null;
   brand?: CatalogEntity | null;
   manufacturer?: CatalogEntity | null;
@@ -22,6 +24,8 @@ const ProductInfo = ({
   name,
   productCode,
   modelNumber,
+  gtin,
+  condition,
   series,
   brand,
   manufacturer,
@@ -54,52 +58,57 @@ const ProductInfo = ({
         </div>
       </div>
 
-      {(brand || manufacturer || modelNumber || series) && (
+      {(brand ||
+        manufacturer ||
+        modelNumber ||
+        gtin ||
+        series ||
+        condition) && (
         <dl className="grid gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3 text-sm sm:grid-cols-2">
           {brand && (
-            <div className="flex min-w-0 items-start gap-2.5">
-              <Building2
-                className="mt-0.5 h-4 w-4 shrink-0 text-brand-red"
-                aria-hidden="true"
-              />
-              <div className="min-w-0">
-                <dt className="text-xs text-gray-500">Brand</dt>
-                <dd className="truncate font-semibold text-gray-900">
-                  {brand.status === "ACTIVE" ? (
-                    <Link
-                      href={`/products?brandSlug=${encodeURIComponent(brand.slug)}`}
-                      className="hover:text-brand-red"
-                    >
-                      {brand.name}
-                    </Link>
-                  ) : (
-                    brand.name
-                  )}
-                </dd>
-              </div>
+            <div className="min-w-0">
+              <dt className="flex items-center gap-2.5 text-xs text-gray-500">
+                <Building2
+                  className="h-4 w-4 shrink-0 text-brand-red"
+                  aria-hidden="true"
+                />
+                Brand
+              </dt>
+              <dd className="min-w-0 truncate pl-6 font-semibold text-gray-900">
+                {brand.status === "ACTIVE" ? (
+                  <Link
+                    href={`/brands/${encodeURIComponent(brand.slug)}`}
+                    className="hover:text-brand-red"
+                  >
+                    {brand.name}
+                  </Link>
+                ) : (
+                  brand.name
+                )}
+              </dd>
             </div>
           )}
           {manufacturer && (
-            <div className="flex min-w-0 items-start gap-2.5">
-              <Factory
-                className="mt-0.5 h-4 w-4 shrink-0 text-brand-red"
-                aria-hidden="true"
-              />
-              <div className="min-w-0">
-                <dt className="text-xs text-gray-500">Manufacturer</dt>
-                <dd className="truncate font-semibold text-gray-900">
-                  {manufacturer.status === "ACTIVE" ? (
-                    <Link
-                      href={`/products?manufacturerSlug=${encodeURIComponent(manufacturer.slug)}`}
-                      className="hover:text-brand-red"
-                    >
-                      {manufacturer.name}
-                    </Link>
-                  ) : (
-                    manufacturer.name
-                  )}
-                </dd>
-              </div>
+            <div className="min-w-0">
+              <dt className="flex items-center gap-2.5 text-xs text-gray-500">
+                <Factory
+                  className="h-4 w-4 shrink-0 text-brand-red"
+                  aria-hidden="true"
+                />
+                Manufacturer
+              </dt>
+              <dd className="min-w-0 truncate pl-6 font-semibold text-gray-900">
+                {manufacturer.status === "ACTIVE" ? (
+                  <Link
+                    href={`/products?manufacturerSlug=${encodeURIComponent(manufacturer.slug)}`}
+                    className="hover:text-brand-red"
+                  >
+                    {manufacturer.name}
+                  </Link>
+                ) : (
+                  manufacturer.name
+                )}
+              </dd>
             </div>
           )}
           {modelNumber && (
@@ -114,6 +123,18 @@ const ProductInfo = ({
               <dd className="font-semibold text-gray-900">{series}</dd>
             </div>
           )}
+          {gtin && (
+            <div>
+              <dt className="text-xs text-gray-500">GTIN</dt>
+              <dd className="font-mono font-semibold text-gray-900">{gtin}</dd>
+            </div>
+          )}
+          <div>
+            <dt className="text-xs text-gray-500">Condition</dt>
+            <dd className="font-semibold capitalize text-gray-900">
+              {condition}
+            </dd>
+          </div>
         </dl>
       )}
     </div>

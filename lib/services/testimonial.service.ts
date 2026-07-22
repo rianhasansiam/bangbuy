@@ -89,7 +89,7 @@ const getCachedActiveTestimonials = unstable_cache(
     return rows.map(serializeTestimonial);
   },
   ["testimonials-active"],
-  { revalidate: 300, tags: ["testimonials"] },
+  { revalidate: 3600, tags: ["testimonials"] },
 );
 
 export function getActiveTestimonials() {

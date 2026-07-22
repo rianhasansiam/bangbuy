@@ -11,9 +11,19 @@ import { absoluteUrl, siteConfig } from "./site";
  * relative image/canonical paths resolve to absolute URLs automatically.
  */
 
+/** Convert admin-authored rich/free-form text into safe metadata text. */
+export function plainMetadataText(input: string | null | undefined): string {
+  return (input ?? "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/[<>]/g, " ")
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** Truncate free-form text to a search-friendly length on a word boundary. */
 export function clampDescription(input: string | null | undefined, max = 160): string {
-  const text = (input ?? "").replace(/\s+/g, " ").trim();
+  const text = plainMetadataText(input);
   if (text.length <= max) return text || siteConfig.description;
   const sliced = text.slice(0, max);
   const lastSpace = sliced.lastIndexOf(" ");
@@ -58,12 +68,13 @@ export function buildMetadata({
   ogType = "website",
   index = true,
 }: PageMetadataInput): Metadata {
+  const safeTitle = plainMetadataText(title) || siteConfig.name;
   const desc = clampDescription(description);
   const canonical = absoluteUrl(path);
-  const images = resolveOgImages(image, title);
+  const images = resolveOgImages(image, safeTitle);
 
   return {
-    title,
+    title: safeTitle,
     description: desc,
     keywords: keywords && keywords.length > 0 ? keywords : [...siteConfig.keywords],
     alternates: { canonical },
@@ -71,14 +82,14 @@ export function buildMetadata({
       type: ogType,
       url: canonical,
       siteName: siteConfig.name,
-      title,
+      title: safeTitle,
       description: desc,
       locale: siteConfig.locale,
       images,
     },
     twitter: {
       card: "summary_large_image",
-      title,
+      title: safeTitle,
       description: desc,
       images: images.map((img) => img.url),
     },
@@ -103,6 +114,11 @@ export function noIndexMetadata(title: string, description?: string): Metadata {
   return {
     title,
     description: description ?? siteConfig.description,
+    // Metadata merges shallowly. Explicitly replace the root homepage
+    // canonical so private routes never claim `/` as their canonical URL.
+    alternates: { canonical: null },
+    openGraph: null,
+    twitter: null,
     robots: { index: false, follow: false },
   };
 }

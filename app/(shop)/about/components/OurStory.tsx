@@ -1,5 +1,3 @@
-"use client";
-
 import Image from "next/image";
 import { PackageCheck, Target } from "lucide-react";
 
@@ -16,7 +14,6 @@ export default function OurStory() {
               fill
               className="object-contain p-10"
               sizes="(max-width: 1024px) 100vw, 50vw"
-              priority={false}
             />
 
             <div className="absolute inset-0 bg-gradient-to-br from-brand-black/70 via-brand-black/35 to-brand-red/30" />

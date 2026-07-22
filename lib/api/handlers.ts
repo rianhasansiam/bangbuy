@@ -5,7 +5,7 @@ import { type ZodType, z } from "zod";
 
 import { requireAdmin } from "@/lib/api/guards";
 import { created, jsonError, ok, type ApiMeta } from "@/lib/api/response";
-import { revalidateCacheTags } from "@/lib/cache/revalidation";
+import { revalidateCacheTagsImmediately } from "@/lib/cache/revalidation";
 import { logAdminRouteActivity } from "@/lib/services/admin-activity.service";
 import { handleServiceError } from "@/lib/services/service-error";
 
@@ -103,7 +103,7 @@ type AdminJsonRouteOptions<
   /** Scope string passed to `handleServiceError` — keep identical to the
    *  original hand-written route for log continuity. */
   scope: string;
-  /** Cache tags to `revalidateTag(..., "max")` on a successful run. */
+  /** Cache tags to expire after a successful committed mutation. */
   revalidate?: readonly string[];
   /** Map a thrown error code (e.g. Prisma `P2025`) to a 404 response. */
   notFoundOn?: NotFoundMapping;
@@ -152,7 +152,7 @@ function envelope<TData>(result: AdminHandlerResult<TData>): Response {
  *     `fieldErrors` from `z.flattenError` on schema failure
  *   - 404 + custom message if `notFoundOn` matches the thrown error
  *   - `handleServiceError(scope, error)` for everything else
- *   - `revalidateTag(tag, "max")` for each declared tag on success
+ *   - blocking tag expiry for each declared tag on success
  */
 export function adminJsonRoute<
   TSchema extends ZodType,
@@ -198,12 +198,16 @@ export function adminJsonRoute<
         request,
         session: guard.session,
       });
-      await logAdminRouteActivity({
-        scope,
-        method: request.method,
-        actor: guard.session.user,
-      });
-      revalidateCacheTags(revalidate);
+      try {
+        await logAdminRouteActivity({
+          scope,
+          method: request.method,
+          actor: guard.session.user,
+        });
+      } catch (activityError) {
+        console.error(`[${scope}] Activity logging failed after success`, activityError);
+      }
+      revalidateCacheTagsImmediately(revalidate);
       return envelope(result);
     } catch (error) {
       if (notFoundOn && hasErrorCode(error, notFoundOn.code)) {
@@ -257,12 +261,16 @@ export function adminRoute<
         session: guard.session,
         query,
       });
-      await logAdminRouteActivity({
-        scope,
-        method: request.method,
-        actor: guard.session.user,
-      });
-      revalidateCacheTags(revalidate);
+      try {
+        await logAdminRouteActivity({
+          scope,
+          method: request.method,
+          actor: guard.session.user,
+        });
+      } catch (activityError) {
+        console.error(`[${scope}] Activity logging failed after success`, activityError);
+      }
+      revalidateCacheTagsImmediately(revalidate);
       return envelope(result);
     } catch (error) {
       if (notFoundOn && hasErrorCode(error, notFoundOn.code)) {

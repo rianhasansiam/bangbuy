@@ -7,6 +7,8 @@ import PolicySection from "@/components/policy/PolicySection";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { siteConfig } from "@/lib/seo/site";
 
+export const revalidate = 21600;
+
 /**
  * Terms & Conditions page.
  *

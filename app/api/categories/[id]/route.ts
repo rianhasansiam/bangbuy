@@ -4,7 +4,7 @@ import { z } from "zod";
 import { handleCategoryApiError } from "@/lib/api/category-error";
 import { isAdminRequest, requireAdmin } from "@/lib/api/guards";
 import { jsonError, ok } from "@/lib/api/response";
-import { revalidateCategoryCaches } from "@/lib/cache/category-revalidation";
+import { invalidateCategoryMutation } from "@/lib/cache/catalog-invalidation";
 import { logAdminActivity } from "@/lib/services/admin-activity.service";
 import {
   deleteCategory,
@@ -58,6 +58,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   try {
+    const previous = await getCategoryById(id);
+    if (!previous) return jsonError(404, "Category not found.");
     const category = await updateCategory(id, parsed.data);
     await logAdminActivity({
       kind: "category",
@@ -67,7 +69,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       href: "/admin/categories",
       actor: guard.session.user,
     });
-    revalidateCategoryCaches();
+    invalidateCategoryMutation({
+      reason: `category updated: ${category.id}`,
+      categoryIds: [category.id],
+      oldPaths: [previous.path],
+      newPaths: [category.path],
+    });
     return ok(category);
   } catch (error) {
     return handleCategoryApiError("categories/[id].PATCH", error);
@@ -89,7 +96,11 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       href: "/admin/categories",
       actor: guard.session.user,
     });
-    revalidateCategoryCaches();
+    invalidateCategoryMutation({
+      reason: `category deleted: ${category.id}`,
+      categoryIds: [category.id],
+      oldPaths: [category.path],
+    });
     return ok(category);
   } catch (error) {
     return handleCategoryApiError("categories/[id].DELETE", error);

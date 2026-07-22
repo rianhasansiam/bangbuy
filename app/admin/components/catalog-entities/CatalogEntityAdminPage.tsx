@@ -104,6 +104,8 @@ export default function CatalogEntityAdminPage({
         row.name.toLowerCase().includes(search) ||
         row.slug.toLowerCase().includes(search) ||
         (row.description ?? "").toLowerCase().includes(search) ||
+        (row.seoTitle ?? "").toLowerCase().includes(search) ||
+        (row.metaDescription ?? "").toLowerCase().includes(search) ||
         (row.website ?? "").toLowerCase().includes(search) ||
         (row.country ?? "").toLowerCase().includes(search);
       return matchesStatus && matchesSearch;
@@ -154,6 +156,17 @@ export default function CatalogEntityAdminPage({
       });
       return;
     }
+    if (
+      isBrand &&
+      editing !== "new" &&
+      !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(form.slug.trim())
+    ) {
+      setMutationNote({
+        tone: "error",
+        message: "Use a lowercase slug with letters, numbers, and single hyphens.",
+      });
+      return;
+    }
 
     const body: CatalogEntityWriteBody = {
       name: form.name.trim(),
@@ -161,6 +174,14 @@ export default function CatalogEntityAdminPage({
       logo: form.logo.trim() || null,
       website: form.website.trim() || null,
       status: form.status,
+      ...(isBrand
+        ? {
+            ...(editing !== "new" ? { slug: form.slug.trim() } : {}),
+            seoTitle: form.seoTitle.trim() || null,
+            metaDescription: form.metaDescription.trim() || null,
+            ogImage: form.ogImage.trim() || null,
+          }
+        : {}),
       ...(kind === "manufacturer"
         ? { country: form.country.trim() || null }
         : {}),

@@ -1,6 +1,7 @@
 import { readApiError } from "@/features/http/api-envelope";
 
 export type ProductStatus = "ACTIVE" | "INACTIVE";
+export type ProductCondition = "NEW" | "REFURBISHED" | "USED";
 export type AttributeMap = Record<string, string>;
 export type SpecificationMap = Record<string, string | number | boolean>;
 
@@ -30,7 +31,13 @@ export type AdminProduct = {
   id: string;
   productCode: string;
   name: string;
+  slug: string;
   description: string | null;
+  seoTitle: string | null;
+  metaDescription: string | null;
+  ogImage: string | null;
+  gtin: string | null;
+  itemCondition: ProductCondition;
   modelNumber: string | null;
   series: string | null;
   specifications: SpecificationMap | null;
@@ -38,6 +45,7 @@ export type AdminProduct = {
   salePrice: number;
   discountPrice: number | null;
   image: string | null;
+  primaryImageAlt: string | null;
   images: string[];
   rating: number;
   reviewCount: number;
@@ -95,7 +103,14 @@ export type VariantFormRow = {
 
 export type ProductFormState = {
   name: string;
+  slug: string;
   description: string;
+  seoTitle: string;
+  metaDescription: string;
+  ogImage: string;
+  gtin: string;
+  itemCondition: ProductCondition;
+  primaryImageAlt: string;
   modelNumber: string;
   series: string;
   buyingPrice: string;
@@ -150,7 +165,14 @@ export function makeEmptyVariant(): VariantFormRow {
 
 export const EMPTY_FORM: ProductFormState = {
   name: "",
+  slug: "",
   description: "",
+  seoTitle: "",
+  metaDescription: "",
+  ogImage: "",
+  gtin: "",
+  itemCondition: "NEW",
+  primaryImageAlt: "",
   modelNumber: "",
   series: "",
   buyingPrice: "",
@@ -291,7 +313,16 @@ export function parseProductsPayload(payload: unknown): AdminProduct[] {
       id: string(row.id) ?? "",
       productCode: string(row.productCode) ?? "",
       name: string(row.name) ?? "Untitled Product",
+      slug: string(row.slug) ?? "",
       description: string(row.description),
+      seoTitle: string(row.seoTitle),
+      metaDescription: string(row.metaDescription),
+      ogImage: string(row.ogImage),
+      gtin: string(row.gtin),
+      itemCondition:
+        row.itemCondition === "REFURBISHED" || row.itemCondition === "USED"
+          ? row.itemCondition
+          : "NEW",
       modelNumber: string(row.modelNumber),
       series: string(row.series),
       specifications: specificationMap(row.specifications),
@@ -299,6 +330,7 @@ export function parseProductsPayload(payload: unknown): AdminProduct[] {
       salePrice: number(row.salePrice ?? row.price) ?? 0,
       discountPrice: number(row.discountPrice),
       image: string(row.image) ?? images[0] ?? null,
+      primaryImageAlt: string(row.imageAlt),
       images,
       rating: number(row.rating) ?? 0,
       reviewCount: number(row.reviewCount) ?? 0,
@@ -417,7 +449,14 @@ function mapToRows(value: Record<string, unknown> | null): KeyValueFormRow[] {
 export function buildFormFromProduct(product: AdminProduct): ProductFormState {
   return {
     name: product.name,
+    slug: product.slug,
     description: product.description ?? "",
+    seoTitle: product.seoTitle ?? "",
+    metaDescription: product.metaDescription ?? "",
+    ogImage: product.ogImage ?? "",
+    gtin: product.gtin ?? "",
+    itemCondition: product.itemCondition,
+    primaryImageAlt: product.primaryImageAlt ?? "",
     modelNumber: product.modelNumber ?? "",
     series: product.series ?? "",
     buyingPrice: String(product.buyingPrice),

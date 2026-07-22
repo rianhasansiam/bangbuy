@@ -1,13 +1,7 @@
-"use client";
-
-import { useEffect } from "react";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { useDispatch, useSelector } from "react-redux";
 
 import ProductCard from "@/components/product/ProductCard";
-import { setHomeCategories } from "@/store/slices/home-categories.slice";
-import type { AppDispatch, RootState } from "@/store";
 import type { HomeCategory } from "@/lib/services/home-categories.service";
 
 import { CategoriesBanner } from "./CategoriesBanner";
@@ -17,17 +11,7 @@ type CategoriesProps = {
 };
 
 export default function Categories({ initialCategories }: CategoriesProps) {
-  const dispatch = useDispatch<AppDispatch>();
-  const categoriesFromStore = useSelector(
-    (state: RootState) => state.homeCategories.items,
-  );
-
-  useEffect(() => {
-    dispatch(setHomeCategories(initialCategories));
-  }, [dispatch, initialCategories]);
-
-  const categories =
-    categoriesFromStore.length > 0 ? categoriesFromStore : initialCategories;
+  const categories = initialCategories;
 
   if (categories.length === 0) {
     return (
@@ -81,7 +65,7 @@ export default function Categories({ initialCategories }: CategoriesProps) {
                   className="rounded-full border border-brand-border bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-brand-red/40 hover:text-brand-red"
                 >
                   {child.name}
-                  <span className="ml-1 text-gray-400">
+                  <span className="ml-1 text-gray-600">
                     ({child.totalProductCount})
                   </span>
                 </Link>

@@ -18,6 +18,11 @@ import { deriveVariantKey } from "@/lib/catalog/variant-options";
  */
 
 const PRODUCT_STATUS = ["ACTIVE", "INACTIVE"] as const;
+export const PRODUCT_CONDITION_VALUES = [
+  "NEW",
+  "REFURBISHED",
+  "USED",
+] as const;
 
 const SORT_VALUES = [
   "latest",
@@ -34,6 +39,16 @@ const name = z
   .trim()
   .min(2, "Product name is too short.")
   .max(150, "Product name is too long.");
+
+const slug = z
+  .string()
+  .trim()
+  .min(1, "Product slug is required.")
+  .max(160, "Product slug is too long.")
+  .regex(
+    /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+    "Product slug must use lowercase letters, numbers, and single hyphens.",
+  );
 
 const description = z
   .string()
@@ -84,6 +99,41 @@ const image = z
   .nullable();
 
 const images = z.array(z.string().trim().max(2048)).max(20).optional();
+
+const seoTitle = z
+  .string()
+  .trim()
+  .max(70, "SEO title is too long.")
+  .optional()
+  .nullable();
+
+const metaDescription = z
+  .string()
+  .trim()
+  .max(320, "Meta description is too long.")
+  .optional()
+  .nullable();
+
+const ogImage = z
+  .string()
+  .trim()
+  .max(2048, "Open Graph image URL is too long.")
+  .optional()
+  .nullable();
+
+const gtin = z
+  .string()
+  .trim()
+  .max(32, "GTIN is too long.")
+  .optional()
+  .nullable();
+
+const primaryImageAlt = z
+  .string()
+  .trim()
+  .max(250, "Primary image alt text is too long.")
+  .optional()
+  .nullable();
 
 const optionalText = (max: number) =>
   z.string().trim().min(1).max(max).optional().nullable();
@@ -197,6 +247,11 @@ export const createProductSchema = z
   .object({
     name,
     description,
+    seoTitle,
+    metaDescription,
+    ogImage,
+    gtin,
+    itemCondition: z.enum(PRODUCT_CONDITION_VALUES).default("NEW"),
     modelNumber: optionalText(100),
     series: optionalText(100),
     specifications,
@@ -205,6 +260,7 @@ export const createProductSchema = z
     discountPrice,
     image,
     images,
+    primaryImageAlt,
     status: z.enum(PRODUCT_STATUS).default("ACTIVE"),
     categoryId: z.string().trim().min(1, "Category is required."),
     brandId: entityId,
@@ -243,7 +299,13 @@ export const createProductSchema = z
 export const updateProductSchema = z
   .object({
     name: name.optional(),
+    slug: slug.optional(),
     description,
+    seoTitle,
+    metaDescription,
+    ogImage,
+    gtin,
+    itemCondition: z.enum(PRODUCT_CONDITION_VALUES).optional(),
     modelNumber: optionalText(100),
     series: optionalText(100),
     specifications,
@@ -252,6 +314,7 @@ export const updateProductSchema = z
     discountPrice,
     image,
     images,
+    primaryImageAlt,
     status: z.enum(PRODUCT_STATUS).optional(),
     categoryId: z.string().trim().min(1).optional(),
     brandId: entityId,
@@ -287,7 +350,7 @@ export const updateProductSchema = z
  */
 export const productQuerySchema = z
   .object({
-    page: z.coerce.number().int().min(1).default(1),
+    page: z.coerce.number().int().min(1).max(10_000).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(20),
     search: z.string().trim().min(1).max(150).optional(),
     categoryId: z.string().trim().min(1).optional(),
