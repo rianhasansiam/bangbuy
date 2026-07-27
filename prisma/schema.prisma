@@ -49,6 +49,16 @@ enum AuthProvider {
   GOOGLE
 }
 
+model RateLimitBucket {
+  keyDigest String   @id
+  count     Int
+  resetAt   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
+}
+
 /**
  * ==========================================================================
  * Catalog
@@ -405,11 +415,16 @@ model OrderStatusHistory {
 enum PaymentMethod {
   CASH_ON_DELIVERY
   ONLINE
+  SSLCOMMERZ
+  PAYPAL
 }
 
 enum PaymentStatus {
   PAID
   UNPAID
+  PENDING
+  FAILED
+  REFUNDED
 }
 
 model OrderItem {
@@ -632,20 +647,40 @@ model PaymentTransaction {
   orderId String
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  provider      String
-  transactionId String?
-  amount        Decimal                  @db.Decimal(12, 2)
-  currency      String                   @default("BDT")
-  status        PaymentTransactionStatus @default(PENDING)
-  rawResponse   Json?                    @db.JsonB
+  provider                  String
+  transactionId             String?
+  idempotencyKey            String?
+  gatewayUrl                String?
+  gatewaySessionKey         String?
+  validationId              String?
+  bankTransactionId         String?
+  cardType                  String?
+  riskLevel                 Int?
+  amount                    Decimal                  @db.Decimal(12, 2)
+  currency                  String                   @default("BDT")
+  status                    PaymentTransactionStatus @default(PENDING)
+  rawResponse               Json?                    @db.JsonB
+  paidAt                    DateTime?
+  requiresReview            Boolean                  @default(false)
+  reviewReason              String?
+  reviewResolvedAt          DateTime?
+  reviewResolvedBy          String?
+  reviewResolution          String?
+  reviewResolutionReference String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([provider, transactionId])
+  @@unique([provider, idempotencyKey])
+  @@unique([provider, gatewaySessionKey])
+  @@unique([provider, validationId])
+  @@unique([provider, bankTransactionId])
   @@index([orderId, createdAt])
+  @@index([createdAt, id])
   @@index([status, createdAt])
   @@index([provider, status, createdAt])
+  @@index([provider, requiresReview, createdAt])
 }
 
 enum PaymentTransactionStatus {
@@ -654,6 +689,7 @@ enum PaymentTransactionStatus {
   FAILED
   CANCELLED
   REFUNDED
+  EXPIRED
 }
 
 model InventoryLog {

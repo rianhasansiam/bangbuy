@@ -1,11 +1,8 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
-import type {
-  OrderDetail,
-  OrderItem,
-  OrderPaymentMethod,
-} from "@/features/orders/api";
+import type { OrderDetail, OrderItem } from "@/features/orders/api";
+import { paymentMethodLabel } from "@/features/orders/payment";
 import {
   badgeFor,
   drawBadge,
@@ -44,10 +41,6 @@ import {
  * Shared brand chrome (palette, logo, header, footer) lives in
  * `features/branding/pdf`.
  */
-
-function paymentMethodLabel(method: OrderPaymentMethod | string): string {
-  return method === "ONLINE" ? "Online payment" : "Cash on delivery";
-}
 
 /** Variant / SKU descriptor for an item, dropping raw hex colour swatches. */
 function buildVariantText(item: OrderItem): string {

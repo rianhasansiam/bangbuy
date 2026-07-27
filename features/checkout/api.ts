@@ -1,7 +1,11 @@
-import { readApiData } from "@/features/http/api-envelope";
+import {
+  asRecord,
+  readApiData,
+  readApiError,
+} from "@/features/http/api-envelope";
 import type { OrderDetail } from "@/features/orders/api";
 
-export type CheckoutPaymentMethod = "CASH_ON_DELIVERY" | "ONLINE";
+export type CheckoutPaymentMethod = "CASH_ON_DELIVERY" | "SSLCOMMERZ";
 export type DeliveryZone = "INSIDE_DHAKA" | "OUTSIDE_DHAKA";
 
 export type CheckoutItemInput = {
@@ -102,13 +106,35 @@ export type PlaceOrderRequest = {
   paymentMethod: CheckoutPaymentMethod;
   promoCode?: string | null;
   clearCart?: boolean;
+  /**
+   * Stable key for retrying the same SSLCommerz checkout submission.
+   * It identifies the attempt only; prices and totals remain server-owned.
+   */
+  idempotencyKey?: string;
 };
 
 export type PlacedOrderResult = {
   order: OrderDetail;
   summary: CheckoutSummary;
   promo: CheckoutPromo;
+  /** Present only when the customer must continue at an external gateway. */
+  paymentUrl?: string;
 };
+
+export class CheckoutSubmissionError extends Error {
+  readonly orderId: string | null;
+  readonly paymentState: string | null;
+
+  constructor(
+    message: string,
+    details: { orderId: string | null; paymentState: string | null },
+  ) {
+    super(message);
+    this.name = "CheckoutSubmissionError";
+    this.orderId = details.orderId;
+    this.paymentState = details.paymentState;
+  }
+}
 
 export async function placeCheckoutOrder(
   body: PlaceOrderRequest,
@@ -119,6 +145,30 @@ export async function placeCheckoutOrder(
     body: JSON.stringify(body),
     cache: "no-store",
   });
+
+  if (!response.ok) {
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      throw new CheckoutSubmissionError("Failed to place the order.", {
+        orderId: null,
+        paymentState: null,
+      });
+    }
+    const details = asRecord(asRecord(payload)?.details);
+    throw new CheckoutSubmissionError(
+      readApiError(payload, "Failed to place the order."),
+      {
+        orderId:
+          typeof details?.orderId === "string" ? details.orderId : null,
+        paymentState:
+          typeof details?.paymentState === "string"
+            ? details.paymentState
+            : null,
+      },
+    );
+  }
 
   return readApiData<PlacedOrderResult>(
     response,

@@ -450,7 +450,7 @@ export function ProfilePageSkeleton() {
         </div>
         <div className="mt-6 grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
           <div className="space-y-2 rounded-2xl border border-brand-border bg-brand-white p-3">
-            {Array.from({ length: 6 }).map((_, index) => (
+            {Array.from({ length: 7 }).map((_, index) => (
               <Skeleton key={index} className="h-11 w-full rounded-xl" />
             ))}
           </div>

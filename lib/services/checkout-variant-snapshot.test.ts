@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   variantUpdateMany: vi.fn(),
   inventoryCreate: vi.fn(),
   orderCreate: vi.fn(),
+  orderStatusHistoryCreate: vi.fn(),
   queryRaw: vi.fn(),
   activeCategoryIds: vi.fn(),
   getStoreSettings: vi.fn(),
@@ -31,7 +32,10 @@ vi.mock("@/lib/services/settings.service", () => ({
   findActivePromoCode: mocks.findActivePromoCode,
 }));
 
-import { placeOrder } from "@/lib/services/checkout.service";
+import {
+  placeOrder,
+  placeOrderForCustomer,
+} from "@/lib/services/checkout.service";
 import { checkoutSchema } from "@/lib/validations/checkout.validation";
 
 describe("checkout variant snapshots", () => {
@@ -92,6 +96,7 @@ describe("checkout variant snapshots", () => {
       productVariant: { updateMany: mocks.variantUpdateMany },
       inventoryLog: { create: mocks.inventoryCreate },
       order: { create: mocks.orderCreate },
+      orderStatusHistory: { create: mocks.orderStatusHistoryCreate },
       promoCode: { updateMany: vi.fn() },
       promoCodeUsage: { create: vi.fn() },
       cartItem: { deleteMany: vi.fn() },
@@ -150,5 +155,35 @@ describe("checkout variant snapshots", () => {
         buyingPrice: 70,
       }),
     ]);
+  });
+
+  it("records an admin-collected advance with its payment time", async () => {
+    const input = checkoutSchema.parse({
+      items: [{ productId: "product-1", variantId: "variant-1", quantity: 1 }],
+      customerName: "Advance Buyer",
+      customerPhone: "01700000000",
+      customerAddress: "123 Test Road",
+      deliveryZone: "INSIDE_DHAKA",
+      paymentMethod: "CASH_ON_DELIVERY",
+    });
+
+    await placeOrderForCustomer(null, input, { advancePayment: 50 });
+
+    const orderData = mocks.orderCreate.mock.calls[0]?.[0].data as {
+      payments: {
+        create: {
+          provider: string;
+          amount: number;
+          status: string;
+          paidAt: Date;
+        };
+      };
+    };
+    expect(orderData.payments.create).toEqual({
+      provider: "ADMIN_ADVANCE",
+      amount: 50,
+      status: "SUCCESS",
+      paidAt: expect.any(Date),
+    });
   });
 });

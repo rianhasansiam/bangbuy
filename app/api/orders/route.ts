@@ -2,7 +2,12 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/api/guards";
-import { created, jsonError } from "@/lib/api/response";
+import {
+  created,
+  jsonError,
+  tooManyRequests,
+} from "@/lib/api/response";
+import { rateLimitPersistent } from "@/lib/auth/rate-limit";
 import { invalidateProductsById } from "@/lib/cache/catalog-invalidation";
 import { revalidateCacheTags } from "@/lib/cache/revalidation";
 import { placeOrder } from "@/lib/services/checkout.service";
@@ -27,6 +32,17 @@ export async function POST(request: NextRequest) {
   const guard = await requireUser();
   if (!guard.ok) return guard.response;
 
+  try {
+    const limit = await rateLimitPersistent(
+      `checkout-submit:${guard.session.user.id}`,
+      6,
+      5 * 60_000,
+    );
+    if (!limit.allowed) return tooManyRequests(limit.resetMs);
+  } catch (error) {
+    return handleServiceError("orders.POST.rateLimit", error);
+  }
+
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.toLowerCase().includes("application/json")) {
     return jsonError(415, "Content-Type must be application/json.");
@@ -44,6 +60,13 @@ export async function POST(request: NextRequest) {
     return jsonError(400, "Please review the highlighted fields and try again.", {
       fieldErrors: z.flattenError(parsed.error).fieldErrors,
     });
+  }
+
+  if (parsed.data.paymentMethod === "SSLCOMMERZ") {
+    return jsonError(
+      400,
+      "Online payment must be initiated through /api/checkout.",
+    );
   }
 
   try {

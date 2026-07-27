@@ -59,11 +59,12 @@ export default function OrderSummaryCard({
     : 0;
 
   const buttonLabel = isPlacing
-    ? "Placing order..."
-    : paymentMethod === "ONLINE"
-      ? "Pay now (coming soon)"
+    ? paymentMethod === "SSLCOMMERZ"
+      ? "Starting secure payment..."
+      : "Placing order..."
+    : paymentMethod === "SSLCOMMERZ"
+      ? "Pay securely with SSLCommerz"
       : "Place order";
-  const onlineDisabled = paymentMethod === "ONLINE";
   const isApplyingPromo = isLoading && Boolean(promoCode.trim()) && !appliedPromo;
 
   return (
@@ -225,17 +226,12 @@ export default function OrderSummaryCard({
       <button
         type="button"
         onClick={onPlaceOrder}
-        disabled={isPlacing || !summary || onlineDisabled}
+        disabled={isPlacing || !summary}
         aria-busy={isPlacing}
-        title={
-          onlineDisabled
-            ? "Online payment is coming soon. Switch to Cash on delivery to place the order."
-            : undefined
-        }
         className="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-brand-red px-5 text-base font-bold text-brand-white shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none disabled:hover:translate-y-0"
       >
         {isPlacing ? (
-          <ButtonLoader label="Placing order..." />
+          <ButtonLoader label={buttonLabel} />
         ) : (
           <>
             <Lock className="h-4 w-4" />
@@ -244,9 +240,9 @@ export default function OrderSummaryCard({
           </>
         )}
       </button>
-      {onlineDisabled && (
-        <p className="-mt-1 text-center text-[11px] font-medium text-amber-700">
-          Online payment isn&apos;t live yet. Pick Cash on delivery to finish your order.
+      {paymentMethod === "SSLCOMMERZ" && (
+        <p className="-mt-1 text-center text-[11px] font-medium text-gray-600">
+          You&apos;ll continue to SSLCommerz to complete your secure payment.
         </p>
       )}
 

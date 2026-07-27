@@ -19,7 +19,7 @@ export const PATCH = adminJsonRoute<
 >({
   schema: updateOrderStatusSchema,
   scope: "admin.orders/[id].status.PATCH",
-  revalidate: ["admin-orders"],
+  revalidate: ["admin-orders", "promo-codes"],
   handler: async ({ body, params, session }) => {
     const order = await updateOrderStatus(params.id, body, session.user.id);
     if (body.status === "CANCELLED" || body.status === "RETURNED") {

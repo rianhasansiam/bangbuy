@@ -12,7 +12,7 @@ import { z } from "zod";
  *    the customer's choices (items, address, promo code, payment).
  */
 
-const PAYMENT_METHOD = ["CASH_ON_DELIVERY", "ONLINE"] as const;
+const PAYMENT_METHOD = ["CASH_ON_DELIVERY", "SSLCOMMERZ"] as const;
 const DELIVERY_ZONES = ["INSIDE_DHAKA", "OUTSIDE_DHAKA"] as const;
 
 const checkoutItem = z.object({
@@ -51,7 +51,7 @@ export const checkoutPreviewSchema = z.object({
  * with 401 before the body is even parsed. The order is always
  * attached to the session userId.
  */
-export const checkoutSchema = z.object({
+const checkoutBaseSchema = z.object({
   items: z.array(checkoutItem).max(100).optional(),
   customerName: z
     .string()
@@ -98,6 +98,11 @@ export const checkoutSchema = z.object({
     .optional()
     .or(z.literal("")),
   paymentMethod: z.enum(PAYMENT_METHOD).default("CASH_ON_DELIVERY"),
+  idempotencyKey: z
+    .string()
+    .trim()
+    .uuid("Payment request ID must be a UUID.")
+    .optional(),
   promoCode: z
     .string()
     .trim()
@@ -110,12 +115,26 @@ export const checkoutSchema = z.object({
   clearCart: z.boolean().default(true),
 });
 
+export const checkoutSchema = checkoutBaseSchema.superRefine((value, context) => {
+  if (value.paymentMethod === "SSLCOMMERZ" && !value.idempotencyKey) {
+    context.addIssue({
+      code: "custom",
+      path: ["idempotencyKey"],
+      message: "A payment request ID is required for online payment.",
+    });
+  }
+});
+
 /**
  * Body for an admin-created order. Admins choose a registered customer or a
  * guest customer and explicitly select products, so this schema requires at
  * least one item and never falls back to a saved cart.
  */
-export const adminCheckoutSchema = checkoutSchema.extend({
+export const adminCheckoutSchema = checkoutBaseSchema.extend({
+  // Gateway initiation is customer-owned. Admin-created orders remain COD
+  // until a separate staff payment workflow is designed.
+  paymentMethod: z.literal("CASH_ON_DELIVERY").default("CASH_ON_DELIVERY"),
+  idempotencyKey: z.never().optional(),
   // Empty means a guest / walk-in customer. A non-empty value is verified
   // server-side to ensure it belongs to a regular customer account.
   customerId: z.string().trim().min(1).optional().or(z.literal("")),

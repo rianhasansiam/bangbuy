@@ -1,4 +1,8 @@
 import { readApiError } from "@/features/http/api-envelope";
+import type {
+  OrderPaymentMethod,
+  PaymentStatus as OrderPaymentStatus,
+} from "@/features/orders/api";
 import type { OrderStatus } from "@/lib/orders/status";
 
 /**
@@ -25,8 +29,8 @@ export type ReportType = (typeof REPORT_TYPES)[number];
 
 export type { OrderStatus } from "@/lib/orders/status";
 
-export type PaymentStatus = "PAID" | "UNPAID";
-export type PaymentMethod = "CASH_ON_DELIVERY";
+export type PaymentStatus = OrderPaymentStatus;
+export type PaymentMethod = OrderPaymentMethod;
 
 export type ReportMeta = {
   type: ReportType;

@@ -1,6 +1,9 @@
 import "server-only";
 
-import type { Prisma } from "@/app/generated/prisma/client";
+import type {
+  PaymentStatus,
+  Prisma,
+} from "@/app/generated/prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
 import { round2, toNumber } from "@/lib/money";
@@ -95,7 +98,7 @@ export type DashboardRecentOrder = {
   totalAmount: number;
   itemsCount: number;
   status: OrderStatus;
-  paymentStatus: "PAID" | "UNPAID";
+  paymentStatus: PaymentStatus;
   createdAt: string;
 };
 

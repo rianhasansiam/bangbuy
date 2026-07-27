@@ -221,7 +221,7 @@ Do not bypass this flow for new admin endpoints without a documented reason.
 - Guest product-card wishlist quick-adds use placeholder `"BangBuy"`/`"General"` brand and category values in `components/product/ProductCard.tsx`.
 - After authentication, `StoreHydrator` merges guest quantities/selections into database-backed cart and wishlist records.
 - Saved-for-later remains local-only.
-- A full recent-order snapshot, including customer/order details, is placed in `sessionStorage` for fast order-success rendering. It is tab-scoped rather than durable, and protected APIs remain authoritative, but the snapshot is still sensitive same-origin data that an XSS could read.
+- Order-success pages fetch owner-scoped order data from the server. They do not trust or persist customer/order receipt snapshots in browser storage; the storage helper only removes the legacy snapshot key.
 - Product filters/pagination and profile tabs use URL state so they can be refreshed or deep-linked.
 - Forms and short-lived interactions generally use local React state.
 
@@ -249,8 +249,10 @@ Do not bypass this flow for new admin endpoints without a documented reason.
 2. Preview recalculates product prices, variants, delivery fees, discounts, and promotion eligibility on the server.
 3. Order creation repeats authoritative validation; client totals are never trusted.
 4. The checkout service uses transactions, row locking/atomic stock guards, inventory logs, promotion usage, and immutable item/price/cost snapshots.
-5. Cancellation follows status-transition rules and restores inventory where applicable.
-6. Customer order reads are owner-scoped, except for the stale-admin-role flaw documented under P0.
+5. COD orders remain unpaid until payment is recorded. SSLCommerz checkout reserves stock and promotion usage, persists a pending payment attempt, then initializes the gateway on the server.
+6. SSLCommerz browser callbacks are navigation-only. IPN processing validates the transaction server-to-server before changing payment or order state, and duplicate notifications are idempotent.
+7. Cancellation/failure/expiry follows status-transition rules and restores reserved inventory and promotion usage exactly once where applicable.
+8. Customer order reads are owner-scoped; elevated reads refresh the current database role rather than trusting a stale JWT role.
 
 ### Admin mutation
 
@@ -261,11 +263,11 @@ Admin UI → feature API adapter → admin Route Handler → DB-refreshed guard
 
 ## Data model
 
-`prisma/schema.prisma` defines 28 models:
+`prisma/schema.prisma` defines 29 models:
 
 | Domain | Models |
 | --- | --- |
-| Identity | `User`, `Address` |
+| Identity and abuse controls | `User`, `Address`, `RateLimitBucket` |
 | Catalog and inventory | `Category`, `Brand`, `Manufacturer`, `Product`, `CatalogRedirect`, `ProductVariant`, `ProductImage`, `InventoryLog` |
 | Shopping state | `CartItem`, `Wishlist` |
 | Orders and payments | `Order`, `OrderItem`, `OrderStatusHistory`, `PaymentTransaction` |
@@ -278,7 +280,7 @@ Important invariants:
 - Products have generic variants, multiple images, inventory state, SEO fields, and redirect history.
 - Money uses Prisma Decimal-backed handling rather than binary floating-point arithmetic.
 - Order items snapshot mutable catalog information so historical orders do not change when products do.
-- Inventory movements, order transitions, and promotion usage have explicit records. `PaymentTransaction` currently records admin advances; ordinary admin payment-status changes update `Order.paymentStatus` without a separate immutable payment-history row.
+- Inventory movements, order transitions, promotion usage, and provider payment attempts have explicit records. SSLCommerz metadata, validation identity, risk state, idempotency identity, and gateway-session state are stored on `PaymentTransaction`.
 - Catalog SEO fields and redirects depend on the pending `20260722000000_catalog_seo_redirects` migration.
 
 ## Caching, rendering, and SEO
@@ -316,6 +318,7 @@ Next.js 16 documentation marks `unstable_cache` as replaced by the `use cache` d
 
 | Integration | Purpose | Current caveat |
 | --- | --- | --- |
+| SSLCommerz | Server-initiated online checkout with authoritative IPN validation | Requires private merchant credentials, a public HTTPS callback origin, and an external reconciliation scheduler |
 | Google OAuth | Authentication | Unsafe automatic email linking is a P0 finding |
 | ImgBB | Product/profile image uploads | No explicit timeout/retry; upload size enforcement occurs too late |
 | Courier/customer information API | Fraud/courier checks | No explicit timeout/retry; service availability affects the feature |
@@ -339,6 +342,10 @@ Use `.env.example` as the key-name contract. Never copy real values into documen
 | `AUTH_GOOGLE_SECRET` | Secret/server | Google OAuth client secret |
 | `IMGBB_API_KEY` | Secret/server | ImgBB upload API |
 | `CUSTOMER_INFO_CHECKER_API` | Secret/server | Courier/customer information API |
+| `SSLCOMMERZ_STORE_ID` | Secret/server | SSLCommerz merchant store identifier |
+| `SSLCOMMERZ_STORE_PASSWORD` | Secret/server | SSLCommerz merchant API password |
+| `SSLCOMMERZ_IS_LIVE` | Server configuration | Explicit `false` for sandbox or `true` for live endpoints; no implicit environment fallback |
+| `PAYMENT_RECONCILIATION_SECRET` | Secret/server | High-entropy bearer secret for the private reconciliation trigger |
 | `NEXT_PUBLIC_EMAILJS_SERVICE_ID` | Public | EmailJS browser service ID |
 | `NEXT_PUBLIC_EMAILJS_TEMPLATE_ID` | Public | EmailJS browser template ID |
 | `NEXT_PUBLIC_EMAILJS_PUBLIC_KEY` | Public | EmailJS browser public key |
@@ -367,6 +374,14 @@ Before applying or creating a migration, verify `DATABASE_URL` targets the inten
 - Staging/production: back up/snapshot first, then `npx prisma migrate deploy`
 
 Never use `prisma migrate reset` against a shared or production database.
+
+### SSLCommerz operations
+
+Set the four server-only payment variables from `.env.example`. The canonical `SITE_URL` must be a publicly reachable HTTPS origin for gateway callbacks and IPN delivery. In development, use a trusted HTTPS tunnel and set `SITE_URL` to that origin.
+
+The reconciliation handler is intentionally an authenticated trigger, not an in-process timer. Configure the deployment scheduler to `POST /api/payments/sslcommerz/reconcile` every 5–10 minutes with `Authorization: Bearer <PAYMENT_RECONCILIATION_SECRET>`. Use a random secret of at least 32 characters. This sweep queries SSLCommerz for stale pending attempts and safely applies terminal provider state.
+
+Provider-risk, duplicate-charge, late-charge, and validation-mismatch findings place the order on an admin-visible fulfillment hold. An admin may approve a verified successful payment, or—only after completing the refund in SSLCommerz—record the external refund reference and cancel/release the reservation. BangBuy records that evidence but does not initiate provider refunds.
 
 ### Quality gates
 
@@ -434,9 +449,8 @@ Priority labels here combine exploitability, data exposure, release impact, and 
 
 | Finding | Evidence and impact | Required direction |
 | --- | --- | --- |
-| Untrusted login callback can become navigation XSS | `app/(auth)/login/page.tsx` reads `callbackUrl` and passes it to `router.push`. Next.js explicitly warns that `javascript:` values execute in page context. Successful exploitation can also read same-origin browser storage, including the recent-order snapshot. | Accept only validated same-origin application paths; reject schemes, protocol-relative URLs, control characters, and external origins. Add malicious and valid callback regression tests. |
+| Untrusted login callback can become navigation XSS | `app/(auth)/login/page.tsx` reads `callbackUrl` and passes it to `router.push`. Next.js explicitly warns that `javascript:` values execute in page context. Successful exploitation can also read other same-origin browser state, although order receipt snapshots are no longer stored there. | Accept only validated same-origin application paths; reject schemes, protocol-relative URLs, control characters, and external origins. Add malicious and valid callback regression tests. |
 | Google email auto-linking enables account pre-hijacking | Credential registration accepts an unverified email. `lib/auth/auth.ts` later links Google sign-in by email while preserving an existing password. An attacker can pre-register a victim's Google address and retain credential access. | Require verified ownership before credential activation/linking, or require authenticated explicit provider linking. Never auto-link solely because email strings match. |
-| Demoted admin can retain reads of known customer orders/PII | `app/api/orders/[id]/route.ts` branches on the JWT role after the normal user guard. While the stale JWT remains valid, a demoted admin can use known or otherwise obtained order IDs without owner scoping; this finding does not establish order-ID enumeration. | Use a current database role check for the admin branch and otherwise enforce owner scope. Add demotion/stale-token tests and consider session version/revocation. |
 | Production dependency advisories | `npm audit --omit=dev` reports 2 critical, 4 high, and 4 moderate advisories, including the direct NextAuth/Next.js dependency paths. | Upgrade direct dependencies deliberately, review changelogs against installed Next.js docs, regenerate the lockfile, and rerun the full release/auth suite and audit. |
 | Inspected database schema is behind application code | Prisma reports `20260722000000_catalog_seo_redirects` pending on the configured database. Build-time catalog reads expect columns such as `Category.seoTitle`, so page-data collection fails there. | Confirm the intended target, take a snapshot, review and deploy the additive migration before the application build, confirm migration status, then rebuild. |
 | HTTPS canonical origin is a production-build precondition | The normal local-development `SITE_URL` is HTTP. Production-mode canonical validation correctly requires HTTPS and stops page collection before the schema failure is reached. | Configure a real HTTPS origin for staging/production builds and keep public/server origins aligned. Do not weaken canonical validation to accommodate a production HTTP URL. |

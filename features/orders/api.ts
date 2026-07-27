@@ -12,9 +12,18 @@ import type { OrderStatus } from "@/lib/orders/status";
 
 export type { OrderStatus } from "@/lib/orders/status";
 
-export type PaymentStatus = "PAID" | "UNPAID";
+export type PaymentStatus =
+  | "PAID"
+  | "UNPAID"
+  | "PENDING"
+  | "FAILED"
+  | "REFUNDED";
 
-export type OrderPaymentMethod = "CASH_ON_DELIVERY" | "ONLINE";
+export type OrderPaymentMethod =
+  | "CASH_ON_DELIVERY"
+  | "SSLCOMMERZ"
+  | "PAYPAL"
+  | "ONLINE";
 
 /** One entry in an order's status audit trail / tracking timeline. */
 export type OrderStatusHistoryEntry = {
@@ -72,6 +81,7 @@ export type OrderDetail = {
   status: OrderStatus;
   paymentMethod: OrderPaymentMethod;
   paymentStatus: PaymentStatus;
+  requiresPaymentReview: boolean;
 
   createdAt: string;
   updatedAt: string;
@@ -113,6 +123,7 @@ export type MyOrderSummary = {
   status: OrderStatus;
   paymentMethod: OrderPaymentMethod;
   paymentStatus: PaymentStatus;
+  requiresPaymentReview: boolean;
   createdAt: string;
   updatedAt: string;
   items: Array<{

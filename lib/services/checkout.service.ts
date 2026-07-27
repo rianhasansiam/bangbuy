@@ -541,6 +541,13 @@ const orderInclude = {
 type OrderPaymentOptions = {
   /** Amount collected by an admin at order creation; not a discount. */
   advancePayment?: number;
+  /** Persisted before any provider request for an SSLCommerz checkout. */
+  paymentAttempt?: {
+    id: string;
+    provider: "SSLCOMMERZ";
+    transactionId: string;
+    idempotencyKey: string;
+  };
 };
 
 async function lockCheckoutCatalogRows(
@@ -564,12 +571,13 @@ async function placeOrderInternal(
   input: CheckoutInput,
   options: OrderPaymentOptions = {},
 ) {
-  // Pay Now is intentionally disabled until the gateway is wired up.
-  // Reject server-side too so a curious client can't bypass the UI lock.
-  if (input.paymentMethod === "ONLINE") {
+  const isSslCommerz = input.paymentMethod === "SSLCOMMERZ";
+  if (isSslCommerz !== Boolean(options.paymentAttempt)) {
     throw new CheckoutError(
       400,
-      "Online payment is coming soon. Please choose Cash on Delivery for now.",
+      isSslCommerz
+        ? "Online payment must be initiated through the payment service."
+        : "Payment attempt metadata is not valid for this payment method.",
     );
   }
 
@@ -688,7 +696,11 @@ async function placeOrderInternal(
           customerPostalCode,
           customerNote,
           paymentMethod: input.paymentMethod,
-          paymentStatus: isPaidInFull ? "PAID" : "UNPAID",
+          paymentStatus: isSslCommerz
+            ? "PENDING"
+            : isPaidInFull
+              ? "PAID"
+              : "UNPAID",
           promoCode: promo?.ok ? promo.code : null,
           ...(advancePayment.greaterThan(0)
             ? {
@@ -697,6 +709,7 @@ async function placeOrderInternal(
                     provider: "ADMIN_ADVANCE",
                     amount: round2(advancePayment),
                     status: "SUCCESS",
+                    paidAt: new Date(),
                   },
                 },
               }
@@ -721,6 +734,32 @@ async function placeOrderInternal(
         },
         include: orderInclude,
       });
+
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: order.id,
+          status: "PENDING",
+          note: isSslCommerz
+            ? "Order created; awaiting verified online payment."
+            : "Order placed.",
+          updatedBy: userId,
+        },
+      });
+
+      const paymentAttempt = options.paymentAttempt
+        ? await tx.paymentTransaction.create({
+            data: {
+              id: options.paymentAttempt.id,
+              orderId: order.id,
+              provider: options.paymentAttempt.provider,
+              transactionId: options.paymentAttempt.transactionId,
+              idempotencyKey: options.paymentAttempt.idempotencyKey,
+              amount: summary.total,
+              currency: settings.currency.toUpperCase(),
+              status: "PENDING",
+            },
+          })
+        : null;
 
       // Bump usedCount when a real promo was applied.
       if (promo?.ok) {
@@ -757,13 +796,20 @@ async function placeOrderInternal(
         await tx.cartItem.deleteMany({ where: { userId } });
       }
 
-      return { order, summary, promo: promoToJson(promo) };
+      return { order, summary, promo: promoToJson(promo), paymentAttempt };
     });
   } catch (error) {
-    if (
-      error instanceof PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
+    if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
+      const target = Array.isArray(error.meta?.target)
+        ? error.meta.target.map(String)
+        : [String(error.meta?.target ?? "")];
+      if (target.some((field) => field.includes("idempotencyKey"))) {
+        throw new CheckoutError(
+          409,
+          "This payment request is already being processed.",
+          { code: "PAYMENT_IDEMPOTENCY_CONFLICT" },
+        );
+      }
       throw new CheckoutError(
         500,
         "Failed to generate a unique order number. Please retry.",
@@ -774,8 +820,37 @@ async function placeOrderInternal(
 }
 
 /** Place an account-backed customer checkout order. */
-export function placeOrder(userId: string, input: CheckoutInput) {
-  return placeOrderInternal(userId, input);
+export async function placeOrder(userId: string, input: CheckoutInput) {
+  if (input.paymentMethod !== "CASH_ON_DELIVERY") {
+    throw new CheckoutError(
+      400,
+      "Online payment must be initiated through the checkout payment service.",
+    );
+  }
+  const result = await placeOrderInternal(userId, input);
+  return {
+    order: result.order,
+    summary: result.summary,
+    promo: result.promo,
+  };
+}
+
+/** Reserve inventory/promo and persist an SSLCommerz attempt atomically. */
+export async function reserveOrderForSslCommerz(
+  userId: string,
+  input: CheckoutInput,
+  paymentAttempt: NonNullable<OrderPaymentOptions["paymentAttempt"]>,
+) {
+  if (input.paymentMethod !== "SSLCOMMERZ") {
+    throw new CheckoutError(400, "SSLCommerz payment method is required.");
+  }
+
+  const result = await placeOrderInternal(userId, input, { paymentAttempt });
+  const persistedAttempt = result.paymentAttempt;
+  if (!persistedAttempt) {
+    throw new CheckoutError(500, "Payment attempt could not be persisted.");
+  }
+  return { ...result, paymentAttempt: persistedAttempt };
 }
 
 /**

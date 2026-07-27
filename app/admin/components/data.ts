@@ -16,6 +16,7 @@ import {
   Activity,
   Factory,
   Tags,
+  ReceiptText,
 } from "lucide-react";
 
 /**
@@ -59,6 +60,11 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     label: "Operations",
     items: [
       { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
+      {
+        href: "/admin/transactions",
+        label: "Transactions",
+        icon: ReceiptText,
+      },
       { href: "/admin/reviews", label: "Reviews", icon: Star },
       { href: "/admin/courier", label: "Courier Check", icon: ShieldCheck },
       { href: "/admin/users", label: "Customers", icon: Users },

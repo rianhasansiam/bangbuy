@@ -1,4 +1,5 @@
 import { readApiData } from "@/features/http/api-envelope";
+import type { PaymentStatus } from "@/features/orders/api";
 import type { OrderStatus } from "@/lib/orders/status";
 
 /**
@@ -42,7 +43,7 @@ export type DashboardSalesSeries = {
 
 export type DashboardOrderStatus = OrderStatus;
 
-export type DashboardPaymentStatus = "PAID" | "UNPAID";
+export type DashboardPaymentStatus = PaymentStatus;
 
 export type DashboardRecentOrder = {
   id: string;

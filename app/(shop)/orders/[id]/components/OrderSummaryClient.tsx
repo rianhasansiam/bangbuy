@@ -6,7 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertCircle,
   CheckCircle2,
+  Clock3,
   Download,
+  LoaderCircle,
   Mail,
   MapPin,
   Package,
@@ -18,11 +20,13 @@ import {
 import { useSession } from "@/lib/auth/use-app-session";
 
 import { fetchOrderDetail, type OrderDetail } from "@/features/orders/api";
-import { downloadOrderPdf } from "@/features/orders/pdf";
 import {
-  clearOrderSnapshot,
-  readOrderSnapshot,
-} from "@/features/orders/storage";
+  isAwaitingSslCommerzConfirmation,
+  paymentMethodLabel,
+  PAYMENT_STATUS_META,
+} from "@/features/orders/payment";
+import { downloadOrderPdf } from "@/features/orders/pdf";
+import { clearOrderSnapshot } from "@/features/orders/storage";
 import { ORDER_STATUS_META } from "@/lib/orders/status";
 import ColorBadge from "@/components/ui/ColorBadge";
 import { ButtonLoader, OrderDetailsPageSkeleton } from "@/components/ui/loading";
@@ -30,6 +34,8 @@ import OrderTracker from "./OrderTracker";
 
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400";
+const PAYMENT_POLL_INTERVAL_MS = 2_500;
+const PAYMENT_POLL_TIMEOUT_MS = 60_000;
 
 type OrderSummaryClientProps = {
   orderId: string;
@@ -37,7 +43,7 @@ type OrderSummaryClientProps = {
 
 type LoadState =
   | { status: "loading" }
-  | { status: "ready"; order: OrderDetail; source: "api" | "snapshot" }
+  | { status: "ready"; order: OrderDetail }
   | { status: "error"; message: string };
 
 function formatDateTime(value: string): string {
@@ -46,10 +52,6 @@ function formatDateTime(value: string): string {
   } catch {
     return value;
   }
-}
-
-function paymentLabel(method: OrderDetail["paymentMethod"]): string {
-  return method === "ONLINE" ? "Pay now (online)" : "Cash on delivery";
 }
 
 const STATUS_TONE: Record<
@@ -62,64 +64,41 @@ const STATUS_TONE: Record<
   ]),
 ) as Record<OrderDetail["status"], { label: string; pill: string }>;
 
-const PAYMENT_TONE: Record<
-  OrderDetail["paymentStatus"],
-  { label: string; pill: string }
-> = {
-  PAID: { label: "Paid", pill: "bg-emerald-100 text-emerald-700" },
-  UNPAID: { label: "Awaiting payment", pill: "bg-amber-100 text-amber-700" },
-};
-
 export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { status: authStatus } = useSession();
 
   const justPlaced = searchParams.get("just-placed") === "1";
+  const paymentParameter = searchParams.get("payment");
+  const paymentReturnOutcome =
+    paymentParameter === "processing" ||
+    paymentParameter === "failed" ||
+    paymentParameter === "cancelled"
+      ? paymentParameter
+      : null;
 
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [paymentPollTimedOut, setPaymentPollTimedOut] = useState(false);
 
-  // Load the order. Authentication is required everywhere now, so
-  // the API is the single source of truth. The snapshot stashed by
-  // the checkout page is used only as a friendly first paint while
-  // the live request resolves on the post-checkout redirect.
+  // Load only through the owner-scoped API. Browser storage is untrusted and
+  // must never paint another customer's or a forged receipt.
   useEffect(() => {
     if (authStatus === "loading") return;
     if (authStatus !== "authenticated") return;
 
     let ignore = false;
+    clearOrderSnapshot();
 
     void (async () => {
-      await Promise.resolve();
-      if (ignore) return;
-
-      // First paint: if the checkout page just stashed a snapshot for
-      // this order, render it immediately so the receipt appears with
-      // no loading spinner. The fetch below still runs and replaces it
-      // with authoritative data.
-      const snapshot = readOrderSnapshot(orderId);
-      if (snapshot) {
-        setState({
-          status: "ready",
-          order: snapshot.order,
-          source: "snapshot",
-        });
-      } else {
-        setState({ status: "loading" });
-      }
-
       try {
         const order = await fetchOrderDetail(orderId);
         if (ignore) return;
-        setState({ status: "ready", order, source: "api" });
+        setState({ status: "ready", order });
       } catch (error) {
         if (ignore) return;
-        // If we already painted from the snapshot, keep it on screen
-        // — refusing to overwrite a good render with an error feels
-        // better than flashing red between two valid states.
-        if (snapshot) return;
         const message =
           error instanceof Error
             ? error.message
@@ -133,16 +112,58 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
     };
   }, [authStatus, orderId]);
 
-  // Once we've shown the receipt at least once, drop the snapshot so
-  // a stale copy doesn't haunt the next checkout in the same tab.
+  // SSLCommerz redirects are navigation only, never proof of payment. Poll the
+  // existing owner-scoped, no-store order endpoint for up to one minute so the
+  // page reflects the server-authoritative IPN/validation result.
   useEffect(() => {
-    if (state.status !== "ready") return;
-    if (state.source !== "snapshot") return;
-    // Defer the cleanup so a quick refresh during the same render
-    // still has the snapshot available.
-    const timer = window.setTimeout(() => clearOrderSnapshot(), 0);
-    return () => window.clearTimeout(timer);
-  }, [state]);
+    if (authStatus !== "authenticated" || !paymentReturnOutcome) return;
+
+    let ignore = false;
+    let timer: number | undefined;
+    const startedAt = Date.now();
+
+    const poll = async () => {
+      if (ignore) return;
+
+      try {
+        const nextOrder = await fetchOrderDetail(orderId);
+        if (ignore) return;
+
+        setState({ status: "ready", order: nextOrder });
+        if (
+          nextOrder.requiresPaymentReview ||
+          !isAwaitingSslCommerzConfirmation(
+            nextOrder.paymentMethod,
+            nextOrder.paymentStatus,
+          )
+        ) {
+          return;
+        }
+      } catch {
+        // A transient read failure should not replace an already-rendered
+        // receipt. Keep retrying within the same bounded polling window.
+      }
+
+      if (ignore) return;
+      if (Date.now() - startedAt >= PAYMENT_POLL_TIMEOUT_MS) {
+        setPaymentPollTimedOut(true);
+        return;
+      }
+
+      timer = window.setTimeout(() => {
+        void poll();
+      }, PAYMENT_POLL_INTERVAL_MS);
+    };
+
+    timer = window.setTimeout(() => {
+      void poll();
+    }, PAYMENT_POLL_INTERVAL_MS);
+
+    return () => {
+      ignore = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [authStatus, orderId, paymentReturnOutcome]);
 
   const order = state.status === "ready" ? state.order : null;
 
@@ -220,7 +241,12 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
   }
 
   const statusBadge = STATUS_TONE[order.status] ?? STATUS_TONE.PENDING;
-  const paymentBadge = PAYMENT_TONE[order.paymentStatus] ?? PAYMENT_TONE.UNPAID;
+  const paymentBadge =
+    PAYMENT_STATUS_META[order.paymentStatus] ?? PAYMENT_STATUS_META.UNPAID;
+  const showPaymentResult =
+    order.paymentMethod === "SSLCOMMERZ" &&
+    (paymentReturnOutcome !== null || order.requiresPaymentReview);
+  const paymentUnderReview = order.requiresPaymentReview;
 
   const addressLines = [
     order.customerAddress,
@@ -306,7 +332,7 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
               custom={
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-semibold text-gray-900">
-                    {paymentLabel(order.paymentMethod)}
+                    {paymentMethodLabel(order.paymentMethod)}
                   </span>
                   <span
                     className={`inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${paymentBadge.pill}`}
@@ -318,6 +344,77 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
             />
           </div>
         </section>
+
+        {showPaymentResult && (
+          <section
+            aria-live="polite"
+            className={`mt-5 flex items-start gap-3 rounded-2xl border p-4 shadow-sm ${
+              paymentUnderReview
+                ? "border-amber-200 bg-amber-50 text-amber-800"
+                : order.paymentStatus === "PAID"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                  : order.paymentStatus === "REFUNDED"
+                    ? "border-slate-200 bg-slate-50 text-slate-800"
+                : order.paymentStatus === "FAILED"
+                  ? "border-rose-200 bg-rose-50 text-rose-800"
+                  : "border-sky-200 bg-sky-50 text-sky-800"
+            }`}
+          >
+            {paymentUnderReview ? (
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+            ) : order.paymentStatus === "PAID" ? (
+              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+            ) : order.paymentStatus === "REFUNDED" ? (
+              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+            ) : order.paymentStatus === "FAILED" ? (
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+            ) : paymentPollTimedOut ? (
+              <Clock3 className="mt-0.5 h-5 w-5 shrink-0" />
+            ) : (
+              <LoaderCircle className="mt-0.5 h-5 w-5 shrink-0 animate-spin" />
+            )}
+            <div>
+              <h2 className="text-sm font-bold">
+                {paymentUnderReview && order.paymentStatus !== "PAID"
+                  ? "Payment verification needs review"
+                  : order.paymentStatus === "PAID"
+                  ? paymentUnderReview
+                    ? "Payment received — review pending"
+                    : "Payment confirmed"
+                  : order.paymentStatus === "REFUNDED"
+                    ? "Payment refunded"
+                  : order.paymentStatus === "FAILED"
+                    ? "Payment was not completed"
+                    : paymentPollTimedOut
+                      ? "Payment confirmation is taking longer than expected"
+                      : paymentReturnOutcome === "failed"
+                        ? "Checking the failed payment"
+                        : paymentReturnOutcome === "cancelled"
+                          ? "Checking the cancelled payment"
+                          : "Confirming your payment"}
+              </h2>
+              <p className="mt-1 text-xs leading-5">
+                {paymentUnderReview && order.paymentStatus !== "PAID"
+                  ? "BangBuy detected a gateway verification discrepancy. The order remains safely on hold while support investigates the payment."
+                  : order.paymentStatus === "PAID"
+                  ? paymentUnderReview
+                    ? "BangBuy verified the payment, but the order is safely on hold for an operations review."
+                    : "SSLCommerz has been verified by BangBuy. Your order is ready for processing."
+                  : order.paymentStatus === "REFUNDED"
+                    ? "BangBuy recorded the externally confirmed SSLCommerz refund. No payment is retained for this order."
+                  : order.paymentStatus === "FAILED"
+                    ? "BangBuy has not confirmed this payment. You can review your orders or try checkout again."
+                    : paymentPollTimedOut
+                      ? "Your order remains safe. Check this page again shortly for the authoritative payment status."
+                      : paymentReturnOutcome === "failed"
+                        ? "SSLCommerz returned a failure signal. BangBuy is waiting for the authoritative server notification before finalizing the order."
+                        : paymentReturnOutcome === "cancelled"
+                          ? "SSLCommerz returned a cancellation signal. BangBuy is waiting for the authoritative server notification before finalizing the order."
+                          : "BangBuy is waiting for secure server verification from SSLCommerz. This page updates automatically."}
+              </p>
+            </div>
+          </section>
+        )}
 
         {/* Tracking timeline */}
         <OrderTracker
@@ -357,7 +454,7 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                 <Field
                   icon={<Truck className="h-4 w-4" />}
                   label="Payment method"
-                  value={paymentLabel(order.paymentMethod)}
+                  value={paymentMethodLabel(order.paymentMethod)}
                 />
                 <div className="sm:col-span-2">
                   <Field

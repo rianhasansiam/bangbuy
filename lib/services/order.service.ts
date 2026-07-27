@@ -13,6 +13,13 @@ import {
   CUSTOMER_CANCELLABLE_STATUSES,
   STATUS_TRANSITIONS,
 } from "@/lib/orders/status";
+import {
+  lockOrderForStatusChange,
+  lockPaymentAttempt,
+  recordStatusHistory,
+  releasePromotionUsage,
+  restoreStockForItems,
+} from "@/lib/orders/mutations";
 import { notifyOrderStatusChange } from "@/lib/orders/notifications";
 import { ServiceError } from "@/lib/services/service-error";
 import type {
@@ -81,6 +88,16 @@ const orderInclude = {
   // Full audit trail, oldest first, so the customer tracker and admin
   // timeline render chronologically without a client-side sort.
   statusHistory: { orderBy: { createdAt: "asc" } },
+  // Expose only a derived hold flag at the JSON boundary; payment record IDs
+  // and provider evidence remain server-side.
+  payments: {
+    where: {
+      provider: "SSLCOMMERZ",
+      requiresReview: true,
+    },
+    select: { id: true },
+    take: 1,
+  },
 } satisfies Prisma.OrderInclude;
 
 const orderWithUserInclude = {
@@ -129,15 +146,17 @@ function serializeOrderItem(item: OrderWithItems["items"][number]) {
 }
 
 export function serializeOrder<T extends OrderWithItems>(order: T) {
+  const { payments, ...rest } = order;
   return {
-    ...order,
-    subtotal: toNumber(order.subtotal),
-    deliveryCharge: toNumber(order.deliveryCharge),
-    discountAmount: toNumber(order.discountAmount),
-    taxAmount: toNumber(order.taxAmount),
-    totalAmount: toNumber(order.totalAmount),
-    advancePayment: toNumber(order.advancePayment),
-    items: order.items.map(serializeOrderItem),
+    ...rest,
+    subtotal: toNumber(rest.subtotal),
+    deliveryCharge: toNumber(rest.deliveryCharge),
+    discountAmount: toNumber(rest.discountAmount),
+    taxAmount: toNumber(rest.taxAmount),
+    totalAmount: toNumber(rest.totalAmount),
+    advancePayment: toNumber(rest.advancePayment),
+    items: rest.items.map(serializeOrderItem),
+    requiresPaymentReview: payments.length > 0,
   };
 }
 
@@ -215,35 +234,6 @@ export function getOrderForUser(orderId: string, userId: string) {
 const CUSTOMER_CANCELLABLE: readonly OrderStatus[] = CUSTOMER_CANCELLABLE_STATUSES;
 
 /**
- * Append a row to the order's status audit trail. Always called inside
- * the same transaction that updates `Order.status` so the history can
- * never drift from the live status.
- */
-function recordStatusHistory(
-  tx: Prisma.TransactionClient,
-  orderId: string,
-  status: OrderStatus,
-  options: { note?: string | null; updatedBy?: string | null } = {},
-) {
-  return tx.orderStatusHistory.create({
-    data: {
-      orderId,
-      status,
-      note: options.note ?? null,
-      updatedBy: options.updatedBy ?? null,
-    },
-  });
-}
-
-/** Serialize status transitions for one order for the lifetime of the transaction. */
-async function lockOrderForStatusChange(
-  tx: Prisma.TransactionClient,
-  orderId: string,
-): Promise<void> {
-  await tx.$queryRaw`SELECT "id" FROM "Order" WHERE "id" = ${orderId} FOR UPDATE`;
-}
-
-/**
  * Fire a best-effort status-change notification for an already-committed
  * order. Kept outside the DB transaction so a delivery hiccup can't roll
  * back the status update; `notifyOrderStatusChange` itself never throws.
@@ -264,62 +254,37 @@ async function fireStatusNotification(order: {
   });
 }
 
-/**
- * Restore stock for an order's items onto their variants.
- *
- * Order items keep a `variantId` snapshot. We restore onto that variant
- * when it still exists (SET NULL on delete means it may be gone). A SKU
- * fallback covers any legacy rows that predate the variantId snapshot.
- * Each restore is recorded in the inventory ledger.
- */
-async function restoreStockForItems(
-  tx: Prisma.TransactionClient,
-  items: { variantId: string | null; sku: string | null; quantity: number }[],
-  orderNumber: string,
-) {
-  for (const item of items) {
-    let variantId = item.variantId ?? null;
-
-    if (!variantId && item.sku) {
-      const variant = await tx.productVariant.findUnique({
-        where: { sku: item.sku },
-        select: { id: true },
-      });
-      variantId = variant?.id ?? null;
-    }
-
-    if (!variantId) continue;
-
-    // Guard against a variant that was deleted after the order was placed.
-    const exists = await tx.productVariant.findUnique({
-      where: { id: variantId },
-      select: { id: true },
-    });
-    if (!exists) continue;
-
-    await tx.productVariant.update({
-      where: { id: variantId },
-      data: { stock: { increment: item.quantity } },
-    });
-    await tx.inventoryLog.create({
-      data: {
-        variantId,
-        type: "ORDER_CANCELLED",
-        quantity: item.quantity,
-        note: `Order ${orderNumber} cancelled`,
-      },
-    });
-  }
-}
-
 export async function cancelOrderAsCustomer(orderId: string, userId: string) {
   const result = await prisma.$transaction(async (tx) => {
     await lockOrderForStatusChange(tx, orderId);
     const order = await tx.order.findFirst({
       where: { id: orderId, userId },
-      include: { items: true },
+      include: {
+        items: true,
+        payments: {
+          where: {
+            provider: "SSLCOMMERZ",
+            OR: [{ status: "SUCCESS" }, { requiresReview: true }],
+          },
+          select: { id: true, status: true, requiresReview: true },
+        },
+      },
     });
     if (!order) throw new OrderError(404, "Order not found.");
+
+    if (
+      order.paymentMethod === "SSLCOMMERZ" &&
+      (order.paymentStatus === "PAID" ||
+        order.payments.some(
+          (payment) =>
+            payment.status === "SUCCESS" || payment.requiresReview,
+        ))
+    ) {
+      throw new OrderError(
+        409,
+        "This online payment has succeeded or requires investigation; cancellation needs a verified refund resolution.",
+      );
+    }
 
     if (!CUSTOMER_CANCELLABLE.includes(order.status)) {
       throw new OrderError(
@@ -330,10 +295,26 @@ export async function cancelOrderAsCustomer(orderId: string, userId: string) {
 
     // Restore stock for every line onto its variant.
     await restoreStockForItems(tx, order.items, order.orderNumber);
+    await releasePromotionUsage(tx, order.id);
+    if (order.paymentMethod === "SSLCOMMERZ") {
+      await tx.paymentTransaction.updateMany({
+        where: {
+          orderId: order.id,
+          provider: "SSLCOMMERZ",
+          status: "PENDING",
+        },
+        data: { status: "CANCELLED" },
+      });
+    }
 
     const updated = await tx.order.update({
       where: { id: order.id },
-      data: { status: "CANCELLED" },
+      data: {
+        status: "CANCELLED",
+        ...(order.paymentMethod === "SSLCOMMERZ"
+          ? { paymentStatus: "FAILED" as const }
+          : {}),
+      },
       include: orderInclude,
     });
     await recordStatusHistory(tx, order.id, "CANCELLED", {
@@ -389,6 +370,13 @@ export async function listOrdersForAdmin(query: AdminOrderQueryInput) {
         status: true,
         paymentMethod: true,
         paymentStatus: true,
+        payments: {
+          where: {
+            provider: "SSLCOMMERZ",
+            requiresReview: true,
+          },
+          select: { status: true, reviewReason: true },
+        },
         customerName: true,
         customerPhone: true,
         customerAddress: true,
@@ -403,7 +391,7 @@ export async function listOrdersForAdmin(query: AdminOrderQueryInput) {
 
   // Flatten `_count.items` and convert Decimal money fields to numbers.
   const items = rows.map((row) => {
-    const { _count, ...rest } = row;
+    const { _count, payments, ...rest } = row;
     return {
       ...rest,
       subtotal: toNumber(rest.subtotal),
@@ -412,6 +400,23 @@ export async function listOrdersForAdmin(query: AdminOrderQueryInput) {
       totalAmount: toNumber(rest.totalAmount),
       advancePayment: toNumber(rest.advancePayment),
       itemsCount: _count.items,
+      requiresPaymentReview: payments.length > 0,
+      paymentReviewReasons: [
+        ...new Set(
+          payments.map(
+            (payment) => payment.reviewReason ?? "UNSPECIFIED_REVIEW",
+          ),
+        ),
+      ],
+      paymentReviewApprovalAllowed:
+        payments.length > 0 &&
+        rest.paymentStatus === "PAID" &&
+        !["CANCELLED", "REFUNDED"].includes(rest.status) &&
+        payments.every((payment) => payment.status === "SUCCESS"),
+      paymentReviewRefundCancellationAllowed:
+        payments.length > 0 &&
+        (["CANCELLED", "REFUNDED"].includes(rest.status) ||
+          STATUS_TRANSITIONS[rest.status].includes("CANCELLED")),
     };
   });
 
@@ -474,13 +479,53 @@ export async function updateOrderStatus(
     await lockOrderForStatusChange(tx, orderId);
     const order = await tx.order.findUnique({
       where: { id: orderId },
-      include: { items: true },
+      include: {
+        items: true,
+        payments: {
+          where: {
+            provider: "SSLCOMMERZ",
+            OR: [{ status: "SUCCESS" }, { requiresReview: true }],
+          },
+          select: { id: true, status: true, requiresReview: true },
+        },
+      },
     });
     if (!order) throw new OrderError(404, "Order not found.");
 
     const next = input.status;
     if (next === order.status) {
       throw new OrderError(409, `Order is already ${next}.`);
+    }
+
+    const requiresPaymentReview = order.payments.some(
+      (payment) => payment.requiresReview,
+    );
+    if (order.paymentMethod === "SSLCOMMERZ" && requiresPaymentReview) {
+      throw new OrderError(
+        409,
+        "This payment requires fraud or operations review before fulfillment.",
+      );
+    }
+    if (
+      order.paymentMethod === "SSLCOMMERZ" &&
+      next === "PAYMENT_CONFIRMED" &&
+      order.paymentStatus !== "PAID"
+    ) {
+      throw new OrderError(
+        409,
+        "Online orders can be confirmed only after verified gateway payment.",
+      );
+    }
+    if (
+      order.paymentMethod === "SSLCOMMERZ" &&
+      next === "CANCELLED" &&
+      (order.paymentStatus === "PAID" ||
+        order.payments.some((payment) => payment.status === "SUCCESS"))
+    ) {
+      throw new OrderError(
+        409,
+        "A paid online order requires a refund before cancellation.",
+      );
     }
 
     const allowed = STATUS_TRANSITIONS[order.status];
@@ -495,11 +540,29 @@ export async function updateOrderStatus(
     // cancellation or a completed return both put the units back.
     if (next === "CANCELLED" || next === "RETURNED") {
       await restoreStockForItems(tx, order.items, order.orderNumber);
+      if (next === "CANCELLED") {
+        await releasePromotionUsage(tx, order.id);
+      }
+      if (next === "CANCELLED" && order.paymentMethod === "SSLCOMMERZ") {
+        await tx.paymentTransaction.updateMany({
+          where: {
+            orderId: order.id,
+            provider: "SSLCOMMERZ",
+            status: "PENDING",
+          },
+          data: { status: "CANCELLED" },
+        });
+      }
     }
 
     const updated = await tx.order.update({
       where: { id: order.id },
-      data: { status: next },
+      data: {
+        status: next,
+        ...(next === "CANCELLED" && order.paymentMethod === "SSLCOMMERZ"
+          ? { paymentStatus: "FAILED" as const }
+          : {}),
+      },
       include: orderWithUserInclude,
     });
     await recordStatusHistory(tx, order.id, next, {
@@ -513,15 +576,240 @@ export async function updateOrderStatus(
   return result;
 }
 
+/**
+ * Resolve a successful SSLCommerz payment hold after an authenticated admin
+ * has completed the provider/fraud review.
+ *
+ * The provider already proved payment, so this never changes payment amount,
+ * identifiers, or SUCCESS state. It only records who approved the hold and
+ * advances a still-pending order to PAYMENT_CONFIRMED. All provider writers
+ * take the same order -> payment locks, preventing a new risk event from being
+ * lost behind the approval.
+ */
+export async function approveSslCommerzPaymentReview(
+  orderId: string,
+  updatedBy: string,
+) {
+  return prisma.$transaction(async (tx) => {
+    await lockOrderForStatusChange(tx, orderId);
+
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: {
+        payments: {
+          where: { provider: "SSLCOMMERZ", requiresReview: true },
+          select: { id: true, status: true, requiresReview: true },
+          orderBy: { id: "asc" },
+        },
+      },
+    });
+    if (!order) throw new OrderError(404, "Order not found.");
+    if (order.paymentMethod !== "SSLCOMMERZ") {
+      throw new OrderError(
+        409,
+        "Only an SSLCommerz order can have a payment review approved.",
+      );
+    }
+    if (["CANCELLED", "REFUNDED"].includes(order.status)) {
+      throw new OrderError(
+        409,
+        "A terminal order requires a verified refund workflow, not payment-review approval.",
+      );
+    }
+
+    const reviewedPayments = order.payments.filter(
+      (payment) => payment.requiresReview,
+    );
+    if (reviewedPayments.length === 0) {
+      throw new OrderError(409, "This order has no unresolved payment review.");
+    }
+    if (
+      order.paymentStatus !== "PAID" ||
+      reviewedPayments.some((payment) => payment.status !== "SUCCESS")
+    ) {
+      throw new OrderError(
+        409,
+        "This hold is a gateway verification anomaly and requires payment/refund investigation; it cannot be approved for fulfillment.",
+      );
+    }
+
+    for (const payment of reviewedPayments) {
+      await lockPaymentAttempt(tx, payment.id);
+    }
+
+    const resolvedAt = new Date();
+    const resolved = await tx.paymentTransaction.updateMany({
+      where: {
+        id: { in: reviewedPayments.map((payment) => payment.id) },
+        provider: "SSLCOMMERZ",
+        status: "SUCCESS",
+        requiresReview: true,
+      },
+      data: {
+        requiresReview: false,
+        reviewResolvedAt: resolvedAt,
+        reviewResolvedBy: updatedBy,
+        reviewResolution: "APPROVED",
+        reviewResolutionReference: null,
+      },
+    });
+    if (resolved.count !== reviewedPayments.length) {
+      throw new OrderError(
+        409,
+        "Payment review state changed. Refresh the order and try again.",
+      );
+    }
+
+    const nextStatus =
+      order.status === "PENDING" ? "PAYMENT_CONFIRMED" : order.status;
+    const updated = await tx.order.update({
+      where: { id: order.id },
+      data:
+        nextStatus === order.status
+          ? {}
+          : { status: "PAYMENT_CONFIRMED" as const },
+      include: orderWithUserInclude,
+    });
+    await recordStatusHistory(tx, order.id, nextStatus, {
+      note:
+        nextStatus === order.status
+          ? "SSLCommerz payment review approved; fulfillment hold removed."
+          : "SSLCommerz payment review approved and payment confirmed.",
+      updatedBy,
+    });
+
+    return serializeOrder(updated);
+  });
+}
+
+/**
+ * Record a refund that an administrator has already verified in the provider
+ * back office, then release/cancel the reserved order exactly once.
+ *
+ * This does not call or pretend to initiate a refund. The required external
+ * reference, actor, and timestamp are retained on each affected payment row.
+ */
+export async function recordSslCommerzRefundAndCancel(
+  orderId: string,
+  refundReference: string,
+  updatedBy: string,
+) {
+  return prisma.$transaction(async (tx) => {
+    await lockOrderForStatusChange(tx, orderId);
+
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: true,
+        payments: {
+          where: {
+            provider: "SSLCOMMERZ",
+            OR: [
+              { requiresReview: true },
+              { status: { in: ["PENDING", "SUCCESS"] } },
+            ],
+          },
+          select: { id: true, status: true, requiresReview: true },
+          orderBy: { id: "asc" },
+        },
+      },
+    });
+    if (!order) throw new OrderError(404, "Order not found.");
+    if (order.paymentMethod !== "SSLCOMMERZ") {
+      throw new OrderError(
+        409,
+        "Only an SSLCommerz order can record a provider refund resolution.",
+      );
+    }
+    if (!order.payments.some((payment) => payment.requiresReview)) {
+      throw new OrderError(409, "This order has no unresolved payment review.");
+    }
+
+    const alreadyCancelled = order.status === "CANCELLED";
+    const alreadyRefunded = order.status === "REFUNDED";
+    const canCancel = STATUS_TRANSITIONS[order.status].includes("CANCELLED");
+    if (!alreadyCancelled && !alreadyRefunded && !canCancel) {
+      throw new OrderError(
+        409,
+        "This order can no longer be cancelled through the payment-review workflow.",
+      );
+    }
+
+    for (const payment of order.payments) {
+      await lockPaymentAttempt(tx, payment.id);
+    }
+
+    const resolvedAt = new Date();
+    const resolved = await tx.paymentTransaction.updateMany({
+      where: {
+        id: { in: order.payments.map((payment) => payment.id) },
+        provider: "SSLCOMMERZ",
+      },
+      data: {
+        status: "REFUNDED",
+        requiresReview: false,
+        reviewResolvedAt: resolvedAt,
+        reviewResolvedBy: updatedBy,
+        reviewResolution: "REFUND_CONFIRMED",
+        reviewResolutionReference: refundReference,
+      },
+    });
+    if (resolved.count !== order.payments.length) {
+      throw new OrderError(
+        409,
+        "Payment review state changed. Refresh the order and try again.",
+      );
+    }
+
+    const shouldCancel = !alreadyCancelled && !alreadyRefunded;
+    const affectedProductIds = shouldCancel
+      ? order.items.flatMap((item) =>
+          item.productId ? [item.productId] : [],
+        )
+      : [];
+    if (shouldCancel) {
+      await restoreStockForItems(tx, order.items, order.orderNumber);
+      await releasePromotionUsage(tx, order.id);
+    }
+
+    const nextStatus = shouldCancel ? "CANCELLED" : order.status;
+    const updated = await tx.order.update({
+      where: { id: order.id },
+      data: {
+        status: nextStatus,
+        paymentStatus: "REFUNDED",
+      },
+      include: orderWithUserInclude,
+    });
+    await recordStatusHistory(tx, order.id, nextStatus, {
+      note:
+        "Externally confirmed SSLCommerz refund recorded; payment review resolved.",
+      updatedBy,
+    });
+
+    return {
+      order: serializeOrder(updated),
+      affectedProductIds,
+    };
+  });
+}
+
 export async function updatePaymentStatus(
   orderId: string,
   input: UpdatePaymentStatusInput,
 ) {
   const existing = await prisma.order.findUnique({
     where: { id: orderId },
-    select: { id: true, paymentStatus: true },
+    select: { id: true, paymentMethod: true, paymentStatus: true },
   });
   if (!existing) throw new OrderError(404, "Order not found.");
+
+  if (existing.paymentMethod === "SSLCOMMERZ") {
+    throw new OrderError(
+      409,
+      "SSLCommerz payment status is controlled by verified gateway notifications.",
+    );
+  }
 
   if (existing.paymentStatus === input.paymentStatus) {
     throw new OrderError(409, `Payment is already ${input.paymentStatus}.`);

@@ -16,7 +16,14 @@ import { ORDER_STATUSES } from "@/lib/orders/status";
 
 const ORDER_STATUS = ORDER_STATUSES;
 
-const PAYMENT_STATUS = ["PAID", "UNPAID"] as const;
+const PAYMENT_STATUS_FILTER = [
+  "PAID",
+  "UNPAID",
+  "PENDING",
+  "FAILED",
+  "REFUNDED",
+] as const;
+const MANUAL_PAYMENT_STATUS = ["PAID", "UNPAID"] as const;
 
 /** Query string for `GET /api/orders/my-orders`. */
 export const orderQuerySchema = z.object({
@@ -31,7 +38,7 @@ export const adminOrderQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   search: z.string().trim().min(1).max(120).optional(),
   status: z.enum(ORDER_STATUS).optional(),
-  paymentStatus: z.enum(PAYMENT_STATUS).optional(),
+  paymentStatus: z.enum(PAYMENT_STATUS_FILTER).optional(),
 });
 
 /** Body for `PATCH /api/admin/orders/[id]/status`. */
@@ -44,8 +51,32 @@ export const updateOrderStatusSchema = z.object({
 
 /** Body for `PATCH /api/admin/orders/[id]/payment-status`. */
 export const updatePaymentStatusSchema = z.object({
-  paymentStatus: z.enum(PAYMENT_STATUS),
+  paymentStatus: z.enum(MANUAL_PAYMENT_STATUS),
 });
+
+/**
+ * Body for `PATCH /api/admin/orders/[id]/payment-review`.
+ *
+ * Approving a provider risk hold is a privileged assertion, not a generic
+ * fulfillment transition, so it has a dedicated controlled action.
+ */
+export const resolvePaymentReviewSchema = z.discriminatedUnion("decision", [
+  z.object({
+    decision: z.literal("APPROVE"),
+  }),
+  z.object({
+    decision: z.literal("REFUND_AND_CANCEL"),
+    refundReference: z
+      .string()
+      .trim()
+      .min(4, "Refund reference is required.")
+      .max(200, "Refund reference is too long.")
+      .regex(
+        /^[A-Za-z0-9][A-Za-z0-9._:/, -]*$/,
+        "Refund reference contains unsupported characters.",
+      ),
+  }),
+]);
 
 /** Body for `PATCH /api/orders/[id]/cancel` — empty/optional reason. */
 export const cancelOrderSchema = z.object({
@@ -57,5 +88,8 @@ export type AdminOrderQueryInput = z.infer<typeof adminOrderQuerySchema>;
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
 export type UpdatePaymentStatusInput = z.infer<
   typeof updatePaymentStatusSchema
+>;
+export type ResolvePaymentReviewInput = z.infer<
+  typeof resolvePaymentReviewSchema
 >;
 export type CancelOrderInput = z.infer<typeof cancelOrderSchema>;

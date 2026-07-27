@@ -31,7 +31,7 @@ export async function PATCH(_request: NextRequest, context: RouteContext) {
       order.items.flatMap((item) => (item.productId ? [item.productId] : [])),
       { reason: `customer cancellation stock restore: ${order.id}` },
     );
-    revalidateCacheTags(["admin-orders"]);
+    revalidateCacheTags(["admin-orders", "promo-codes"]);
     return ok(order);
   } catch (error) {
     return handleServiceError("orders/[id].cancel.PATCH", error);

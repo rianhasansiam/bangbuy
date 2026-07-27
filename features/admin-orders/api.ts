@@ -7,7 +7,11 @@ import type {
   CheckoutSummary,
   DeliveryZone,
 } from "@/features/checkout/api";
-import type { OrderDetail } from "@/features/orders/api";
+import type {
+  OrderDetail,
+  OrderPaymentMethod,
+  PaymentStatus as OrderPaymentStatus,
+} from "@/features/orders/api";
 import {
   ORDER_STATUSES,
   STATUS_TRANSITIONS as ORDER_STATUS_TRANSITIONS,
@@ -16,9 +20,9 @@ import {
 
 export type { OrderStatus } from "@/lib/orders/status";
 
-export type PaymentStatus = "PAID" | "UNPAID";
+export type PaymentStatus = OrderPaymentStatus;
 
-export type PaymentMethod = "CASH_ON_DELIVERY" | "ONLINE";
+export type PaymentMethod = OrderPaymentMethod;
 
 export type AdminOrderUser = {
   id: string;
@@ -38,6 +42,10 @@ export type AdminOrderRow = {
   status: OrderStatus;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
+  requiresPaymentReview: boolean;
+  paymentReviewReasons: string[];
+  paymentReviewApprovalAllowed: boolean;
+  paymentReviewRefundCancellationAllowed: boolean;
   customerName: string;
   customerPhone: string;
   customerAddress: string;
@@ -64,7 +72,13 @@ export const API_PAGE_SIZE = 100;
 
 export const ORDER_STATUS_VALUES: readonly OrderStatus[] = ORDER_STATUSES;
 
-export const PAYMENT_STATUS_VALUES: readonly PaymentStatus[] = ["PAID", "UNPAID"];
+export const PAYMENT_STATUS_VALUES: readonly PaymentStatus[] = [
+  "PAID",
+  "UNPAID",
+  "PENDING",
+  "FAILED",
+  "REFUNDED",
+];
 
 /**
  * Allowed forward transitions per status. Re-exported from the shared
@@ -92,7 +106,17 @@ function parseOrderStatus(value: unknown): OrderStatus {
 }
 
 function parsePaymentStatus(value: unknown): PaymentStatus {
-  return value === "PAID" ? "PAID" : "UNPAID";
+  return (PAYMENT_STATUS_VALUES as readonly unknown[]).includes(value)
+    ? (value as PaymentStatus)
+    : "UNPAID";
+}
+
+function parsePaymentMethod(value: unknown): PaymentMethod {
+  return (
+    ["CASH_ON_DELIVERY", "SSLCOMMERZ", "PAYPAL", "ONLINE"] as const
+  ).includes(value as PaymentMethod)
+    ? (value as PaymentMethod)
+    : "CASH_ON_DELIVERY";
 }
 
 function parseRow(entry: unknown): AdminOrderRow {
@@ -109,11 +133,17 @@ function parseRow(entry: unknown): AdminOrderRow {
     totalAmount: Number(item.totalAmount ?? 0),
     advancePayment: Number(item.advancePayment ?? 0),
     status: parseOrderStatus(item.status),
-    paymentMethod:
-      item.paymentMethod === "ONLINE"
-        ? "ONLINE"
-        : "CASH_ON_DELIVERY",
+    paymentMethod: parsePaymentMethod(item.paymentMethod),
     paymentStatus: parsePaymentStatus(item.paymentStatus),
+    requiresPaymentReview: item.requiresPaymentReview === true,
+    paymentReviewReasons: Array.isArray(item.paymentReviewReasons)
+      ? item.paymentReviewReasons.filter(
+          (reason): reason is string => typeof reason === "string",
+        )
+      : [],
+    paymentReviewApprovalAllowed: item.paymentReviewApprovalAllowed === true,
+    paymentReviewRefundCancellationAllowed:
+      item.paymentReviewRefundCancellationAllowed === true,
     customerName: typeof item.customerName === "string" ? item.customerName : "",
     customerPhone:
       typeof item.customerPhone === "string" ? item.customerPhone : "",
@@ -230,6 +260,60 @@ export async function patchPaymentStatus(
   }
 }
 
+export async function approvePaymentReview(orderId: string): Promise<void> {
+  const response = await fetch(
+    `/api/admin/orders/${orderId}/payment-review`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision: "APPROVE" }),
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    let payload: unknown = null;
+    try {
+      payload = (await response.json()) as unknown;
+    } catch {
+      // ignore
+    }
+    throw new Error(
+      readApiError(payload, "Failed to approve the payment review."),
+    );
+  }
+}
+
+export async function recordPaymentRefundAndCancel(
+  orderId: string,
+  refundReference: string,
+): Promise<void> {
+  const response = await fetch(
+    `/api/admin/orders/${orderId}/payment-review`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        decision: "REFUND_AND_CANCEL",
+        refundReference,
+      }),
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    let payload: unknown = null;
+    try {
+      payload = (await response.json()) as unknown;
+    } catch {
+      // ignore
+    }
+    throw new Error(
+      readApiError(payload, "Failed to record the refund resolution."),
+    );
+  }
+}
+
 export function formatCurrency(value: number): string {
   return `BDT ${value.toLocaleString(undefined, {
     minimumFractionDigits: 0,
@@ -274,7 +358,7 @@ export type AdminOrderDraft = {
   customerNote: string;
   promoCode: string;
   advancePayment: string;
-  paymentMethod: CheckoutPaymentMethod;
+  paymentMethod: Extract<CheckoutPaymentMethod, "CASH_ON_DELIVERY">;
   items: Array<Required<CheckoutItemInput>>;
 };
 

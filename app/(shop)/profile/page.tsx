@@ -6,7 +6,7 @@ import { siteConfig } from "@/lib/seo/site";
 
 export const metadata: Metadata = {
   title: `My Profile | ${siteConfig.name}`,
-  description: `Manage your account, view orders, wishlist, and cart history on ${siteConfig.name}.`,
+  description: `Manage your account, view orders, payment transactions, wishlist, and cart history on ${siteConfig.name}.`,
   robots: { index: false, follow: false },
 };
 

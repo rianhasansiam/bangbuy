@@ -2,9 +2,14 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/api/guards";
-import { created, jsonError } from "@/lib/api/response";
+import { created, jsonError, tooManyRequests } from "@/lib/api/response";
+import { rateLimitPersistent } from "@/lib/auth/rate-limit";
 import { invalidateProductsById } from "@/lib/cache/catalog-invalidation";
 import { revalidateCacheTags } from "@/lib/cache/revalidation";
+import {
+  CommittedPaymentError,
+  initiateSslCommerzCheckout,
+} from "@/lib/payments";
 import { placeOrder } from "@/lib/services/checkout.service";
 import { handleServiceError } from "@/lib/services/service-error";
 import { checkoutSchema } from "@/lib/validations/checkout.validation";
@@ -20,6 +25,17 @@ import { checkoutSchema } from "@/lib/validations/checkout.validation";
 export async function POST(request: NextRequest) {
   const guard = await requireUser();
   if (!guard.ok) return guard.response;
+
+  try {
+    const limit = await rateLimitPersistent(
+      `checkout-submit:${guard.session.user.id}`,
+      6,
+      5 * 60_000,
+    );
+    if (!limit.allowed) return tooManyRequests(limit.resetMs);
+  } catch (error) {
+    return handleServiceError("checkout.POST.rateLimit", error);
+  }
 
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.toLowerCase().includes("application/json")) {
@@ -41,7 +57,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await placeOrder(guard.session.user.id, parsed.data);
+    const result =
+      parsed.data.paymentMethod === "SSLCOMMERZ"
+        ? await initiateSslCommerzCheckout(
+            guard.session.user.id,
+            parsed.data,
+          )
+        : await placeOrder(guard.session.user.id, parsed.data);
     // Order placement decrements stock and empties the cart. Bust the
     // cached surfaces that embed product/stock data. (The cart itself is
     // uncached and refetched fresh by the client.)
@@ -54,6 +76,21 @@ export async function POST(request: NextRequest) {
     revalidateCacheTags(["admin-orders", "promo-codes"]);
     return created(result);
   } catch (error) {
+    if (error instanceof CommittedPaymentError) {
+      try {
+        if (error.productIds.length > 0) {
+          await invalidateProductsById(error.productIds, {
+            reason: "payment initialization state change",
+          });
+        }
+        revalidateCacheTags(["admin-orders", "promo-codes"]);
+      } catch (cacheError) {
+        console.error("[checkout.POST] payment cache invalidation failed", {
+          category: "CACHE_INVALIDATION",
+          cacheError,
+        });
+      }
+    }
     return handleServiceError("checkout.POST", error);
   }
 }
