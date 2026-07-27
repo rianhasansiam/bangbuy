@@ -16,7 +16,7 @@ type Stat = {
 };
 
 type BrandPanelProps = {
-  /** Top-line eyebrow next to the pin badge, e.g. `PixoHouse · Sign in`. */
+  /** Top-line eyebrow next to the pin badge, e.g. `BangBuy · Sign in`. */
   badgeText: string;
   /** Headline shown in white. */
   headlineLead: string;

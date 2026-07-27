@@ -1,5 +1,3 @@
-"use client";
-
 import { Heart, Lightbulb, Users, Leaf } from "lucide-react";
 
 const values = [

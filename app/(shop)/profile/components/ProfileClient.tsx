@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/use-app-session";
 import Link from "next/link";
 import { AlertCircle, LogIn } from "lucide-react";
 
@@ -20,6 +20,7 @@ import ProfileHeader from "./ProfileHeader";
 import ProfileSidebar from "./ProfileSidebar";
 import SecurityTab from "./SecurityTab";
 import SettingsTab from "./SettingsTab";
+import TransactionsTab from "./TransactionsTab";
 import WishlistTab from "./WishlistTab";
 import { PROFILE_TABS, type ProfileTabId } from "./constants";
 
@@ -200,6 +201,7 @@ export default function ProfileClient() {
               />
             )}
             {activeTab === "orders" && <OrdersTab />}
+            {activeTab === "transactions" && <TransactionsTab />}
             {activeTab === "wishlist" && <WishlistTab />}
             {activeTab === "cart" && <CartTab />}
             {activeTab === "settings" && (

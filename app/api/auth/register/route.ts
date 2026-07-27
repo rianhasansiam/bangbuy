@@ -6,7 +6,7 @@ import { z } from "zod";
 import { isAllowedOrigin } from "@/lib/auth/origin";
 import { hashPassword } from "@/lib/auth/passwords";
 import { getClientIp, rateLimit } from "@/lib/auth/rate-limit";
-import { jsonError, tooManyRequests } from "@/lib/api/response";
+import { created, jsonError, tooManyRequests } from "@/lib/api/response";
 import { registerSchema } from "@/lib/validations/auth.validation";
 import { prisma } from "@/lib/db/prisma";
 
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     revalidateTag("admin-users", "max");
 
-    return Response.json({ user }, { status: 201 });
+    return created({ user });
   } catch (error) {
     // P2002 = unique constraint violation. Race-safe duplicate handling.
     if (

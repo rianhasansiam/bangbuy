@@ -1,9 +1,15 @@
 import type { NextRequest } from "next/server";
-import { revalidateTag } from "next/cache";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/api/guards";
-import { created, jsonError } from "@/lib/api/response";
+import {
+  created,
+  jsonError,
+  tooManyRequests,
+} from "@/lib/api/response";
+import { rateLimitPersistent } from "@/lib/auth/rate-limit";
+import { invalidateProductsById } from "@/lib/cache/catalog-invalidation";
+import { revalidateCacheTags } from "@/lib/cache/revalidation";
 import { placeOrder } from "@/lib/services/checkout.service";
 import { handleServiceError } from "@/lib/services/service-error";
 import { checkoutSchema } from "@/lib/validations/checkout.validation";
@@ -26,6 +32,17 @@ export async function POST(request: NextRequest) {
   const guard = await requireUser();
   if (!guard.ok) return guard.response;
 
+  try {
+    const limit = await rateLimitPersistent(
+      `checkout-submit:${guard.session.user.id}`,
+      6,
+      5 * 60_000,
+    );
+    if (!limit.allowed) return tooManyRequests(limit.resetMs);
+  } catch (error) {
+    return handleServiceError("orders.POST.rateLimit", error);
+  }
+
   const contentType = request.headers.get("content-type") ?? "";
   if (!contentType.toLowerCase().includes("application/json")) {
     return jsonError(415, "Content-Type must be application/json.");
@@ -45,13 +62,23 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  if (parsed.data.paymentMethod === "SSLCOMMERZ") {
+    return jsonError(
+      400,
+      "Online payment must be initiated through /api/checkout.",
+    );
+  }
+
   try {
     const result = await placeOrder(guard.session.user.id, parsed.data);
     // Order creation changes stock and (optionally) empties the cart.
-    revalidateTag("admin-orders", "max");
-    revalidateTag("home-categories", "max");
-    revalidateTag("categories", "max");
-    revalidateTag("promo-codes", "max");
+    await invalidateProductsById(
+      result.order.items.flatMap((item) =>
+        item.productId ? [item.productId] : [],
+      ),
+      { reason: `order stock decrement: ${result.order.id}` },
+    );
+    revalidateCacheTags(["admin-orders", "promo-codes"]);
     return created(result.order);
   } catch (error) {
     return handleServiceError("orders.POST", error);

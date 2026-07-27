@@ -1,5 +1,3 @@
-"use client";
-
 import { Users, ShoppingBag, Store, Award } from "lucide-react";
 
 const stats = [

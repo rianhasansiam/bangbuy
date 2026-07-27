@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { resolveBannerBackground } from "@/components/ui/tailwind-palette";
 
@@ -57,17 +57,6 @@ function cardBackground(slide: CarouselSlide): string {
 
 export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
   const [activeIndex, setActiveIndex] = useState(0);
-
-  useEffect(() => {
-    if (slides.length <= 1) return;
-    const timer = setInterval(() => {
-      setActiveIndex((prevIndex) =>
-        prevIndex === slides.length - 1 ? 0 : prevIndex + 1,
-      );
-    }, 3500);
-
-    return () => clearInterval(timer);
-  }, [slides.length]);
 
   if (slides.length === 0) return null;
 
@@ -138,7 +127,7 @@ export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
               fill
               className="rounded-full border-2 border-white/30 object-cover shadow-2xl md:border-4"
               sizes="(max-width: 640px) 96px, (max-width: 768px) 144px, (max-width: 1024px) 256px, 288px"
-              priority
+              preload
             />
 
             <div className="absolute -right-1 -top-1 animate-bounce rounded-full bg-brand-red px-2 py-1 text-[9px] font-black text-brand-white shadow-lg sm:text-[10px] md:-right-2 md:-top-2 md:px-3 md:py-1.5 md:text-sm">
@@ -159,6 +148,7 @@ export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
                 <button
                   key={card.id}
                   onClick={() => setActiveIndex(index)}
+                  aria-pressed={isActive}
                   style={{ background: cardBackground(card) }}
                   className={`rounded-xl min-w-[160px] sm:min-w-[180px] h-28 sm:h-32 shrink-0
                   shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300
@@ -174,6 +164,7 @@ export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
                     src={card.image}
                     alt={card.subtitle}
                     fill
+                    sizes="(max-width: 640px) 160px, (max-width: 1024px) 180px, 25vw"
                     className={`object-cover transition-all duration-500 ${
                       isActive
                         ? "opacity-60 scale-110"
@@ -182,11 +173,6 @@ export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
                   />
 
                   <div className="absolute inset-0 bg-linear-to-t from-black/50 to-transparent" />
-
-                  {/* Active Progress Indicator */}
-                  {isActive && (
-                    <div className="absolute bottom-0 left-0 h-1 bg-brand-gold animate-[progress_3.5s_linear_infinite]" />
-                  )}
 
                   <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-3">
                     <h3 className="text-lg sm:text-xl font-black text-white drop-shadow-lg mb-0.5">

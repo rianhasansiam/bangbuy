@@ -1,40 +1,40 @@
 "use client";
 
 import { useState } from "react";
-import { Tag, Check, X, AlertCircle } from "lucide-react";
+import { AlertCircle, Check, Tag, X } from "lucide-react";
+
 import { Input } from "@/components/ui/input";
 
 type AppliedPromo = {
   code: string;
   discount: number;
-  description: string;
+  description: string | null;
 };
 
 type PromoCodeInputProps = {
   applied: AppliedPromo | null;
-  onApply: (code: string) => AppliedPromo | null;
+  onApply: (code: string) => void;
   onRemove: () => void;
+  onErrorClear: () => void;
+  error: string | null;
+  isApplying?: boolean;
 };
 
 export default function PromoCodeInput({
   applied,
   onApply,
   onRemove,
+  onErrorClear,
+  error,
+  isApplying = false,
 }: PromoCodeInputProps) {
   const [value, setValue] = useState("");
-  const [error, setError] = useState<string | null>(null);
 
-  const handleApply = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleApply = (event: React.FormEvent) => {
+    event.preventDefault();
     const trimmed = value.trim().toUpperCase();
     if (!trimmed) return;
-    const result = onApply(trimmed);
-    if (!result) {
-      setError("That code didn't work. Try ENTERFLY10");
-      return;
-    }
-    setError(null);
-    setValue("");
+    onApply(trimmed);
   };
 
   if (applied) {
@@ -52,7 +52,14 @@ export default function PromoCodeInput({
               applied
             </p>
             <p className="truncate text-xs text-emerald-700">
-              {applied.description} • -BDT {applied.discount.toLocaleString()}
+              {isApplying ? (
+                "Revalidating discount..."
+              ) : (
+                <>
+                  {applied.description ? `${applied.description} · ` : ""}-BDT{" "}
+                  {applied.discount.toLocaleString()}
+                </>
+              )}
             </p>
           </div>
           <button
@@ -76,20 +83,23 @@ export default function PromoCodeInput({
           <Input
             type="text"
             value={value}
-            onChange={(e) => {
-              setValue(e.target.value);
-              if (error) setError(null);
+            onChange={(event) => {
+              setValue(event.target.value);
+              if (error) onErrorClear();
             }}
+            disabled={isApplying}
+            maxLength={40}
             placeholder="Promo code"
             className="h-11 rounded-xl border-brand-border bg-white pl-10 pr-3 text-sm font-medium uppercase tracking-wide focus-visible:border-brand-red focus-visible:ring-brand-red/30"
           />
         </div>
         <button
           type="submit"
-          disabled={!value.trim()}
+          disabled={!value.trim() || isApplying}
+          aria-busy={isApplying}
           className="rounded-xl bg-brand-red px-4 text-sm font-semibold text-brand-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-sm"
         >
-          Apply
+          {isApplying ? "Applying..." : "Apply"}
         </button>
       </form>
       {error && (
@@ -99,15 +109,7 @@ export default function PromoCodeInput({
         </p>
       )}
       <p className="text-[11px] text-gray-500">
-        Try{" "}
-        <button
-          type="button"
-          onClick={() => setValue("ENTERFLY10")}
-          className="font-mono font-semibold text-brand-red underline-offset-2 hover:underline"
-        >
-          ENTERFLY10
-        </button>{" "}
-        for 10% off
+        Promo availability and discount are verified by the checkout service.
       </p>
     </div>
   );

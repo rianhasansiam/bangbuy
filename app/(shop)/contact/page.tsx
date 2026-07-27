@@ -9,6 +9,8 @@ import SocialConnect from "./components/SocialConnect";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { siteConfig } from "@/lib/seo/site";
 
+export const revalidate = 3600;
+
 export const metadata: Metadata = buildMetadata({
   title: "Contact Us",
   description: `Get in touch with ${siteConfig.name}. Questions about orders, products, or support? Reach our team and we'll help you out.`,

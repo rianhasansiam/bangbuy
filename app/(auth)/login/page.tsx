@@ -127,9 +127,9 @@ function LoginPageInner() {
 
       <section className="relative z-10 mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 px-4 py-8 sm:px-6 lg:grid-cols-12 lg:gap-8 lg:py-12">
         <BrandPanel
-          badgeText="PixoHouse · Sign in"
+          badgeText="BangBuy · Sign in"
           headlineLead="Welcome back to"
-          headlineEmphasis="PixoHouse."
+          headlineEmphasis="BangBuy."
           subheading="Sign in to keep shopping where you left off, with deals from premium stores in your neighborhood."
           perks={BRAND_PERKS}
           stats={BRAND_STATS}

@@ -8,6 +8,7 @@ import { noIndexMetadata } from "@/lib/seo/metadata";
  * tag as defense-in-depth alongside the robots.txt disallow rules.
  */
 export const metadata: Metadata = noIndexMetadata("Account");
+export const dynamic = "force-dynamic";
 
 export default function AuthLayout({
   children,

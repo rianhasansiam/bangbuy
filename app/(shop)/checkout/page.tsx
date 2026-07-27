@@ -1,20 +1,33 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/use-app-session";
 import { useDispatch, useSelector } from "react-redux";
 
 import {
   fetchCheckoutPreview,
   fetchCheckoutProfile,
   placeCheckoutOrder,
+  CheckoutSubmissionError,
   type CheckoutItemInput,
   type CheckoutPaymentMethod,
   type CheckoutPreview,
+  type PlaceOrderRequest,
 } from "@/features/checkout/api";
-import { ORDER_SNAPSHOT_STORAGE_KEY } from "@/features/orders/storage";
+import {
+  resolveCheckoutIdempotencyAttempt,
+  type CheckoutIdempotencyAttempt,
+} from "@/features/checkout/idempotency";
+import { normalizeCheckoutPromoCode } from "@/features/checkout/promo";
 import {
   setCartData,
   setCartError,
@@ -80,6 +93,12 @@ function CheckoutPageInner() {
   const { data: session, status: authStatus } = useSession();
 
   const items = useSelector((state: RootState) => state.cart.items);
+  const cartMode = useSelector((state: RootState) => state.cart.mode);
+  const cartIsHydrated = useSelector(
+    (state: RootState) => state.cart.isHydrated,
+  );
+  const cartIsLoading = useSelector((state: RootState) => state.cart.isLoading);
+  const cartError = useSelector((state: RootState) => state.cart.error);
 
   // Source: explicit buy-now items from query string OR the user's cart.
   const buyNowItems = useMemo(
@@ -90,12 +109,16 @@ function CheckoutPageInner() {
     () => (buyNowItems ? { kind: "buy-now", items: buyNowItems } : { kind: "cart" }),
     [buyNowItems],
   );
+  const carriedPromo = useMemo(
+    () => normalizeCheckoutPromoCode(searchParams.get("promo")),
+    [searchParams],
+  );
 
   const [form, setForm] = useState<CustomerFormState>(EMPTY_FORM);
   const [paymentMethod, setPaymentMethod] =
     useState<CheckoutPaymentMethod>("CASH_ON_DELIVERY");
-  const [promoCode, setPromoCode] = useState<string>("");
-  const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
+  const [promoCode, setPromoCode] = useState<string>(carriedPromo ?? "");
+  const [appliedPromo, setAppliedPromo] = useState<string | null>(carriedPromo);
   const [promoFeedback, setPromoFeedback] = useState<{
     tone: "success" | "error";
     message: string;
@@ -110,6 +133,9 @@ function CheckoutPageInner() {
 
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const submitInFlightRef = useRef(false);
+  const sslIdempotencyAttemptRef =
+    useRef<CheckoutIdempotencyAttempt | null>(null);
 
   const [fieldErrors, setFieldErrors] = useState<
     Partial<Record<keyof CustomerFormState, string>>
@@ -128,8 +154,8 @@ function CheckoutPageInner() {
   // post-login redirect lands them right back here.
   useEffect(() => {
     if (authStatus !== "unauthenticated") return;
-    const buy = searchParams.get("buy");
-    const target = buy ? `/checkout?buy=${encodeURIComponent(buy)}` : "/checkout";
+    const query = searchParams.toString();
+    const target = query ? `/checkout?${query}` : "/checkout";
     router.replace(`/login?callbackUrl=${encodeURIComponent(target)}`);
   }, [authStatus, router, searchParams]);
 
@@ -192,6 +218,10 @@ function CheckoutPageInner() {
     return undefined;
   }, [source]);
 
+  const cartSourceReady =
+    source.kind === "buy-now" ||
+    (cartIsHydrated && cartMode === "server" && !cartIsLoading);
+
   // Single source of truth for "fetch the preview". Triggered by:
   //   - auth status becoming known
   //   - the items source changing (cart -> buy-now and vice versa)
@@ -200,6 +230,21 @@ function CheckoutPageInner() {
   // Anything that should refresh totals just updates one of those inputs.
   useEffect(() => {
     if (authStatus !== "authenticated") return;
+    if (!cartSourceReady) {
+      if (
+        source.kind === "cart" &&
+        cartIsHydrated &&
+        !cartIsLoading &&
+        cartError
+      ) {
+        void (async () => {
+          setPreview(null);
+          setPreviewLoading(false);
+          setPreviewError(cartError);
+        })();
+      }
+      return;
+    }
 
     let ignore = false;
 
@@ -250,6 +295,10 @@ function CheckoutPageInner() {
     };
   }, [
     authStatus,
+    cartError,
+    cartIsHydrated,
+    cartIsLoading,
+    cartSourceReady,
     source,
     appliedPromo,
     previewToken,
@@ -302,7 +351,7 @@ function CheckoutPageInner() {
   };
 
   const handlePlaceOrder = async () => {
-    if (isPlacingOrder) return;
+    if (isPlacingOrder || submitInFlightRef.current) return;
     setSubmitError(null);
 
     if (!preview || preview.items.length === 0) {
@@ -317,10 +366,12 @@ function CheckoutPageInner() {
       return;
     }
 
+    submitInFlightRef.current = true;
     setIsPlacingOrder(true);
+    let handingOffToGateway = false;
 
     try {
-      const result = await placeCheckoutOrder({
+      const checkoutRequest: PlaceOrderRequest = {
         items: buildItemsPayload(),
         customerName: form.customerName.trim(),
         customerPhone: form.customerPhone.trim(),
@@ -334,7 +385,26 @@ function CheckoutPageInner() {
         paymentMethod,
         promoCode: appliedPromo,
         clearCart: source.kind === "cart",
-      });
+      };
+
+      if (paymentMethod === "SSLCOMMERZ") {
+        const attempt = resolveCheckoutIdempotencyAttempt(
+          sslIdempotencyAttemptRef.current,
+          JSON.stringify(checkoutRequest),
+          () => window.crypto.randomUUID(),
+        );
+        sslIdempotencyAttemptRef.current = attempt;
+        checkoutRequest.idempotencyKey = attempt.key;
+      }
+
+      const result = await placeCheckoutOrder(checkoutRequest);
+      const paymentUrl =
+        paymentMethod === "SSLCOMMERZ" ? result.paymentUrl : undefined;
+      if (paymentMethod === "SSLCOMMERZ" && !paymentUrl) {
+        throw new Error(
+          "The secure payment session could not be started. Please try again.",
+        );
+      }
 
       // Cart is now empty server-side. Sync local state so the next
       // navigation doesn't show stale items.
@@ -343,28 +413,49 @@ function CheckoutPageInner() {
         dispatch(setCartError(null));
       }
 
-      // Stash the snapshot returned by the API so the order summary
-      // page can paint the receipt instantly on the post-checkout
-      // redirect, before the live `/api/orders/[id]` request resolves.
-      try {
-        window.sessionStorage.setItem(
-          ORDER_SNAPSHOT_STORAGE_KEY,
-          JSON.stringify({ id: result.order.id, order: result.order }),
-        );
-      } catch {
-        // sessionStorage can be disabled (private browsing, quota); the
-        // logged-in path still works because the API can re-fetch.
+      if (paymentMethod === "SSLCOMMERZ" && paymentUrl) {
+        toast.info("Redirecting to secure payment...");
+        window.location.assign(paymentUrl);
+        handingOffToGateway = true;
+        return;
       }
 
       toast.success("Order placed successfully!");
       router.push(`/orders/${result.order.id}?just-placed=1`);
     } catch (error) {
+      if (
+        error instanceof CheckoutSubmissionError &&
+        error.orderId &&
+        paymentMethod === "SSLCOMMERZ"
+      ) {
+        if (source.kind === "cart") {
+          dispatch(
+            setCartData({ items: [], summary: computeCartSummary([]) }),
+          );
+          dispatch(setCartError(null));
+        }
+        const outcome =
+          error.paymentState === "PENDING" ||
+          error.paymentState === "SUCCESS"
+            ? "processing"
+            : "failed";
+        toast.info(
+          outcome === "processing"
+            ? "Your order is safe while payment status is checked."
+            : "The payment attempt ended. Review the order for details.",
+        );
+        router.push(`/orders/${error.orderId}?payment=${outcome}`);
+        return;
+      }
       const message =
         error instanceof Error ? error.message : "Failed to place the order.";
       setSubmitError(message);
       toast.error(message);
     } finally {
-      setIsPlacingOrder(false);
+      if (!handingOffToGateway) {
+        submitInFlightRef.current = false;
+        setIsPlacingOrder(false);
+      }
     }
   };
 

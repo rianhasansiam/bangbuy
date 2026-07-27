@@ -7,12 +7,16 @@ import type {
   DashboardPaymentStatus,
   DashboardRecentOrder,
 } from "@/features/admin-dashboard/api";
+import { PAYMENT_STATUS_META } from "@/features/orders/payment";
 import { ORDER_STATUS_META } from "@/lib/orders/status";
 import { cn } from "@/lib/utils";
 
 const PAYMENT_STYLES: Record<DashboardPaymentStatus, string> = {
-  PAID: "bg-emerald-50 text-emerald-700",
-  UNPAID: "bg-amber-50 text-amber-700",
+  PAID: PAYMENT_STATUS_META.PAID.pill,
+  UNPAID: PAYMENT_STATUS_META.UNPAID.pill,
+  PENDING: PAYMENT_STATUS_META.PENDING.pill,
+  FAILED: PAYMENT_STATUS_META.FAILED.pill,
+  REFUNDED: PAYMENT_STATUS_META.REFUNDED.pill,
 };
 
 type RecentOrdersProps = {
@@ -117,9 +121,7 @@ export default function RecentOrders({ orders, loading }: RecentOrdersProps) {
                           PAYMENT_STYLES[order.paymentStatus],
                         )}
                       >
-                        {order.paymentStatus === "PAID"
-                          ? "Paid"
-                          : "Unpaid"}
+                        {PAYMENT_STATUS_META[order.paymentStatus].label}
                       </span>
                     </div>
                   </td>

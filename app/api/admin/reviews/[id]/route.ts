@@ -1,4 +1,5 @@
 import { adminRoute } from "@/lib/api/handlers";
+import { invalidateProductsById } from "@/lib/cache/catalog-invalidation";
 import { deleteReview } from "@/lib/services/review.service";
 
 type Params = { id: string };
@@ -10,9 +11,12 @@ type Params = { id: string };
  */
 export const DELETE = adminRoute<unknown, Params>({
   scope: "admin.reviews/[id].DELETE",
-  revalidate: ["admin-reviews"],
   handler: async ({ params }) => {
     const result = await deleteReview(params.id);
+    await invalidateProductsById([result.productId], {
+      reason: `review deleted: ${result.id}`,
+      reviews: true,
+    });
     return { data: result };
   },
 });

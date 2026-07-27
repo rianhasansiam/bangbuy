@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { ChevronDown, Package2 } from "lucide-react";
 
 import {
@@ -11,13 +11,20 @@ import {
   type OrderStatus,
   type PaymentStatus,
 } from "@/features/admin-orders/api";
+import {
+  paymentMethodLabel,
+  PAYMENT_STATUS_META,
+} from "@/features/orders/payment";
 import { LoadingSpinner, TableSkeleton } from "@/components/ui/loading";
 import { ORDER_STATUS_META } from "@/lib/orders/status";
 import { cn } from "@/lib/utils";
 
 const PAYMENT_BADGE: Record<PaymentStatus, string> = {
-  PAID: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  UNPAID: "bg-amber-50 text-amber-700 ring-amber-200",
+  PAID: PAYMENT_STATUS_META.PAID.ring,
+  UNPAID: PAYMENT_STATUS_META.UNPAID.ring,
+  PENDING: PAYMENT_STATUS_META.PENDING.ring,
+  FAILED: PAYMENT_STATUS_META.FAILED.ring,
+  REFUNDED: PAYMENT_STATUS_META.REFUNDED.ring,
 };
 
 function DetailBlock({
@@ -46,6 +53,8 @@ export default function OrdersTable({
   onToggleExpand,
   onChangeStatus,
   onTogglePayment,
+  onApprovePaymentReview,
+  onRecordPaymentRefund,
 }: {
   orders: AdminOrderRow[];
   isLoading: boolean;
@@ -55,7 +64,16 @@ export default function OrdersTable({
   onToggleExpand: (id: string | null) => void;
   onChangeStatus: (order: AdminOrderRow, next: OrderStatus) => void;
   onTogglePayment: (order: AdminOrderRow) => void;
+  onApprovePaymentReview: (order: AdminOrderRow) => void;
+  onRecordPaymentRefund: (
+    order: AdminOrderRow,
+    refundReference: string,
+  ) => void;
 }) {
+  const [refundReferences, setRefundReferences] = useState<
+    Record<string, string>
+  >({});
+
   if (isLoading && totalCount === 0) {
     return <TableSkeleton rows={6} columns={8} ariaLabel="Loading orders" />;
   }
@@ -89,7 +107,18 @@ export default function OrdersTable({
             {orders.map((order) => {
               const isBusy = busyOrderId === order.id;
               const isExpanded = expandedId === order.id;
-              const allowedNext = STATUS_TRANSITIONS[order.status];
+              const isGatewayManaged = order.paymentMethod === "SSLCOMMERZ";
+              const allowedNext = STATUS_TRANSITIONS[order.status].filter(
+                (status) =>
+                  !(
+                    isGatewayManaged &&
+                    (order.requiresPaymentReview ||
+                      (status === "PAYMENT_CONFIRMED" &&
+                        order.paymentStatus !== "PAID") ||
+                      (status === "CANCELLED" &&
+                        order.paymentStatus === "PAID"))
+                  ),
+              );
 
               return (
                 <Fragment key={order.id}>
@@ -167,13 +196,21 @@ export default function OrdersTable({
                           PAYMENT_BADGE[order.paymentStatus],
                         )}
                       >
-                        {order.paymentStatus}
+                        {PAYMENT_STATUS_META[order.paymentStatus].label}
                       </span>
                       <p className="mt-1 text-xs text-gray-500">
-                        {order.paymentMethod === "CASH_ON_DELIVERY"
-                          ? "COD"
-                          : order.paymentMethod}
+                        {paymentMethodLabel(order.paymentMethod)}
                       </p>
+                      {order.requiresPaymentReview && (
+                        <div className="mt-1 text-xs text-rose-700">
+                          <p className="font-bold">Manual review required</p>
+                          {order.paymentReviewReasons.map((reason) => (
+                            <p key={reason} className="max-w-48">
+                              {reason.replaceAll("_", " ").toLowerCase()}
+                            </p>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">
                       {formatDateTime(order.createdAt)}
@@ -198,23 +235,97 @@ export default function OrdersTable({
                               </option>
                             ))}
                           </select>
+                        ) : order.requiresPaymentReview ? (
+                          <span className="text-[11px] font-semibold text-rose-700">
+                            Review hold
+                          </span>
                         ) : (
                           <span className="text-[11px] uppercase tracking-wide text-gray-400">
                             Final
                           </span>
                         )}
 
-                        <button
-                          type="button"
-                          onClick={() => onTogglePayment(order)}
-                          disabled={isBusy || order.status === "CANCELLED"}
-                          aria-busy={isBusy}
-                          className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-2.5 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {isBusy && <LoadingSpinner decorative size="xs" />}
-                          Mark{" "}
-                          {order.paymentStatus === "PAID" ? "unpaid" : "paid"}
-                        </button>
+                        {isGatewayManaged ? (
+                          <div className="flex max-w-52 flex-col items-end gap-1.5">
+                            {order.requiresPaymentReview &&
+                            order.paymentReviewApprovalAllowed ? (
+                              <button
+                                type="button"
+                                onClick={() => onApprovePaymentReview(order)}
+                                disabled={isBusy}
+                                aria-busy={isBusy}
+                                className="inline-flex items-center gap-1 rounded-lg border border-amber-300 px-2.5 py-1 text-xs font-semibold text-amber-800 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {isBusy && (
+                                  <LoadingSpinner decorative size="xs" />
+                                )}
+                                Approve payment review
+                              </button>
+                            ) : order.requiresPaymentReview ? (
+                              <span className="text-right text-[11px] font-semibold text-rose-700">
+                                Gateway/refund investigation required
+                              </span>
+                            ) : (
+                              <span className="text-[11px] font-semibold text-sky-700">
+                                Gateway managed
+                              </span>
+                            )}
+
+                            {order.requiresPaymentReview &&
+                              order.paymentReviewRefundCancellationAllowed && (
+                                <>
+                                  <input
+                                    type="text"
+                                    value={refundReferences[order.id] ?? ""}
+                                    onChange={(event) =>
+                                      setRefundReferences((current) => ({
+                                        ...current,
+                                        [order.id]: event.target.value,
+                                      }))
+                                    }
+                                    maxLength={200}
+                                    autoComplete="off"
+                                    aria-label={`Refund reference for ${order.orderNumber}`}
+                                    placeholder="Provider refund reference"
+                                    className="h-8 w-full rounded-lg border border-brand-border px-2 text-xs outline-none focus:border-brand-red"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      onRecordPaymentRefund(
+                                        order,
+                                        (refundReferences[order.id] ?? "").trim(),
+                                      )
+                                    }
+                                    disabled={
+                                      isBusy ||
+                                      (refundReferences[order.id] ?? "").trim()
+                                        .length < 4
+                                    }
+                                    aria-busy={isBusy}
+                                    className="inline-flex items-center gap-1 rounded-lg border border-rose-300 px-2.5 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    {isBusy && (
+                                      <LoadingSpinner decorative size="xs" />
+                                    )}
+                                    Record refund &amp; cancel
+                                  </button>
+                                </>
+                              )}
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => onTogglePayment(order)}
+                            disabled={isBusy || order.status === "CANCELLED"}
+                            aria-busy={isBusy}
+                            className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-2.5 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {isBusy && <LoadingSpinner decorative size="xs" />}
+                            Mark{" "}
+                            {order.paymentStatus === "PAID" ? "unpaid" : "paid"}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

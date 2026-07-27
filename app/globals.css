@@ -20,7 +20,7 @@
 
 @theme inline {
   /*
-   * PixoHouse brand color utilities.
+   * BangBuy brand color utilities.
    *
    * Map each raw --brand-* token (defined once in :root) to a Tailwind v4
    * --color-brand-* theme entry so the generator emits brand utilities such
@@ -84,7 +84,7 @@
 
 :root {
   /*
-   * PixoHouse raw brand tokens — single source of truth.
+   * BangBuy raw brand tokens — single source of truth.
    *
    * Each value is an OKLCH color perceptually equivalent (within an
    * imperceptible tolerance) to its reference sRGB hex, listed alongside.
@@ -103,7 +103,7 @@
   --brand-gold: oklch(0.861 0.173 91.9); /* #FACC15 */
 
   /*
-   * shadcn semantic tokens remapped to PixoHouse brand tokens (light theme).
+   * shadcn semantic tokens remapped to BangBuy brand tokens (light theme).
    *
    * Each mapping references a raw --brand-* token with a CSS-native fallback
    * (var(--token, <safe-default>)) so no element ever resolves to an
@@ -149,7 +149,7 @@
 
 .dark {
   /*
-   * shadcn semantic tokens remapped to PixoHouse brand tokens (dark theme).
+   * shadcn semantic tokens remapped to BangBuy brand tokens (dark theme).
    *
    * Mirrors the light-theme :root remap but resolves to the dark-theme brand
    * Design_Tokens: page/surface backgrounds use Brand_Black / Dark_Surface and

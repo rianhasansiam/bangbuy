@@ -1,27 +1,31 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Boxes, CircleDollarSign, PackageCheck, Warehouse } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 
+import ProductFormDrawer from "@/app/admin/products/components/ProductFormDrawer";
+import ProductsTable from "@/app/admin/products/components/ProductsTable";
+import ProductsToolbar from "@/app/admin/products/components/ProductsToolbar";
 import {
-  setAdminProducts,
-  setAdminProductsError,
-  setAdminProductsLoading,
-} from "@/store/slices/admin-products.slice";
-import type { AppDispatch, RootState } from "@/store";
+  fetchActiveBrandOptions,
+  fetchActiveManufacturerOptions,
+  type CatalogEntityOption,
+} from "@/features/admin-catalog-entities/api";
 import {
   buildFormFromProduct,
+  categoryLabel,
   EMPTY_FORM,
   fetchActiveCategories,
   fetchAllProductsSnapshot,
   normalizeImagesInput,
   parseNumericField,
-} from "@/features/admin-products/api";
-import type {
-  AdminProduct,
-  CategoryOption,
-  ProductFormState,
-  ProductStatus,
+  rowsToStringMap,
+  type AdminProduct,
+  type CategoryOption,
+  type ProductCondition,
+  type ProductFormState,
+  type ProductStatus,
 } from "@/features/admin-products/api";
 import { readApiError } from "@/features/http/api-envelope";
 import {
@@ -29,42 +33,99 @@ import {
   notifyActionError,
   notifyActionSuccess,
 } from "@/lib/admin-feedback";
+import { deriveVariantKey } from "@/lib/catalog/variant-options";
+import {
+  setAdminProducts,
+  setAdminProductsError,
+  setAdminProductsLoading,
+} from "@/store/slices/admin-products.slice";
+import type { AppDispatch, RootState } from "@/store";
 
-import ProductsToolbar from "./components/ProductsToolbar";
-import ProductsTable from "./components/ProductsTable";
-import ProductFormDrawer from "./components/ProductFormDrawer";
+type ProductWriteBody = {
+  name: string;
+  description: string | null;
+  seoTitle: string | null;
+  metaDescription: string | null;
+  ogImage: string | null;
+  gtin: string | null;
+  itemCondition: ProductCondition;
+  primaryImageAlt: string | null;
+  modelNumber: string | null;
+  series: string | null;
+  specifications: Record<string, string> | null;
+  buyingPrice: number;
+  salePrice: number;
+  discountPrice: number | null;
+  image: string | null;
+  images: string[];
+  status: ProductStatus;
+  categoryId: string;
+  brandId: string | null;
+  manufacturerId: string | null;
+  variants: Array<{
+    id?: string;
+    name: string | null;
+    size: string | null;
+    color: string | null;
+    modelNumber: string | null;
+    sku: string | null;
+    stock: number;
+    image: string | null;
+    attributes: Record<string, string> | null;
+    isActive: boolean;
+  }>;
+};
 
-const HEX_COLOR_VALUE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
-const HEX_COLOR_BODY = /^(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+function optional(value: string): string | null {
+  return value.trim() || null;
+}
 
-function normalizeColorForSubmit(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  if (trimmed.startsWith("#")) return trimmed.toUpperCase();
-  if (HEX_COLOR_BODY.test(trimmed)) return `#${trimmed.toUpperCase()}`;
-  return trimmed;
+function SummaryCard({
+  label,
+  value,
+  detail,
+  icon: Icon,
+}: {
+  label: string;
+  value: string | number;
+  detail: string;
+  icon: typeof Boxes;
+}) {
+  return (
+    <div className="rounded-2xl border border-brand-border bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-gray-500">{label}</p>
+          <p className="mt-2 text-2xl font-black text-gray-950">{value}</p>
+          <p className="mt-1 text-xs text-gray-500">{detail}</p>
+        </div>
+        <span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-red/10 text-brand-red">
+          <Icon className="h-5 w-5" />
+        </span>
+      </div>
+    </div>
+  );
 }
 
 export default function AdminProductsPage() {
   const dispatch = useDispatch<AppDispatch>();
   const products = useSelector((state: RootState) => state.adminProducts.items);
   const isLoading = useSelector((state: RootState) => state.adminProducts.isLoading);
-  const error = useSelector((state: RootState) => state.adminProducts.error);
+  const loadError = useSelector((state: RootState) => state.adminProducts.error);
 
   const [categories, setCategories] = useState<CategoryOption[]>([]);
-  const [categoriesError, setCategoriesError] = useState<string | null>(null);
-
+  const [brands, setBrands] = useState<CatalogEntityOption[]>([]);
+  const [manufacturers, setManufacturers] = useState<CatalogEntityOption[]>([]);
+  const [optionsError, setOptionsError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | ProductStatus>("ALL");
   const [categoryFilter, setCategoryFilter] = useState<"ALL" | string>("ALL");
-
   const [panelOpen, setPanelOpen] = useState(false);
   const [panelMode, setPanelMode] = useState<"create" | "edit">("create");
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
   const [form, setForm] = useState<ProductFormState>(EMPTY_FORM);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [busyActionProductId, setBusyActionProductId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [successNote, setSuccessNote] = useState<string | null>(null);
 
@@ -72,84 +133,96 @@ export default function AdminProductsPage() {
     dispatch(setAdminProductsLoading(true));
     dispatch(setAdminProductsError(null));
     try {
-      const items = await fetchAllProductsSnapshot();
-      dispatch(setAdminProducts(items));
-    } catch (loadError) {
-      const message =
-        loadError instanceof Error ? loadError.message : "Failed to load products.";
-      dispatch(setAdminProductsError(message));
+      dispatch(setAdminProducts(await fetchAllProductsSnapshot()));
+    } catch (error) {
+      dispatch(setAdminProductsError(error instanceof Error ? error.message : "Failed to load products."));
     } finally {
       dispatch(setAdminProductsLoading(false));
     }
   }, [dispatch]);
 
-  useEffect(() => {
-    void refreshProducts();
-  }, [refreshProducts]);
-
-  useEffect(() => {
-    let ignore = false;
-    const run = async () => {
-      try {
-        const rows = await fetchActiveCategories();
-        if (!ignore) {
-          setCategories(rows);
-          setCategoriesError(null);
-        }
-      } catch (loadError) {
-        if (!ignore) {
-          const message =
-            loadError instanceof Error ? loadError.message : "Failed to load categories.";
-          setCategoriesError(message);
-        }
-      }
-    };
-    void run();
-    return () => {
-      ignore = true;
-    };
+  const refreshOptions = useCallback(async () => {
+    try {
+      const [categoryRows, brandRows, manufacturerRows] = await Promise.all([
+        fetchActiveCategories(),
+        fetchActiveBrandOptions(),
+        fetchActiveManufacturerOptions(),
+      ]);
+      setCategories(categoryRows);
+      setBrands(brandRows);
+      setManufacturers(manufacturerRows);
+      setOptionsError(null);
+    } catch (error) {
+      setOptionsError(error instanceof Error ? error.message : "Failed to load catalog options.");
+    }
   }, []);
 
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      void refreshProducts();
+      void refreshOptions();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [refreshOptions, refreshProducts]);
+
   const categoryOptions = useMemo(() => {
-    const options = new Map<string, string>();
+    const options = new Map(categories.map((category) => [category.id, category.label]));
     for (const product of products) {
-      if (product.categoryId && product.category.name) {
-        options.set(product.categoryId, product.category.name);
-      }
+      if (!options.has(product.categoryId)) options.set(product.categoryId, categoryLabel(product));
     }
-    for (const category of categories) {
-      options.set(category.id, category.name);
-    }
-    return Array.from(options.entries())
-      .map(([id, name]) => ({ id, name }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    return [...options].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
   }, [categories, products]);
 
   const visibleProducts = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const needle = query.trim().toLowerCase();
     return products.filter((product) => {
-      const matchQuery =
-        !q ||
-        product.name.toLowerCase().includes(q) ||
-        product.productCode.toLowerCase().includes(q) ||
-        product.category.name.toLowerCase().includes(q) ||
-        (product.description ?? "").toLowerCase().includes(q);
-
-      const matchStatus = statusFilter === "ALL" || product.status === statusFilter;
-      const matchCategory = categoryFilter === "ALL" || product.categoryId === categoryFilter;
-      return matchQuery && matchStatus && matchCategory;
+      const searchable = [
+        product.name,
+        product.slug,
+        product.productCode,
+        product.seoTitle,
+        product.metaDescription,
+        product.gtin,
+        product.modelNumber,
+        product.series,
+        categoryLabel(product),
+        product.brand?.name,
+        product.manufacturer?.name,
+        ...product.variants.flatMap((variant) => [
+          variant.sku,
+          variant.name,
+          variant.modelNumber,
+          variant.attributeSummary,
+        ]),
+      ].filter(Boolean).join(" ").toLowerCase();
+      return (
+        (!needle || searchable.includes(needle)) &&
+        (statusFilter === "ALL" || product.status === statusFilter) &&
+        (categoryFilter === "ALL" || product.categoryId === categoryFilter)
+      );
     });
   }, [categoryFilter, products, query, statusFilter]);
 
-  const openCreatePanel = () => {
+  const summary = useMemo(() => ({
+    active: products.filter((product) => product.status === "ACTIVE").length,
+    stock: products.reduce((sum, product) => sum + product.stock, 0),
+    value: products.reduce((sum, product) => sum + product.buyingPrice * product.stock, 0),
+  }), [products]);
+
+  const openCreate = () => {
     setPanelMode("create");
     setEditingProduct(null);
-    setForm({ ...EMPTY_FORM, categoryId: categoryOptions[0]?.id ?? "" });
+    setForm({
+      ...EMPTY_FORM,
+      categoryId: categories[0]?.id ?? "",
+      variants: EMPTY_FORM.variants.map((variant) => ({ ...variant, attributes: [] })),
+      specifications: [],
+    });
     setMutationError(null);
     setPanelOpen(true);
   };
 
-  const openEditPanel = (product: AdminProduct) => {
+  const openEdit = (product: AdminProduct) => {
     setPanelMode("edit");
     setEditingProduct(product);
     setForm(buildFormFromProduct(product));
@@ -157,321 +230,208 @@ export default function AdminProductsPage() {
     setPanelOpen(true);
   };
 
-  const closePanel = () => {
-    setPanelOpen(false);
-    setMutationError(null);
+  const closePanel = useCallback(() => {
+    if (!isSubmitting) setPanelOpen(false);
+  }, [isSubmitting]);
+
+  const buildBody = (): ProductWriteBody => {
+    const name = form.name.trim();
+    if (!name) throw new Error("Product name is required.");
+    if (
+      panelMode === "edit" &&
+      !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(form.slug.trim())
+    ) {
+      throw new Error(
+        "Canonical slug must use lowercase letters, numbers, and single hyphens.",
+      );
+    }
+    if (!form.categoryId) throw new Error("Category is required.");
+    const buyingPrice = parseNumericField(form.buyingPrice, "Buying price");
+    const salePrice = parseNumericField(form.salePrice, "Sale price");
+    if (buyingPrice < 0 || salePrice < 0) throw new Error("Prices cannot be negative.");
+    const discountPrice = form.discountPrice.trim()
+      ? parseNumericField(form.discountPrice, "Discount price")
+      : null;
+    if (discountPrice !== null && (discountPrice < 0 || discountPrice > salePrice)) {
+      throw new Error("Discount price must be between zero and the sale price.");
+    }
+    if (form.variants.length === 0) throw new Error("Add at least one variant.");
+
+    const seenCombinations = new Set<string>();
+    const seenSkus = new Set<string>();
+    const variants = form.variants.map((variant, index) => {
+      const stock = parseNumericField(variant.stock, `Variant ${index + 1} stock`);
+      if (!Number.isInteger(stock) || stock < 0) {
+        throw new Error(`Variant ${index + 1} stock must be a non-negative whole number.`);
+      }
+      const attributes = rowsToStringMap(variant.attributes);
+      const variantKey = deriveVariantKey({
+        size: optional(variant.size),
+        color: optional(variant.color),
+        attributes,
+      });
+      if (seenCombinations.has(variantKey)) throw new Error(`Variant ${index + 1} duplicates another option combination.`);
+      seenCombinations.add(variantKey);
+      const sku = optional(variant.sku);
+      if (sku) {
+        const skuKey = sku.toLowerCase();
+        if (seenSkus.has(skuKey)) throw new Error(`Duplicate SKU: ${sku}.`);
+        seenSkus.add(skuKey);
+      }
+      return {
+        ...(variant.id ? { id: variant.id } : {}),
+        name: optional(variant.name),
+        size: optional(variant.size),
+        color: optional(variant.color),
+        modelNumber: optional(variant.modelNumber),
+        sku,
+        stock,
+        image: optional(variant.image),
+        attributes,
+        isActive: variant.isActive,
+      };
+    });
+    if (variants.length > 1 && seenCombinations.has("default")) {
+      throw new Error("Only a single optionless variant may use the default combination.");
+    }
+
+    return {
+      name,
+      description: optional(form.description),
+      seoTitle: optional(form.seoTitle),
+      metaDescription: optional(form.metaDescription),
+      ogImage: optional(form.ogImage),
+      gtin: optional(form.gtin),
+      itemCondition: form.itemCondition,
+      primaryImageAlt: optional(form.primaryImageAlt),
+      modelNumber: optional(form.modelNumber),
+      series: optional(form.series),
+      specifications: rowsToStringMap(form.specifications),
+      buyingPrice,
+      salePrice,
+      discountPrice,
+      image: optional(form.image),
+      images: normalizeImagesInput(form.images),
+      status: form.status,
+      categoryId: form.categoryId,
+      brandId: form.brandId || null,
+      manufacturerId: form.manufacturerId || null,
+      variants,
+    };
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setMutationError(null);
     setSuccessNote(null);
-
-    const name = form.name.trim();
-    if (!name) {
-      setMutationError("Product name is required.");
-      return;
-    }
-    if (!form.categoryId) {
-      setMutationError("Category is required.");
-      return;
-    }
-
-    let buyingPrice: number;
-    let salePrice: number;
+    let body: ProductWriteBody;
     try {
-      buyingPrice = parseNumericField(form.buyingPrice, "Buying price");
-      salePrice = parseNumericField(form.salePrice, "Sale price");
-    } catch (parseError) {
-      setMutationError(parseError instanceof Error ? parseError.message : "Invalid number.");
+      body = buildBody();
+    } catch (error) {
+      setMutationError(error instanceof Error ? error.message : "Invalid product data.");
       return;
     }
-
-    if (buyingPrice < 0) {
-      setMutationError("Buying price cannot be negative.");
-      return;
-    }
-    if (salePrice < 0) {
-      setMutationError("Sale price cannot be negative.");
-      return;
-    }
-
-    let discountPrice: number | null = null;
-    if (form.discountPrice.trim()) {
-      try {
-        discountPrice = parseNumericField(form.discountPrice, "Discount price");
-      } catch (parseError) {
-        setMutationError(parseError instanceof Error ? parseError.message : "Invalid discount.");
-        return;
-      }
-      if (discountPrice < 0) {
-        setMutationError("Discount price cannot be negative.");
-        return;
-      }
-      if (discountPrice > salePrice) {
-        setMutationError("Discount price cannot exceed the sale price.");
-        return;
-      }
-    }
-
-    // Build + validate the variant rows.
-    if (form.variants.length === 0) {
-      setMutationError("Add at least one variant (size + color).");
-      return;
-    }
-
-    const comboSeen = new Set<string>();
-    const skuSeen = new Set<string>();
-    const variantPayload: {
-      id?: string;
-      size: string;
-      color: string;
-      sku: string | null;
-      stock: number;
-      image: string | null;
-      isActive: boolean;
-    }[] = [];
-
-    for (const [index, row] of form.variants.entries()) {
-      const size = row.size.trim();
-      const color = normalizeColorForSubmit(row.color);
-      if (!size || !color) {
-        setMutationError(`Variant ${index + 1}: size and color are required.`);
-        return;
-      }
-      if (color.startsWith("#") && !HEX_COLOR_VALUE.test(color)) {
-        setMutationError(
-          `Variant ${index + 1}: enter a valid hex color code.`,
-        );
-        return;
-      }
-      const comboKey = `${size.toLowerCase()}|${color.toLowerCase()}`;
-      if (comboSeen.has(comboKey)) {
-        setMutationError(
-          `Duplicate size + color combination: "${size} / ${color}".`,
-        );
-        return;
-      }
-      comboSeen.add(comboKey);
-
-      let stock: number;
-      try {
-        stock = parseNumericField(row.stock, `Variant ${index + 1} stock`);
-      } catch (parseError) {
-        setMutationError(parseError instanceof Error ? parseError.message : "Invalid stock.");
-        return;
-      }
-      if (!Number.isInteger(stock) || stock < 0) {
-        setMutationError(`Variant ${index + 1}: stock must be a non-negative whole number.`);
-        return;
-      }
-
-      const sku = row.sku.trim() || null;
-      if (sku) {
-        const skuKey = sku.toLowerCase();
-        if (skuSeen.has(skuKey)) {
-          setMutationError(`Duplicate SKU: "${sku}".`);
-          return;
-        }
-        skuSeen.add(skuKey);
-      }
-
-      variantPayload.push({
-        ...(row.id ? { id: row.id } : {}),
-        size,
-        color,
-        sku,
-        stock,
-        image: row.image.trim() || null,
-        isActive: row.isActive,
-      });
-    }
-
-    const description = form.description.trim() || null;
-    const image = form.image.trim() || null;
-    const images = normalizeImagesInput(form.images);
 
     setIsSubmitting(true);
     try {
-      if (panelMode === "create") {
-        const body = {
-          name,
-          description,
-          buyingPrice,
-          salePrice,
-          discountPrice,
-          image,
-          images,
-          status: form.status,
-          categoryId: form.categoryId,
-          variants: variantPayload,
-        };
-
-        const response = await fetch("/api/products", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-          cache: "no-store",
-        });
-        const payload = (await response.json()) as unknown;
-        if (!response.ok) {
-          throw new Error(readApiError(payload, "Failed to create product."));
+      const requestBody: Partial<ProductWriteBody> & { slug?: string } = {
+        ...body,
+      };
+      if (panelMode === "edit" && editingProduct) {
+        const slug = form.slug.trim();
+        if (slug !== editingProduct.slug) requestBody.slug = slug;
+        if (body.brandId === editingProduct.brandId) delete requestBody.brandId;
+        if (body.manufacturerId === editingProduct.manufacturerId) {
+          delete requestBody.manufacturerId;
         }
-
-        await refreshProducts();
-        const message = "Product created successfully.";
-        setSuccessNote(message);
-        notifyActionSuccess(message);
-        closePanel();
-      } else {
-        if (!editingProduct) throw new Error("No product selected for editing.");
-
-        const patch: Record<string, unknown> = {};
-        if (name !== editingProduct.name) patch.name = name;
-        if (description !== (editingProduct.description ?? null)) patch.description = description;
-        if (buyingPrice !== editingProduct.buyingPrice) patch.buyingPrice = buyingPrice;
-        if (salePrice !== editingProduct.salePrice) patch.salePrice = salePrice;
-        if (discountPrice !== editingProduct.discountPrice) patch.discountPrice = discountPrice;
-        if (image !== (editingProduct.image ?? null)) patch.image = image;
-        if (form.status !== editingProduct.status) patch.status = form.status;
-        if (form.categoryId !== editingProduct.categoryId) patch.categoryId = form.categoryId;
-
-        const sameImages =
-          images.length === editingProduct.images.length &&
-          images.every((value, index) => value === editingProduct.images[index]);
-        if (!sameImages) patch.images = images;
-
-        // Variants are reconciled server-side; send them whenever the set
-        // differs from what we loaded.
-        const currentVariants = editingProduct.variants.map((v) => ({
-          id: v.id,
-          size: v.size,
-          color: v.color,
-          sku: v.sku,
-          stock: v.stock,
-          image: v.image,
-          isActive: v.isActive,
-        }));
-        const nextVariants = variantPayload.map((v) => ({
-          id: v.id ?? null,
-          size: v.size,
-          color: v.color,
-          sku: v.sku,
-          stock: v.stock,
-          image: v.image,
-          isActive: v.isActive,
-        }));
-        const variantsChanged =
-          JSON.stringify(
-            currentVariants.map((v) => ({ ...v, id: v.id ?? null })),
-          ) !== JSON.stringify(nextVariants);
-        if (variantsChanged) patch.variants = variantPayload;
-
-        if (Object.keys(patch).length === 0) {
-          setMutationError("No changes to save.");
-          return;
-        }
-
-        const response = await fetch(`/api/products/${editingProduct.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(patch),
-          cache: "no-store",
-        });
-        const payload = (await response.json()) as unknown;
-        if (!response.ok) {
-          throw new Error(readApiError(payload, "Failed to update product."));
-        }
-
-        await refreshProducts();
-        const message = "Product updated successfully.";
-        setSuccessNote(message);
-        notifyActionSuccess(message);
-        closePanel();
       }
-    } catch (mutation) {
-      const message = mutation instanceof Error ? mutation.message : "Product mutation failed.";
+      const response = await fetch(
+        panelMode === "create" ? "/api/products" : `/api/products/${editingProduct?.id}`,
+        {
+          method: panelMode === "create" ? "POST" : "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+          cache: "no-store",
+        },
+      );
+      const payload = await response.json().catch(() => null) as unknown;
+      if (!response.ok) throw new Error(readApiError(payload, "Failed to save product."));
+      const note = panelMode === "create" ? "Product created." : "Product updated.";
+      setPanelOpen(false);
+      setSuccessNote(note);
+      notifyActionSuccess(note);
+      await refreshProducts();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to save product.";
       setMutationError(message);
-      notifyActionError(mutation, "Product mutation failed.");
+      notifyActionError(message, "Failed to save product.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleToggleHide = async (product: AdminProduct) => {
-    setMutationError(null);
-    setSuccessNote(null);
-    setBusyActionProductId(product.id);
-
+  const toggleStatus = async (product: AdminProduct) => {
+    const status: ProductStatus = product.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    setBusyId(product.id);
     try {
       const response = await fetch(`/api/products/${product.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: product.status === "ACTIVE" ? "INACTIVE" : "ACTIVE",
-        }),
+        body: JSON.stringify({ status }),
         cache: "no-store",
       });
-      const payload = (await response.json()) as unknown;
-      if (!response.ok) {
-        throw new Error(readApiError(payload, "Failed to update visibility."));
-      }
-
+      const payload = await response.json().catch(() => null) as unknown;
+      if (!response.ok) throw new Error(readApiError(payload, "Failed to update product status."));
+      notifyActionSuccess(status === "ACTIVE" ? "Product published." : "Product hidden.");
       await refreshProducts();
-      const message =
-        product.status === "ACTIVE"
-          ? "Product hidden successfully."
-          : "Product made visible successfully.";
-      setSuccessNote(message);
-      notifyActionSuccess(message);
-    } catch (mutation) {
-      const message =
-        mutation instanceof Error ? mutation.message : "Failed to update visibility.";
-      setMutationError(message);
-      notifyActionError(mutation, "Failed to update visibility.");
+    } catch (error) {
+      notifyActionError(error, "Failed to update product status.");
     } finally {
-      setBusyActionProductId(null);
+      setBusyId(null);
     }
   };
 
-  const handleDelete = async (product: AdminProduct) => {
+  const deleteProduct = async (product: AdminProduct) => {
     const confirmed = await confirmMajorAction({
-      title: `Delete "${product.name}"?`,
-      description: "This will permanently delete the product.",
-      confirmLabel: "Delete",
-      variant: "danger",
+      title: `Delete ${product.name}?`,
+      description: "This permanently removes the product and its variants. Historical order snapshots remain.",
+      confirmLabel: "Delete product",
     });
     if (!confirmed) return;
-
-    setMutationError(null);
-    setSuccessNote(null);
-    setBusyActionProductId(product.id);
-
+    setBusyId(product.id);
     try {
-      const response = await fetch(`/api/products/${product.id}`, {
-        method: "DELETE",
-        cache: "no-store",
-      });
-      const payload = (await response.json()) as unknown;
-      if (!response.ok) {
-        throw new Error(readApiError(payload, "Failed to delete product."));
-      }
-
+      const response = await fetch(`/api/products/${product.id}`, { method: "DELETE", cache: "no-store" });
+      const payload = await response.json().catch(() => null) as unknown;
+      if (!response.ok) throw new Error(readApiError(payload, "Failed to delete product."));
+      notifyActionSuccess("Product deleted.");
       await refreshProducts();
-      const message = "Product deleted successfully.";
-      setSuccessNote(message);
-      notifyActionSuccess(message);
-    } catch (mutation) {
-      const message = mutation instanceof Error ? mutation.message : "Failed to delete product.";
-      setMutationError(message);
-      notifyActionError(mutation, "Failed to delete product.");
+    } catch (error) {
+      notifyActionError(error, "Failed to delete product.");
     } finally {
-      setBusyActionProductId(null);
+      setBusyId(null);
     }
   };
 
   return (
-    <section className="space-y-4">
+    <div className="space-y-5">
+      <header>
+        <p className="text-xs font-bold uppercase tracking-widest text-brand-red">Catalog</p>
+        <h1 className="mt-1 text-2xl font-black text-gray-950 sm:text-3xl">Products</h1>
+        <p className="mt-1 text-sm text-gray-600">Manage classification, technical data, pricing, media and purchasable option combinations.</p>
+      </header>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <SummaryCard label="Products" value={products.length} detail="All catalog records" icon={Boxes} />
+        <SummaryCard label="Published" value={summary.active} detail="Visible when category ancestry is active" icon={PackageCheck} />
+        <SummaryCard label="Units in stock" value={summary.stock} detail="Across active variants" icon={Warehouse} />
+        <SummaryCard label="Stock cost" value={`BDT ${summary.value.toLocaleString()}`} detail="Buying price × current stock" icon={CircleDollarSign} />
+      </div>
+
+      {(loadError || optionsError) && (
+        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{loadError ?? optionsError}</div>
+      )}
+      {successNote && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{successNote}</div>}
+
       <ProductsToolbar
         query={query}
         statusFilter={statusFilter}
@@ -483,60 +443,41 @@ export default function AdminProductsPage() {
         onQueryChange={setQuery}
         onStatusChange={setStatusFilter}
         onCategoryChange={setCategoryFilter}
-        onRefresh={() => {
-          void refreshProducts();
-        }}
-        onCreate={openCreatePanel}
+        onRefresh={() => { void refreshProducts(); void refreshOptions(); }}
+        onCreate={openCreate}
       />
-
-      {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
-      {categoriesError && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
-          {categoriesError}
-        </div>
-      )}
-
-      {mutationError && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {mutationError}
-        </div>
-      )}
-
-      {successNote && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
-          {successNote}
-        </div>
-      )}
 
       <ProductsTable
         products={visibleProducts}
         isLoading={isLoading}
         totalCount={products.length}
-        busyActionProductId={busyActionProductId}
-        onEdit={openEditPanel}
-        onToggleHide={(product) => {
-          void handleToggleHide(product);
-        }}
-        onDelete={(product) => {
-          void handleDelete(product);
-        }}
+        busyActionProductId={busyId}
+        onEdit={openEdit}
+        onToggleHide={(product) => { void toggleStatus(product); }}
+        onDelete={(product) => { void deleteProduct(product); }}
       />
 
       <ProductFormDrawer
         open={panelOpen}
         mode={panelMode}
         form={form}
-        categoryOptions={categoryOptions}
+        categories={categories}
+        currentCategory={
+          editingProduct
+            ? {
+                id: editingProduct.categoryId,
+                label: categoryLabel(editingProduct),
+              }
+            : null
+        }
+        brands={brands}
+        manufacturers={manufacturers}
+        error={mutationError}
         isSubmitting={isSubmitting}
-        onClose={closePanel}
         onChange={setForm}
+        onClose={closePanel}
         onSubmit={handleSubmit}
       />
-    </section>
+    </div>
   );
 }

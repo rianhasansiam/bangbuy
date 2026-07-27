@@ -5,7 +5,7 @@ import { Heart, ShoppingCart, Star, PackageX } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/use-app-session";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { setCartData, setCartError as setCartErrorAction } from "@/store/slices/cart.slice";

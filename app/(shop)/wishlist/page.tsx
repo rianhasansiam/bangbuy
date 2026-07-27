@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/use-app-session";
 import { useDispatch, useSelector } from "react-redux";
 
 import WishlistHero from "./components/WishlistHero";
@@ -15,8 +15,6 @@ import SavedForLater from "@/app/(shop)/cart/components/SavedForLater";
 import {
   setWishlistError,
   setWishlistItems,
-  setWishlistLoading,
-  setWishlistMode,
 } from "@/store/slices/wishlist.slice";
 import {
   setCartData,
@@ -36,12 +34,8 @@ import {
 import {
   isServerWishlistRole,
   removeWishlistItemOnServer,
-  syncWishlistToServer,
 } from "@/features/wishlist/api";
-import {
-  readLocalWishlist,
-  writeLocalWishlist,
-} from "@/features/wishlist/storage";
+import { writeLocalWishlist } from "@/features/wishlist/storage";
 import {
   readLocalSaved,
   type SavedItem,
@@ -107,57 +101,6 @@ export default function WishlistPage() {
   useEffect(() => {
     itemsRef.current = items;
   }, [items]);
-
-  useEffect(() => {
-    if (status === "loading") return;
-
-    let ignore = false;
-
-    const hydrate = async () => {
-      const localItems = readLocalWishlist();
-
-      await Promise.resolve();
-      if (ignore) return;
-
-      dispatch(setWishlistError(null));
-      dispatch(setWishlistLoading(true));
-
-      if (!canUseServer) {
-        dispatch(setWishlistMode("local"));
-        dispatch(setWishlistItems(localItems));
-        dispatch(setWishlistLoading(false));
-        return;
-      }
-
-      dispatch(setWishlistMode("server"));
-
-      try {
-        const serverItems = await syncWishlistToServer(localItems.map((item) => item.id));
-        if (ignore) return;
-        dispatch(setWishlistItems(serverItems));
-        writeLocalWishlist(serverItems);
-      } catch (err) {
-        if (ignore) return;
-        const message =
-          err instanceof Error
-            ? err.message
-            : "Failed to load wishlist from server.";
-        dispatch(setWishlistError(message));
-        dispatch(setWishlistMode("local"));
-        dispatch(setWishlistItems(localItems));
-      } finally {
-        if (!ignore) {
-          dispatch(setWishlistLoading(false));
-        }
-      }
-    };
-
-    void hydrate();
-
-    return () => {
-      ignore = true;
-    };
-  }, [canUseServer, dispatch, status]);
 
   const categories = useMemo(
     () => Array.from(new Set(visibleWishlistRows.map((item) => item.category))),

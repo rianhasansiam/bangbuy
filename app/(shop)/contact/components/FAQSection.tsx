@@ -5,7 +5,7 @@ import { HelpCircle, Plus, Minus } from "lucide-react";
 
 const faqs = [
   {
-    q: "How fast does PixoHouse deliver?",
+    q: "How fast does BangBuy deliver?",
     a: "Most orders from local stores within 50km arrive the same day. You'll see the estimated delivery window on the product page before checkout.",
   },
   {
@@ -14,15 +14,15 @@ const faqs = [
   },
   {
     q: "Are all stores verified?",
-    a: "Yes. Every merchant on PixoHouse is hand-picked and goes through identity, address, and quality verification before listing.",
+    a: "Yes. Every merchant on BangBuy is hand-picked and goes through identity, address, and quality verification before listing.",
   },
   {
     q: "How do I track my order?",
-    a: "Once your order is placed, you'll get real-time tracking updates via SMS, email, and the PixoHouse app. You can also track from your profile under My Orders.",
+    a: "Once your order is placed, you'll get real-time tracking updates via SMS, email, and the BangBuy app. You can also track from your profile under My Orders.",
   },
   {
     q: "How do I become a seller?",
-    a: "We'd love to have you. Use the contact form above with subject 'Partnership / Sell on PixoHouse' and our merchant team will reach out within 24 hours.",
+    a: "We'd love to have you. Use the contact form above with subject 'Partnership / Sell on BangBuy' and our merchant team will reach out within 24 hours.",
   },
   {
     q: "Do you offer customer support on weekends?",

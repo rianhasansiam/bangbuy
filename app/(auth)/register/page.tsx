@@ -165,7 +165,7 @@ export default function RegisterPage() {
 
       <section className="relative z-10 mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 px-4 py-8 sm:px-6 lg:grid-cols-12 lg:gap-8 lg:py-12">
         <BrandPanel
-          badgeText="PixoHouse · Welcome"
+          badgeText="BangBuy · Welcome"
           headlineLead="Join the local"
           headlineEmphasis="shopping revolution."
           subheading="Create your account in under a minute and start unlocking deals from premium stores in your neighborhood."
