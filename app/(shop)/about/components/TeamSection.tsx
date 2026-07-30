@@ -1,5 +1,3 @@
-"use client";
-
 import Image from "next/image";
 import { Users } from "lucide-react";
 
@@ -7,8 +5,7 @@ const team = [
   {
     name: "Rian Hasan Siam",
     role: "Founder & CTO",
-    image:
-      "/images/RianDP.png",
+    image: "/images/RianDp.png",
   },
   {
     name: "Md Nafiz Islam Nayan",
@@ -30,7 +27,7 @@ export default function TeamSection() {
             </span>
           </div>
           <h2 className="mt-3 text-2xl font-black tracking-tight text-foreground sm:text-3xl lg:text-4xl">
-            People behind PixoHouse
+            People behind BangBuy
           </h2>
           <p className="mt-2 text-sm text-muted-foreground sm:text-base">
             A passionate team obsessed with making local shopping feel effortless.

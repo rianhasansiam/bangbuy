@@ -7,11 +7,13 @@ import PolicySection from "@/components/policy/PolicySection";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { siteConfig } from "@/lib/seo/site";
 
+export const revalidate = 21600;
+
 /**
  * Terms & Conditions page.
  *
  * IMPORTANT: This is a professional starting template tailored to the
- * current PixoHouse platform (credentials + Google login, guest checkout,
+ * current BangBuy platform (credentials + Google login, guest checkout,
  * Cash on Delivery active, online "Pay Now" coming soon). The content
  * must be reviewed by a qualified legal professional before being used
  * in production, as legal requirements vary by jurisdiction.
@@ -41,7 +43,7 @@ export default function TermsAndConditionsPage() {
 
       <PolicySection
         title="2. Website Usage Rules"
-        intro="When using PixoHouse, you agree to behave responsibly and lawfully."
+        intro="When using BangBuy, you agree to behave responsibly and lawfully."
       >
         <PolicyList
           items={[
@@ -206,7 +208,7 @@ export default function TermsAndConditionsPage() {
 
       <PolicySection
         title="12. Intellectual Property"
-        intro="All content on the Site — including logos, designs, text, images, and software — is owned by or licensed to PixoHouse."
+        intro="All content on the Site — including logos, designs, text, images, and software — is owned by or licensed to BangBuy."
       >
         <p>
           You may not copy, reproduce, distribute, or create derivative works from any part of the
@@ -221,7 +223,7 @@ export default function TermsAndConditionsPage() {
       >
         <PolicyList
           items={[
-            'PixoHouse is provided on an "as is" and "as available" basis',
+            'BangBuy is provided on an "as is" and "as available" basis',
             "We do not guarantee uninterrupted, error-free, or completely secure operation of the Site",
             "We are not liable for indirect, incidental, or consequential damages arising from your use of the Site",
             "Our total liability for any claim related to an order shall not exceed the amount paid for that order",
@@ -235,7 +237,7 @@ export default function TermsAndConditionsPage() {
 
       <PolicySection
         title="14. Privacy"
-        intro="Your use of PixoHouse is also governed by our Privacy Policy."
+        intro="Your use of BangBuy is also governed by our Privacy Policy."
       >
         <p>
           Please review our{" "}

@@ -1,6 +1,7 @@
 import type { z } from "zod";
 
 import { adminJsonRoute, adminRoute } from "@/lib/api/handlers";
+import { invalidateProductsById } from "@/lib/cache/catalog-invalidation";
 import {
   createAdminReview,
   listReviewsForAdmin,
@@ -35,9 +36,12 @@ export const GET = adminRoute({
 export const POST = adminJsonRoute({
   schema: createAdminReviewSchema,
   scope: "admin.reviews.POST",
-  revalidate: ["admin-reviews"],
   handler: async ({ body }) => {
     const review = await createAdminReview(body);
+    await invalidateProductsById([review.productId], {
+      reason: `admin review created: ${review.id}`,
+      reviews: true,
+    });
     return { status: 201, data: review };
   },
 });

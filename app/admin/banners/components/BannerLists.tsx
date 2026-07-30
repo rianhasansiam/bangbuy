@@ -3,8 +3,10 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { AnimatePresence, motion } from "framer-motion";
+import Link from "next/link";
 
 import {
+  categoryBannerHref,
   formatDate,
   type CarouselBannerRow,
   type CategoryBannerRow,
@@ -185,15 +187,26 @@ export function CategoryList({
             <p className="line-clamp-2 text-xs text-gray-500">
               {banner.description}
             </p>
-            <p className="text-[11px] text-gray-400">
-              Linked to:{" "}
-              <span className="font-semibold text-brand-black">
-                {banner.category.name || banner.categoryId}
-              </span>
-              {banner.link && (
-                <span className="ml-2 font-mono">→ {banner.link}</span>
-              )}
-            </p>
+            <div className="text-[11px] text-gray-500">
+              <p>
+                Linked to:{" "}
+                <span className="font-semibold text-brand-black">
+                  {banner.category.name || banner.categoryId}
+                </span>
+              </p>
+              <p className="mt-0.5 truncate font-mono text-gray-400">
+                /{banner.category.path}
+              </p>
+              <Link
+                href={
+                  banner.link ?? categoryBannerHref(banner.category.path)
+                }
+                className="mt-1 inline-flex max-w-full items-center gap-1 truncate font-mono font-semibold text-brand-red hover:underline"
+              >
+                Storefront →{" "}
+                {banner.link ?? categoryBannerHref(banner.category.path)}
+              </Link>
+            </div>
             <RowFooter
               busyId={busyId}
               banner={banner}

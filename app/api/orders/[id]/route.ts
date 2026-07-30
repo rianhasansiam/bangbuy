@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 
-import { requireUser } from "@/lib/api/guards";
+import { isAdminRequest, requireUser } from "@/lib/api/guards";
 import { jsonError, ok } from "@/lib/api/response";
 import {
   getOrderForAdmin,
@@ -25,7 +25,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
   try {
     const order =
-      guard.session.user.role === "ADMIN"
+      (await isAdminRequest())
         ? await getOrderForAdmin(id)
         : await getOrderForUser(id, guard.session.user.id);
 

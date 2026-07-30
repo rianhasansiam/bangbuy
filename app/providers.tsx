@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { SessionProvider } from "next-auth/react";
 import { Provider as ReduxProvider } from "react-redux";
 
-import store from "@/store";
+import { makeStore } from "@/store";
 import Toaster from "@/components/ui/Toaster";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import StoreHydrator from "@/components/layout/StoreHydrator";
@@ -28,6 +29,8 @@ export default function Providers({
 }: {
   children: React.ReactNode;
 }) {
+  const [store] = useState(makeStore);
+
   return (
     <SessionProvider>
       <ReduxProvider store={store}>

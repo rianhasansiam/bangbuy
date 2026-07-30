@@ -1,11 +1,16 @@
 import { adminJsonRoute, adminRoute } from "@/lib/api/handlers";
+import { catalogCacheTags } from "@/lib/cache/catalog-tags";
 import {
   deleteCategoryBanner,
   updateCategoryBanner,
 } from "@/lib/services/banner.service";
 import { updateCategoryBannerSchema } from "@/lib/validations/banner.validation";
 
-const CATEGORY_TAGS = ["admin-banners", "category-banners", "home-categories"] as const;
+const CATEGORY_TAGS = [
+  "admin-banners",
+  "category-banners",
+  catalogCacheTags.homepage,
+] as const;
 const NOT_FOUND = {
   code: "P2025",
   message: "Category banner not found.",

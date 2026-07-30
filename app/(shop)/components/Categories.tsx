@@ -1,66 +1,17 @@
-"use client";
-
-import { useEffect } from "react";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { useDispatch, useSelector } from "react-redux";
 
 import ProductCard from "@/components/product/ProductCard";
-import { setHomeCategories } from "@/store/slices/home-categories.slice";
-import type { AppDispatch, RootState } from "@/store";
+import type { HomeCategory } from "@/lib/services/home-categories.service";
 
 import { CategoriesBanner } from "./CategoriesBanner";
-
-type HomeCategoryProduct = {
-  id: string;
-  slug: string;
-  name: string;
-  description: string | null;
-  price: number;
-  discountPrice: number | null;
-  image: string;
-  images: string[];
-  rating: number;
-  reviewCount: number;
-  badge: string | null;
-  variantCount: number;
-};
-
-type HomeCategoryBanner = {
-  id: string;
-  image: string;
-  label: string;
-  heading: string;
-  discount: string;
-  description: string;
-  link: string | null;
-};
-
-type HomeCategory = {
-  id: string;
-  name: string;
-  slug: string;
-  image: string | null;
-  products: HomeCategoryProduct[];
-  categoryBanner: HomeCategoryBanner | null;
-};
 
 type CategoriesProps = {
   initialCategories: HomeCategory[];
 };
 
 export default function Categories({ initialCategories }: CategoriesProps) {
-  const dispatch = useDispatch<AppDispatch>();
-  const categoriesFromStore = useSelector(
-    (state: RootState) => state.homeCategories.items,
-  );
-
-  useEffect(() => {
-    dispatch(setHomeCategories(initialCategories));
-  }, [dispatch, initialCategories]);
-
-  const categories =
-    categoriesFromStore.length > 0 ? categoriesFromStore : initialCategories;
+  const categories = initialCategories;
 
   if (categories.length === 0) {
     return (
@@ -79,20 +30,20 @@ export default function Categories({ initialCategories }: CategoriesProps) {
               <div>
                 <h2 className="text-lg font-bold text-foreground sm:text-xl">
                   <Link
-                    href={`/categories/${category.slug}`}
+                    href={`/categories/${category.path}`}
                     className="transition-colors hover:text-brand-red"
                   >
                     {category.name}
                   </Link>
                 </h2>
                 <p className="hidden text-xs text-brand-text-muted sm:block">
-                  {category.products.length} products available
+                  {category.totalProductCount} products across this department
                 </p>
               </div>
             </div>
 
             <Link
-              href={`/categories/${category.slug}`}
+              href={`/categories/${category.path}`}
               className="group flex items-center gap-1 text-sm font-semibold text-brand-red transition-colors hover:text-brand-red-hover"
             >
               View All
@@ -101,6 +52,26 @@ export default function Categories({ initialCategories }: CategoriesProps) {
           </div>
 
           <div className="mb-4 h-0.5 rounded-full bg-brand-border" />
+
+          {category.children.length > 0 && (
+            <nav
+              aria-label={`${category.name} subcategories`}
+              className="mb-4 flex flex-wrap gap-2"
+            >
+              {category.children.map((child) => (
+                <Link
+                  key={child.id}
+                  href={`/categories/${child.path}`}
+                  className="rounded-full border border-brand-border bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-brand-red/40 hover:text-brand-red"
+                >
+                  {child.name}
+                  <span className="ml-1 text-gray-600">
+                    ({child.totalProductCount})
+                  </span>
+                </Link>
+              ))}
+            </nav>
+          )}
 
           <div className="flex flex-col gap-4 lg:flex-row">
             <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
@@ -131,6 +102,9 @@ export default function Categories({ initialCategories }: CategoriesProps) {
                   heading: category.categoryBanner.heading,
                   discount: category.categoryBanner.discount,
                   description: category.categoryBanner.description,
+                  link:
+                    category.categoryBanner.link ??
+                    `/categories/${category.path}`,
                 }}
               />
             )}
@@ -138,10 +112,10 @@ export default function Categories({ initialCategories }: CategoriesProps) {
 
           <div className="mt-5 text-center">
             <Link
-              href={`/categories/${category.slug}`}
+              href={`/categories/${category.path}`}
               className="inline-block rounded-full bg-brand-red px-6 py-2.5 text-sm font-semibold text-brand-white shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-lg"
             >
-              Load More Products
+              View all {category.totalProductCount} products
             </Link>
           </div>
 

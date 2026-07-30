@@ -1,21 +1,25 @@
-import { Fragment } from 'react'
-import { ChevronRight, Home } from 'lucide-react'
-import Link from 'next/link'
+import { Fragment } from "react";
+import { ChevronRight, Home } from "lucide-react";
+import Link from "next/link";
 
 const Breadcrumbs = ({
   items,
 }: {
-  items: { label: string; href?: string }[]
+  items: { label: string; href?: string }[];
 }) => {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-gray-100">
       {/* Breadcrumb Navigation */}
-      <nav className="flex items-center gap-2 text-sm overflow-x-auto">
+      <nav
+        aria-label="Breadcrumb"
+        className="flex items-center gap-2 text-sm overflow-x-auto"
+      >
         <Link
           href="/"
+          aria-label="Home"
           className="flex items-center gap-1 text-gray-500 hover:text-brand-red transition-colors shrink-0"
         >
-          <Home className="w-4 h-4" />
+          <Home className="w-4 h-4" aria-hidden="true" />
           <span className="hidden sm:inline">Home</span>
         </Link>
         {items.map((item, index) => (
@@ -29,15 +33,15 @@ const Breadcrumbs = ({
                 {item.label}
               </Link>
             ) : (
-              <span className="text-brand-black font-medium truncate">{item.label}</span>
+              <span className="text-brand-black font-medium truncate">
+                {item.label}
+              </span>
             )}
           </Fragment>
         ))}
       </nav>
-
-   
     </div>
-  )
-}
+  );
+};
 
-export default Breadcrumbs
+export default Breadcrumbs;

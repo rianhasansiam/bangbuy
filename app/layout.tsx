@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
+// import Script from "next/script";
 import "./globals.css";
 
 import Footer from "@/components/layout/Footer";
@@ -10,6 +10,8 @@ import TopBanner from "@/components/layout/TopBanner";
 import JsonLd from "@/components/seo/JsonLd";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/seo/json-ld";
 import { siteConfig } from "@/lib/seo/site";
+import { parsePublicCategoryNode } from "@/features/categories/api";
+import { getActiveCategoryTree } from "@/lib/services/category.service";
 
 import Providers from "./providers";
 
@@ -23,12 +25,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const META_PIXEL_ID = "887205770572625";
-
+// const META_PIXEL_ID = "887205770572625";
+// const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || "";
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
-    default: `${siteConfig.name} - Online Shopping for Electronics, Fashion & More`,
+    default: "Shop Industrial Automation, Electronics & More Online",
     template: `%s | ${siteConfig.name}`,
   },
   description: siteConfig.description,
@@ -74,17 +76,26 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const categories = await getActiveCategoryTree()
+    .then((tree) => tree.map(parsePublicCategoryNode))
+    .catch((error: unknown) => {
+      console.error("layout: failed to load category navigation", error);
+      return [];
+    });
+
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body>
+      {/* Browser extensions add attributes to <body> before React hydrates. */}
+      <body suppressHydrationWarning>
+        {/* Meta Pixel is disabled.
         <Script id="meta-pixel" strategy="afterInteractive">
           {`
             !function(f,b,e,v,n,t,s)
@@ -104,11 +115,12 @@ export default function RootLayout({
             __html: `<img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=${META_PIXEL_ID}&ev=PageView&noscript=1" />`,
           }}
         />
+        */}
         <JsonLd data={[organizationJsonLd(), websiteJsonLd()]} />
         <Providers>
           <SiteChrome
             banner={<TopBanner />}
-            navbar={<Navbar />}
+            navbar={<Navbar categories={categories} />}
             footer={<Footer />}
           >
             {children}

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { Home, LogOut, ShieldCheck, X } from "lucide-react";
-import { ADMIN_NAV } from "./data";
+import { ADMIN_NAV_GROUPS } from "./data";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/lib/seo/site";
 
@@ -57,43 +57,56 @@ export default function AdminSidebar({ open, onClose }: Props) {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-            Main
-          </p>
-          <ul className="space-y-1">
-            {ADMIN_NAV.map((item) => {
-              const Icon = item.icon;
-              const active =
-                item.href === "/admin"
-                  ? pathname === "/admin"
-                  : pathname.startsWith(item.href);
-
+          <div className="space-y-5">
+            {ADMIN_NAV_GROUPS.map((group) => {
+              const headingId = `nav-${group.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
               return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    onClick={onClose}
-                    className={cn(
-                      "group flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200",
-                      active
-                        ? "bg-brand-red text-brand-white shadow-sm"
-                        : "text-brand-black hover:translate-x-0.5 hover:bg-brand-light-bg hover:text-brand-red",
-                    )}
-                  >
-                    <span className="flex items-center gap-2.5">
-                      <Icon
-                        className={cn(
-                          "h-4 w-4 transition-transform duration-200 group-hover:scale-110",
-                          active ? "text-white" : "text-brand-red",
-                        )}
-                      />
-                      {item.label}
-                    </span>
-                  </Link>
-                </li>
+              <section key={group.label} aria-labelledby={headingId}>
+                <p
+                  id={headingId}
+                  className="mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-gray-400"
+                >
+                  {group.label}
+                </p>
+                <ul className="space-y-1">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const active =
+                      item.href === "/admin"
+                        ? pathname === "/admin"
+                        : pathname.startsWith(item.href);
+
+                    return (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          onClick={onClose}
+                          aria-current={active ? "page" : undefined}
+                          className={cn(
+                            "group flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200",
+                            active
+                              ? "bg-brand-red text-brand-white shadow-sm"
+                              : "text-brand-black hover:translate-x-0.5 hover:bg-brand-light-bg hover:text-brand-red",
+                          )}
+                        >
+                          <span className="flex items-center gap-2.5">
+                            <Icon
+                              className={cn(
+                                "h-4 w-4 transition-transform duration-200 group-hover:scale-110",
+                                active ? "text-white" : "text-brand-red",
+                              )}
+                            />
+                            {item.label}
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
               );
             })}
-          </ul>
+          </div>
         </nav>
 
         {/* Footer */}

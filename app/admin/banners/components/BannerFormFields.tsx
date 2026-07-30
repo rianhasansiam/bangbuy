@@ -2,16 +2,17 @@
 
 import {
   CAROUSEL_BG_TYPES,
+  categoryBannerHref,
   STATUS_VALUES,
   type BannerStatus,
   type CarouselBgType,
   type CarouselFormState,
+  type CategoryBannerCategoryOption,
   type CategoryBannerFormState,
   type DealFormState,
   type PromoFormState,
   type TopFormState,
 } from "@/features/admin-banners/api";
-import type { CategoryOption } from "@/features/admin-products/api";
 import ImageUploader from "@/components/ui/ImageUploader";
 import AdvancedColorPicker from "@/components/ui/AdvancedColorPicker";
 
@@ -257,7 +258,7 @@ export function CategoryBannerFormFields({
 }: {
   form: CategoryBannerFormState;
   setForm: React.Dispatch<React.SetStateAction<CategoryBannerFormState>>;
-  categories: CategoryOption[];
+  categories: CategoryBannerCategoryOption[];
 }) {
   const update = <K extends keyof CategoryBannerFormState>(
     key: K,
@@ -269,13 +270,37 @@ export function CategoryBannerFormFields({
       <Field label="Category" required>
         <select
           value={form.categoryId}
-          onChange={(e) => update("categoryId", e.target.value)}
+          onChange={(event) => {
+            const nextId = event.target.value;
+            setForm((current) => {
+              const previousCategory = categories.find(
+                (category) => category.id === current.categoryId,
+              );
+              const nextCategory = categories.find(
+                (category) => category.id === nextId,
+              );
+              const previousDefault = previousCategory
+                ? categoryBannerHref(previousCategory.path)
+                : "";
+              const shouldUseDefaultLink =
+                !current.link.trim() || current.link === previousDefault;
+
+              return {
+                ...current,
+                categoryId: nextId,
+                link:
+                  shouldUseDefaultLink && nextCategory
+                    ? categoryBannerHref(nextCategory.path)
+                    : current.link,
+              };
+            });
+          }}
           className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
         >
           <option value="">Select category</option>
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
-              {category.name}
+              {category.name} · /{category.path}
             </option>
           ))}
         </select>
@@ -322,8 +347,12 @@ export function CategoryBannerFormFields({
           value={form.link}
           onChange={(e) => update("link", e.target.value)}
           className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-          placeholder="/products?category=fashion"
+          placeholder="/categories/tools"
         />
+        <p className="mt-1 text-[11px] text-gray-500">
+          Leave blank to use the selected category&apos;s canonical storefront
+          path.
+        </p>
       </Field>
       <Field label="Status" required>
         <select

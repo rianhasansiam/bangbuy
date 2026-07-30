@@ -1,8 +1,9 @@
 import type { NextRequest } from "next/server";
-import { revalidateTag } from "next/cache";
 
 import { requireUser } from "@/lib/api/guards";
 import { ok } from "@/lib/api/response";
+import { invalidateProductsById } from "@/lib/cache/catalog-invalidation";
+import { revalidateCacheTags } from "@/lib/cache/revalidation";
 import { cancelOrderAsCustomer } from "@/lib/services/order.service";
 import { handleServiceError } from "@/lib/services/service-error";
 
@@ -26,9 +27,11 @@ export async function PATCH(_request: NextRequest, context: RouteContext) {
   try {
     const order = await cancelOrderAsCustomer(id, guard.session.user.id);
     // Cancellation restores stock — refresh cached product surfaces.
-    revalidateTag("admin-orders", "max");
-    revalidateTag("home-categories", "max");
-    revalidateTag("categories", "max");
+    await invalidateProductsById(
+      order.items.flatMap((item) => (item.productId ? [item.productId] : [])),
+      { reason: `customer cancellation stock restore: ${order.id}` },
+    );
+    revalidateCacheTags(["admin-orders", "promo-codes"]);
     return ok(order);
   } catch (error) {
     return handleServiceError("orders/[id].cancel.PATCH", error);

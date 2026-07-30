@@ -11,6 +11,7 @@ import {
 } from "@/store/slices/admin-orders.slice";
 import type { AppDispatch, RootState } from "@/store";
 import {
+  approvePaymentReview,
   EMPTY_ADMIN_ORDER_DRAFT,
   fetchAllAdminOrderCustomers,
   fetchAllAdminOrdersSnapshot,
@@ -18,6 +19,7 @@ import {
   patchOrderStatus,
   patchPaymentStatus,
   previewAdminOrder,
+  recordPaymentRefundAndCancel,
   type AdminOrderCustomer,
   type AdminOrderDraft,
   type AdminOrderRow,
@@ -150,7 +152,7 @@ export default function AdminOrdersPage() {
     for (const order of orders) {
       if (order.status !== "CANCELLED") revenue += order.totalAmount;
       if (order.status === "PENDING") pending += 1;
-      if (order.paymentStatus === "UNPAID" && order.status !== "CANCELLED") {
+      if (order.paymentStatus !== "PAID" && order.status !== "CANCELLED") {
         unpaid += 1;
       }
     }
@@ -236,6 +238,96 @@ export default function AdminOrdersPage() {
           : "Failed to update payment status.";
       setMutationError(message);
       notifyActionError(mutation, "Failed to update payment status.");
+    } finally {
+      setBusyOrderId(null);
+    }
+  };
+
+  const handleApprovePaymentReview = async (order: AdminOrderRow) => {
+    const confirmed = await confirmMajorAction({
+      title: `Approve payment review for ${order.orderNumber}?`,
+      description: `This records your approval of the verified SSLCommerz hold (${order.paymentReviewReasons.join(", ") || "unspecified review"}) and allows fulfillment to continue. It does not issue a refund.`,
+      confirmLabel: "Approve and continue",
+      variant: "warning",
+    });
+    if (!confirmed) return;
+
+    setMutationError(null);
+    setSuccessNote(null);
+    setBusyOrderId(order.id);
+    try {
+      await approvePaymentReview(order.id);
+      dispatch(
+        patchAdminOrder({
+          id: order.id,
+          changes: {
+            requiresPaymentReview: false,
+            paymentReviewApprovalAllowed: false,
+            status:
+              order.status === "PENDING"
+                ? "PAYMENT_CONFIRMED"
+                : order.status,
+            updatedAt: new Date().toISOString(),
+          },
+        }),
+      );
+      const message = `Payment review approved for ${order.orderNumber}.`;
+      setSuccessNote(message);
+      notifyActionSuccess(message);
+    } catch (mutation) {
+      const message =
+        mutation instanceof Error
+          ? mutation.message
+          : "Failed to approve the payment review.";
+      setMutationError(message);
+      notifyActionError(mutation, "Failed to approve the payment review.");
+    } finally {
+      setBusyOrderId(null);
+    }
+  };
+
+  const handleRecordPaymentRefund = async (
+    order: AdminOrderRow,
+    refundReference: string,
+  ) => {
+    const confirmed = await confirmMajorAction({
+      title: `Record refund and cancel ${order.orderNumber}?`,
+      description:
+        "Use this only after the refund has been completed and verified in SSLCommerz. BangBuy will record the reference, cancel the order, and restore its reservation; it does not initiate the refund.",
+      confirmLabel: "Record refund and cancel",
+      variant: "danger",
+    });
+    if (!confirmed) return;
+
+    setMutationError(null);
+    setSuccessNote(null);
+    setBusyOrderId(order.id);
+    try {
+      await recordPaymentRefundAndCancel(order.id, refundReference);
+      dispatch(
+        patchAdminOrder({
+          id: order.id,
+          changes: {
+            requiresPaymentReview: false,
+            paymentReviewApprovalAllowed: false,
+            paymentReviewRefundCancellationAllowed: false,
+            status:
+              order.status === "REFUNDED" ? "REFUNDED" : "CANCELLED",
+            paymentStatus: "REFUNDED",
+            updatedAt: new Date().toISOString(),
+          },
+        }),
+      );
+      const message = `Refund resolution recorded for ${order.orderNumber}.`;
+      setSuccessNote(message);
+      notifyActionSuccess(message);
+    } catch (mutation) {
+      const message =
+        mutation instanceof Error
+          ? mutation.message
+          : "Failed to record the refund resolution.";
+      setMutationError(message);
+      notifyActionError(mutation, "Failed to record the refund resolution.");
     } finally {
       setBusyOrderId(null);
     }
@@ -442,6 +534,12 @@ export default function AdminOrdersPage() {
         }}
         onTogglePayment={(order) => {
           void handleTogglePayment(order);
+        }}
+        onApprovePaymentReview={(order) => {
+          void handleApprovePaymentReview(order);
+        }}
+        onRecordPaymentRefund={(order, refundReference) => {
+          void handleRecordPaymentRefund(order, refundReference);
         }}
       />
 

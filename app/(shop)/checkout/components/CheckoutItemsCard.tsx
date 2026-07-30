@@ -76,6 +76,13 @@ export default function CheckoutItemsCard({
                     size={item.size}
                     className="mt-0.5"
                   />
+                  {(item.variantName || item.attributeSummary) && (
+                    <p className="mt-0.5 line-clamp-2 text-[11px] text-gray-500">
+                      {[item.variantName, item.attributeSummary]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  )}
                   <p className="mt-0.5 text-xs text-gray-500">
                     Qty {item.quantity} • BDT{" "}
                     {item.unitPrice.toLocaleString()} each

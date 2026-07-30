@@ -4,23 +4,17 @@ import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { ArrowRight, Heart, ShoppingBag, Trash2, Star } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/use-app-session";
 import { useDispatch, useSelector } from "react-redux";
 
 import {
   isServerWishlistRole,
   removeWishlistItemOnServer,
-  syncWishlistToServer,
 } from "@/features/wishlist/api";
-import {
-  readLocalWishlist,
-  writeLocalWishlist,
-} from "@/features/wishlist/storage";
+import { writeLocalWishlist } from "@/features/wishlist/storage";
 import {
   setWishlistError,
   setWishlistItems,
-  setWishlistLoading,
-  setWishlistMode,
 } from "@/store/slices/wishlist.slice";
 import type { AppDispatch, RootState } from "@/store";
 import { toast } from "@/lib/feedback";
@@ -38,11 +32,8 @@ const PROFILE_PREVIEW_LIMIT = 6;
 /**
  * Wishlist preview tab on the profile page.
  *
- * Mirrors the hydration logic from the standalone /wishlist page so
- * server-stored items still appear when the user lands here first.
- * The full management UX (filters, bulk actions) lives on /wishlist;
- * this tab is the at-a-glance view with one-tap "remove" and a deep
- * link to the full page.
+ * Consumes the wishlist hydrated by the root StoreHydrator. The full
+ * management UX lives on /wishlist; this is the at-a-glance view.
  */
 export default function WishlistTab() {
   const dispatch = useDispatch<AppDispatch>();
@@ -63,55 +54,6 @@ export default function WishlistTab() {
   useEffect(() => {
     itemsRef.current = items;
   }, [items]);
-
-  useEffect(() => {
-    if (status === "loading") return;
-
-    let ignore = false;
-
-    const hydrate = async () => {
-      const localItems = readLocalWishlist();
-      dispatch(setWishlistError(null));
-      dispatch(setWishlistLoading(true));
-
-      if (!canUseServer) {
-        dispatch(setWishlistMode("local"));
-        dispatch(setWishlistItems(localItems));
-        dispatch(setWishlistLoading(false));
-        return;
-      }
-
-      dispatch(setWishlistMode("server"));
-
-      try {
-        const serverItems = await syncWishlistToServer(
-          localItems.map((item) => item.id),
-        );
-        if (ignore) return;
-        dispatch(setWishlistItems(serverItems));
-        writeLocalWishlist(serverItems);
-      } catch (err) {
-        if (ignore) return;
-        const message =
-          err instanceof Error
-            ? err.message
-            : "Failed to load wishlist from server.";
-        dispatch(setWishlistError(message));
-        dispatch(setWishlistMode("local"));
-        dispatch(setWishlistItems(localItems));
-      } finally {
-        if (!ignore) {
-          dispatch(setWishlistLoading(false));
-        }
-      }
-    };
-
-    void hydrate();
-
-    return () => {
-      ignore = true;
-    };
-  }, [canUseServer, dispatch, status]);
 
   const handleRemove = (id: string) => {
     queueRemoval(

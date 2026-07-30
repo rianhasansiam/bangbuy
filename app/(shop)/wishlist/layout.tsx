@@ -12,6 +12,7 @@ export const metadata: Metadata = noIndexMetadata(
   "Your Wishlist",
   `Items you've saved to your ${siteConfig.name} wishlist.`,
 );
+export const dynamic = "force-dynamic";
 
 export default function WishlistLayout({
   children,

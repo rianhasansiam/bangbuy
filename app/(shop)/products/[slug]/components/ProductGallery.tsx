@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 const FALLBACK_PRODUCT_IMAGE =
   "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400";
-const PRODUCT_VARIANT_IMAGE_EVENT = "pixohouse:product-variant-image";
+const PRODUCT_VARIANT_IMAGE_EVENT = "BangBuy:product-variant-image";
 
 type VariantGalleryImage = {
   variantId: string;
@@ -18,6 +18,7 @@ type VariantGalleryImage = {
 type GalleryItem = {
   url: string;
   variantIds: string[];
+  alt?: string;
   label?: string;
 };
 
@@ -48,7 +49,7 @@ const ProductGallery = ({
   productName,
 }: {
   productId: string;
-  images: string[];
+  images: Array<{ url: string; alt?: string | null }>;
   variantImages?: VariantGalleryImage[];
   initialVariantId?: string | null;
   productName: string;
@@ -56,10 +57,17 @@ const ProductGallery = ({
   const galleryItems = useMemo<GalleryItem[]>(() => {
     const items: GalleryItem[] = [];
 
-    const addProductImage = (url: string) => {
-      const trimmed = url.trim();
+    const addProductImage = (image: {
+      url: string;
+      alt?: string | null;
+    }) => {
+      const trimmed = image.url.trim();
       if (!trimmed || items.some((item) => item.url === trimmed)) return;
-      items.push({ url: trimmed, variantIds: [] });
+      items.push({
+        url: trimmed,
+        variantIds: [],
+        alt: image.alt?.trim() || undefined,
+      });
     };
 
     const addVariantImage = (variant: VariantGalleryImage) => {
@@ -83,11 +91,16 @@ const ProductGallery = ({
     };
 
     images.forEach(addProductImage);
-    if (items.length === 0) addProductImage(FALLBACK_PRODUCT_IMAGE);
+    if (items.length === 0) {
+      addProductImage({
+        url: FALLBACK_PRODUCT_IMAGE,
+        alt: `${productName} product image`,
+      });
+    }
     variantImages.forEach(addVariantImage);
 
     return items;
-  }, [images, variantImages]);
+  }, [images, productName, variantImages]);
 
   const initialImageIndex = useMemo(
     () => findVariantImageIndex(galleryItems, initialVariantId, null),
@@ -157,9 +170,15 @@ const ProductGallery = ({
       >
         <Image
           src={currentItem.url}
-          alt={`${productName} - Image ${selectedImage + 1}`}
+          alt={
+            currentItem.alt ||
+            (isVariantImage && currentItem.label
+              ? `${productName} ${currentItem.label}`
+              : `${productName} - Image ${selectedImage + 1}`)
+          }
           fill
           sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
+          preload
           className="object-contain p-4"
         />
         {isVariantImage && (
@@ -194,9 +213,9 @@ const ProductGallery = ({
               <Image
                 src={item.url}
                 alt={
-                  itemIsVariant && item.label
+                  item.alt || (itemIsVariant && item.label
                     ? `${productName} ${item.label} thumbnail`
-                    : `${productName} thumbnail ${index + 1}`
+                    : `${productName} thumbnail ${index + 1}`)
                 }
                 fill
                 sizes="56px"

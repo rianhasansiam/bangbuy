@@ -9,8 +9,10 @@ import { getActiveCarouselBanners } from "@/lib/services/banner.service";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { siteConfig } from "@/lib/seo/site";
 
+export const revalidate = 600;
+
 export const metadata: Metadata = buildMetadata({
-  title: `${siteConfig.name} - Online Shopping for Electronics, Fashion & More`,
+  title: "Shop Industrial Automation, Electronics & More Online",
   description: siteConfig.description,
   path: "/",
   keywords: [
@@ -44,13 +46,13 @@ export default async function Home() {
   }));
 
   return (
-    <>
+    <main>
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4">
         <CaroselBanner slides={slides} />
       </div>
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 pb-10">
         <Categories initialCategories={categories} />
       </div>
-    </>
+    </main>
   );
 }

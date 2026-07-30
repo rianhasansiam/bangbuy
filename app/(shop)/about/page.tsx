@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 
 import AboutHero from "./components/AboutHero";
-import AboutStats from "./components/AboutStats";
 import OurStory from "./components/OurStory";
 import WhyChooseUs from "./components/WhyChooseUs";
 import OurValues from "./components/OurValues";
@@ -12,6 +11,8 @@ import AboutCTA from "./components/AboutCTA";
 import { getActiveTestimonials } from "@/lib/services/testimonial.service";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { siteConfig } from "@/lib/seo/site";
+
+export const revalidate = 3600;
 
 export const metadata: Metadata = buildMetadata({
   title: "About Us",
@@ -27,7 +28,6 @@ export default async function AboutPage() {
     <div className="min-h-screen bg-brand-light-bg">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-10 sm:space-y-14">
         <AboutHero />
-        {/* <AboutStats /> */}
         <OurStory />
         <WhyChooseUs />
         <OurValues />

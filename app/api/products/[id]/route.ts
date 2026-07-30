@@ -1,14 +1,19 @@
 import type { NextRequest } from "next/server";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
-import { revalidateTag } from "next/cache";
 import { z } from "zod";
 
 import { isAdminRequest, requireAdmin } from "@/lib/api/guards";
 import { jsonError, ok } from "@/lib/api/response";
+import {
+  invalidateProductSnapshots,
+  productInvalidationSnapshot,
+} from "@/lib/cache/catalog-invalidation";
 import { logAdminActivity } from "@/lib/services/admin-activity.service";
 import {
   getProductById,
+  getActiveProductById,
   hardDeleteProduct,
+  ProductError,
   serializeProduct,
   updateProduct,
 } from "@/lib/services/product.service";
@@ -27,12 +32,11 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
   try {
-    const product = await getProductById(id);
-    if (!product) return jsonError(404, "Product not found.");
     const includeBuyingPrice = await isAdminRequest();
-    if (!includeBuyingPrice && product.status !== "ACTIVE") {
-      return jsonError(404, "Product not found.");
-    }
+    const product = includeBuyingPrice
+      ? await getProductById(id)
+      : await getActiveProductById(id);
+    if (!product) return jsonError(404, "Product not found.");
     return ok(serializeProduct(product, { includeBuyingPrice }));
   } catch (error) {
     console.error("[products/[id].GET] failed", error);
@@ -101,6 +105,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   try {
+    const previousSnapshot = productInvalidationSnapshot(existing);
     const product = await updateProduct(id, parsed.data);
     await logAdminActivity({
       kind: "product",
@@ -110,10 +115,21 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       href: "/admin/products",
       actor: guard.session.user,
     });
-    revalidateTag("home-categories", "max");
-    revalidateTag("categories", "max");
+    invalidateProductSnapshots(
+      [previousSnapshot, productInvalidationSnapshot(product)],
+      {
+        reason: `product updated: ${product.id}`,
+        sitemap: true,
+        categoryTree:
+          parsed.data.status !== undefined ||
+          parsed.data.categoryId !== undefined,
+      },
+    );
     return ok(serializeProduct(product, { includeBuyingPrice: true }));
   } catch (error) {
+    if (error instanceof ProductError) {
+      return jsonError(error.status, error.message, error.details);
+    }
     if (
       error instanceof PrismaClientKnownRequestError &&
       error.code === "P2025"
@@ -130,8 +146,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           fieldErrors: { variants: ["Duplicate SKU."] },
         });
       }
-      return jsonError(409, "Each size + color combination must be unique.", {
-        fieldErrors: { variants: ["Duplicate size + color combination."] },
+      return jsonError(409, "Each option combination must be unique.", {
+        fieldErrors: { variants: ["Duplicate option combination."] },
       });
     }
     console.error("[products/[id].PATCH] failed", error);
@@ -167,6 +183,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
   if (!existing) return jsonError(404, "Product not found.");
 
   try {
+    const previousSnapshot = productInvalidationSnapshot(existing);
     await hardDeleteProduct(id);
     await logAdminActivity({
       kind: "product",
@@ -176,8 +193,11 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       href: "/admin/products",
       actor: guard.session.user,
     });
-    revalidateTag("home-categories", "max");
-    revalidateTag("categories", "max");
+    invalidateProductSnapshots([previousSnapshot], {
+      reason: `product deleted: ${existing.id}`,
+      sitemap: true,
+      categoryTree: true,
+    });
     return ok(serializeProduct(existing));
   } catch (error) {
     if (

@@ -1,471 +1,524 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { Boxes, Plus, Trash2, X } from "lucide-react";
 
-import {
-  makeEmptyVariant,
-  normalizeImagesInput,
-  type ProductFormState,
-  type ProductStatus,
-  type VariantFormRow,
-} from "@/features/admin-products/api";
 import ImageUploader from "@/components/ui/ImageUploader";
 import MultiImageUploader from "@/components/ui/MultiImageUploader";
-import AdvancedColorPicker from "@/components/ui/AdvancedColorPicker";
 import { ButtonLoader } from "@/components/ui/loading";
+import type { CatalogEntityOption } from "@/features/admin-catalog-entities/api";
+import {
+  makeEmptyKeyValue,
+  makeEmptyVariant,
+  normalizeImagesInput,
+  type CategoryOption,
+  type KeyValueFormRow,
+  type ProductFormState,
+  type VariantFormRow,
+} from "@/features/admin-products/api";
 import { cn } from "@/lib/utils";
 
 import Field from "./Field";
 
-type CategoryChoice = { id: string; name: string };
-
 const inputClass =
-  "h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red";
+  "h-10 w-full rounded-xl border border-brand-border bg-white px-3 text-sm outline-none transition focus:border-brand-red disabled:cursor-not-allowed disabled:bg-gray-50";
 
-const HEX_COLOR_VALUE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
-const HEX_COLOR_BODY = /^(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
-
-function formatHexInputValue(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  if (trimmed.startsWith("#")) return trimmed.toUpperCase();
-  if (/^[0-9a-f]{1,8}$/i.test(trimmed)) return `#${trimmed.toUpperCase()}`;
-  return trimmed;
+function Section({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-brand-border bg-brand-light-bg/60 p-4">
+      <div className="mb-4">
+        <h3 className="text-sm font-bold text-gray-950">{title}</h3>
+        <p className="mt-0.5 text-xs text-gray-500">{description}</p>
+      </div>
+      {children}
+    </section>
+  );
 }
 
-function normalizeHexInputValue(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  return trimmed.startsWith("#")
-    ? trimmed.toUpperCase()
-    : `#${trimmed.toUpperCase()}`;
-}
-
-function isRenderableHex(value: string): boolean {
-  const trimmed = value.trim();
-  return HEX_COLOR_VALUE.test(trimmed) || HEX_COLOR_BODY.test(trimmed);
+function KeyValueEditor({
+  rows,
+  onChange,
+  keyPlaceholder,
+  valuePlaceholder,
+  addLabel,
+}: {
+  rows: KeyValueFormRow[];
+  onChange: (rows: KeyValueFormRow[]) => void;
+  keyPlaceholder: string;
+  valuePlaceholder: string;
+  addLabel: string;
+}) {
+  return (
+    <div className="space-y-2">
+      {rows.map((row, index) => (
+        <div key={index} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_2.5rem] gap-2">
+          <input
+            value={row.key}
+            onChange={(event) =>
+              onChange(rows.map((item, itemIndex) =>
+                itemIndex === index ? { ...item, key: event.target.value } : item,
+              ))
+            }
+            className={inputClass}
+            placeholder={keyPlaceholder}
+            aria-label={`${addLabel} name ${index + 1}`}
+          />
+          <input
+            value={row.value}
+            onChange={(event) =>
+              onChange(rows.map((item, itemIndex) =>
+                itemIndex === index ? { ...item, value: event.target.value } : item,
+              ))
+            }
+            className={inputClass}
+            placeholder={valuePlaceholder}
+            aria-label={`${addLabel} value ${index + 1}`}
+          />
+          <button
+            type="button"
+            onClick={() => onChange(rows.filter((_, itemIndex) => itemIndex !== index))}
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-red-200 bg-white text-red-600 hover:bg-red-50"
+            aria-label={`Remove ${addLabel.toLowerCase()} ${index + 1}`}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange([...rows, makeEmptyKeyValue()])}
+        className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-brand-border bg-white px-3 text-xs font-semibold text-gray-700 hover:border-brand-red/40 hover:text-brand-red"
+      >
+        <Plus className="h-3.5 w-3.5" />
+        Add {addLabel.toLowerCase()}
+      </button>
+    </div>
+  );
 }
 
 export default function ProductFormDrawer({
   open,
   mode,
   form,
-  categoryOptions,
+  categories,
+  currentCategory,
+  brands,
+  manufacturers,
+  error,
   isSubmitting,
-  onClose,
   onChange,
+  onClose,
   onSubmit,
 }: {
   open: boolean;
   mode: "create" | "edit";
   form: ProductFormState;
-  categoryOptions: CategoryChoice[];
+  categories: CategoryOption[];
+  currentCategory: { id: string; label: string } | null;
+  brands: CatalogEntityOption[];
+  manufacturers: CatalogEntityOption[];
+  error: string | null;
   isSubmitting: boolean;
-  onClose: () => void;
   onChange: React.Dispatch<React.SetStateAction<ProductFormState>>;
+  onClose: () => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
-  const updateVariant = (index: number, patch: Partial<VariantFormRow>) =>
-    onChange((prev) => ({
-      ...prev,
-      variants: prev.variants.map((variant, i) =>
-        i === index ? { ...variant, ...patch } : variant,
+  const closeRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const frame = requestAnimationFrame(() => closeRef.current?.focus());
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !isSubmitting) onClose();
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      cancelAnimationFrame(frame);
+      document.body.style.overflow = previous;
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isSubmitting, onClose, open]);
+
+  const updateVariant = (index: number, patch: Partial<VariantFormRow>) => {
+    onChange((current) => ({
+      ...current,
+      variants: current.variants.map((variant, variantIndex) =>
+        variantIndex === index ? { ...variant, ...patch } : variant,
       ),
     }));
-
-  const addVariant = () =>
-    onChange((prev) => ({
-      ...prev,
-      variants: [...prev.variants, makeEmptyVariant()],
-    }));
-
-  const removeVariant = (index: number) =>
-    onChange((prev) => ({
-      ...prev,
-      variants:
-        prev.variants.length <= 1
-          ? prev.variants
-          : prev.variants.filter((_, i) => i !== index),
-    }));
-
-  // Highlight duplicate size+color rows in the UI before submit.
-  const comboCounts = new Map<string, number>();
-  for (const variant of form.variants) {
-    const key = `${variant.size.trim().toLowerCase()}|${variant.color.trim().toLowerCase()}`;
-    if (!variant.size.trim() || !variant.color.trim()) continue;
-    comboCounts.set(key, (comboCounts.get(key) ?? 0) + 1);
-  }
+  };
 
   return (
     <>
-      <div
-        aria-hidden
+      <button
+        type="button"
+        aria-label="Close product editor"
+        aria-hidden={!open}
+        inert={!open}
+        tabIndex={open ? 0 : -1}
         onClick={onClose}
         className={cn(
-          "fixed inset-0 z-60 bg-brand-black/35 backdrop-blur-[1px] transition-opacity duration-300",
+          "fixed inset-0 z-60 border-0 bg-black/40 transition-opacity",
           open ? "opacity-100" : "pointer-events-none opacity-0",
         )}
       />
-
       <aside
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="product-drawer-title"
+        aria-hidden={!open}
+        inert={!open}
         className={cn(
-          "fixed inset-y-0 right-0 z-70 w-full max-w-lg border-l border-brand-border bg-brand-white shadow-2xl transition-transform duration-300",
+          "fixed inset-y-0 right-0 z-70 flex w-full max-w-3xl flex-col border-l border-brand-border bg-white shadow-2xl transition-transform duration-300",
           open ? "translate-x-0" : "translate-x-full",
         )}
       >
-        <div className="flex h-full flex-col">
-          <div className="border-b border-brand-border bg-brand-black px-5 py-4 text-brand-white">
-            <h2 className="text-lg font-bold">
-              {mode === "create" ? "Create Product" : "Edit Product"}
+        <header className="flex items-start justify-between border-b border-brand-border px-5 py-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-brand-red">Catalog product</p>
+            <h2 id="product-drawer-title" className="mt-1 text-xl font-black text-gray-950">
+              {mode === "create" ? "Create product" : "Edit product"}
             </h2>
-            <p className="mt-0.5 text-xs text-brand-white/70">
-              {mode === "create"
-                ? "Add product details, pricing, and size-color variants."
-                : "Update product details, pricing, and variants."}
-            </p>
           </div>
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="rounded-xl p-2 text-gray-500 hover:bg-brand-light-bg hover:text-brand-red disabled:opacity-50"
+            aria-label="Close product editor"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </header>
 
-          <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
-              <Field label="Name" required>
-                <input
-                  value={form.name}
-                  onChange={(event) =>
-                    onChange((prev) => ({ ...prev, name: event.target.value }))
-                  }
-                  className={inputClass}
-                  placeholder="Product name"
-                />
-              </Field>
-
-              <Field label="Category" required>
-                <select
-                  value={form.categoryId}
-                  onChange={(event) =>
-                    onChange((prev) => ({ ...prev, categoryId: event.target.value }))
-                  }
-                  className={inputClass}
-                >
-                  <option value="">Select category</option>
-                  {categoryOptions.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              {/* Pricing — buyingPrice is admin-only and never shown publicly. */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="Buying Price" required>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={form.buyingPrice}
-                    onChange={(event) =>
-                      onChange((prev) => ({ ...prev, buyingPrice: event.target.value }))
-                    }
-                    className={inputClass}
-                    placeholder="0"
-                  />
-                  <p className="mt-1 text-[11px] text-gray-400">
-                    Internal source cost — admin only
-                  </p>
-                </Field>
-
-                <Field label="Sale Price" required>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={form.salePrice}
-                    onChange={(event) =>
-                      onChange((prev) => ({ ...prev, salePrice: event.target.value }))
-                    }
-                    className={inputClass}
-                    placeholder="0"
-                  />
-                </Field>
+        <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="flex-1 space-y-4 overflow-y-auto p-5">
+            {error && (
+              <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {error}
               </div>
+            )}
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="Discount Price">
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={form.discountPrice}
-                    onChange={(event) =>
-                      onChange((prev) => ({
-                        ...prev,
-                        discountPrice: event.target.value,
-                      }))
-                    }
+            <Section title="Classification" description="Place the product in the catalog and record its technical identity.">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <Field label="Product name" required>
+                    <input
+                      value={form.name}
+                      onChange={(event) => onChange((current) => ({ ...current, name: event.target.value }))}
+                      className={inputClass}
+                      placeholder="Industrial air compressor"
+                    />
+                  </Field>
+                </div>
+                {mode === "edit" && (
+                  <div className="sm:col-span-2">
+                    <Field label="Canonical URL slug" required>
+                      <input
+                        value={form.slug}
+                        onChange={(event) => onChange((current) => ({
+                          ...current,
+                          slug: event.target.value,
+                        }))}
+                        className={inputClass}
+                        placeholder="industrial-air-compressor"
+                        maxLength={160}
+                        pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                      />
+                    </Field>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Changing this moves the product URL and keeps the previous URL as a permanent redirect.
+                    </p>
+                  </div>
+                )}
+                <Field label="Category" required>
+                  <select
+                    value={form.categoryId}
+                    onChange={(event) => onChange((current) => ({ ...current, categoryId: event.target.value }))}
                     className={inputClass}
-                    placeholder="Optional"
-                  />
+                  >
+                    <option value="">Select category</option>
+                    {currentCategory &&
+                      !categories.some(
+                        (category) => category.id === currentCategory.id,
+                      ) && (
+                        <option value={currentCategory.id} disabled>
+                          Current hidden category — {currentCategory.label}
+                        </option>
+                      )}
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>{category.label}</option>
+                    ))}
+                  </select>
                 </Field>
-
                 <Field label="Status" required>
                   <select
                     value={form.status}
-                    onChange={(event) =>
-                      onChange((prev) => ({
-                        ...prev,
-                        status: event.target.value as ProductStatus,
-                      }))
-                    }
+                    onChange={(event) => onChange((current) => ({
+                      ...current,
+                      status: event.target.value as ProductFormState["status"],
+                    }))}
                     className={inputClass}
                   >
-                    <option value="ACTIVE">ACTIVE</option>
-                    <option value="INACTIVE">INACTIVE</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="INACTIVE">Inactive</option>
+                  </select>
+                </Field>
+                <Field label="Brand">
+                  <select
+                    value={form.brandId}
+                    onChange={(event) => onChange((current) => ({ ...current, brandId: event.target.value }))}
+                    className={inputClass}
+                  >
+                    <option value="">No brand</option>
+                    {form.brandId && !brands.some((brand) => brand.value === form.brandId) && (
+                      <option value={form.brandId} disabled>Current inactive brand</option>
+                    )}
+                    {brands.map((brand) => <option key={brand.value} value={brand.value}>{brand.label}</option>)}
+                  </select>
+                </Field>
+                <Field label="Manufacturer">
+                  <select
+                    value={form.manufacturerId}
+                    onChange={(event) => onChange((current) => ({ ...current, manufacturerId: event.target.value }))}
+                    className={inputClass}
+                  >
+                    <option value="">No manufacturer</option>
+                    {form.manufacturerId && !manufacturers.some((manufacturer) => manufacturer.value === form.manufacturerId) && (
+                      <option value={form.manufacturerId} disabled>Current inactive manufacturer</option>
+                    )}
+                    {manufacturers.map((manufacturer) => (
+                      <option key={manufacturer.value} value={manufacturer.value}>{manufacturer.label}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Model number">
+                  <input
+                    value={form.modelNumber}
+                    onChange={(event) => onChange((current) => ({ ...current, modelNumber: event.target.value }))}
+                    className={inputClass}
+                    placeholder="AC-2200"
+                  />
+                </Field>
+                <Field label="Series">
+                  <input
+                    value={form.series}
+                    onChange={(event) => onChange((current) => ({ ...current, series: event.target.value }))}
+                    className={inputClass}
+                    placeholder="ProLine"
+                  />
+                </Field>
+                <Field label="GTIN">
+                  <input
+                    value={form.gtin}
+                    onChange={(event) => onChange((current) => ({
+                      ...current,
+                      gtin: event.target.value,
+                    }))}
+                    className={inputClass}
+                    placeholder="0123456789012"
+                    maxLength={32}
+                    inputMode="numeric"
+                  />
+                </Field>
+                <Field label="Item condition">
+                  <select
+                    value={form.itemCondition}
+                    onChange={(event) => onChange((current) => ({
+                      ...current,
+                      itemCondition: event.target.value as ProductFormState["itemCondition"],
+                    }))}
+                    className={inputClass}
+                  >
+                    <option value="NEW">New</option>
+                    <option value="REFURBISHED">Refurbished</option>
+                    <option value="USED">Used</option>
                   </select>
                 </Field>
               </div>
+            </Section>
 
-              {/* Variants — one purchasable size + color combination per row. */}
-              <div className="rounded-2xl border border-brand-border bg-brand-light-bg p-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">Variants</p>
-                    <p className="text-[11px] text-gray-500">
-                      Each row is one purchasable size + color combination.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={addVariant}
-                    className="inline-flex h-8 items-center gap-1 rounded-lg border border-brand-border bg-brand-white px-2.5 text-xs font-semibold text-foreground transition hover:bg-brand-light-bg"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    Add
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  {form.variants.map((variant, index) => {
-                    const comboKey = `${variant.size.trim().toLowerCase()}|${variant.color.trim().toLowerCase()}`;
-                    const isDuplicate =
-                      variant.size.trim() !== "" &&
-                      variant.color.trim() !== "" &&
-                      (comboCounts.get(comboKey) ?? 0) > 1;
-                    const colorHexInputValue = formatHexInputValue(variant.color);
-                    const colorPreview = isRenderableHex(colorHexInputValue)
-                      ? normalizeHexInputValue(colorHexInputValue)
-                      : null;
-                    const colorHasInvalidHex =
-                      colorHexInputValue.startsWith("#") &&
-                      colorHexInputValue.length > 0 &&
-                      !HEX_COLOR_VALUE.test(colorHexInputValue);
-
-                    return (
-                      <div
-                        key={index}
-                        className={cn(
-                          "rounded-xl border bg-white p-3",
-                          isDuplicate ? "border-red-300" : "border-brand-border",
-                        )}
-                      >
-                        <div className="mb-2 flex items-center justify-between">
-                          <span className="text-xs font-semibold text-gray-500">
-                            Variant {index + 1}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => removeVariant(index)}
-                            disabled={form.variants.length <= 1}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
-                            aria-label={`Remove variant ${index + 1}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                          <Field label="Size" required>
-                            <input
-                              value={variant.size}
-                              onChange={(event) =>
-                                updateVariant(index, { size: event.target.value })
-                              }
-                              className={inputClass}
-                              placeholder="M"
-                            />
-                          </Field>
-
-                          <div className="block space-y-1.5">
-                            <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-                              Color *
-                            </span>
-                            <div className="grid gap-1 sm:grid-cols-[minmax(0,1fr)_10rem]">
-                              <AdvancedColorPicker
-                                label="Variant color"
-                                alpha={false}
-                                value={variant.color}
-                                onChange={(color) => updateVariant(index, { color })}
-                                disabled={isSubmitting}
-                              />
-                              <div className="relative">
-                                <span
-                                  aria-hidden
-                                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 rounded-md ring-1 ring-inset ring-black/15"
-                                  style={{
-                                    backgroundColor: colorPreview ?? "#ffffff",
-                                  }}
-                                />
-                                <input
-                                  value={colorHexInputValue}
-                                  onChange={(event) =>
-                                    updateVariant(index, {
-                                      color: normalizeHexInputValue(event.target.value),
-                                    })
-                                  }
-                                  disabled={isSubmitting}
-                                  spellCheck={false}
-                                  inputMode="text"
-                                  maxLength={9}
-                                  aria-label={`Variant ${index + 1} hex color`}
-                                  className={cn(
-                                    inputClass,
-                                    "pl-9 font-mono text-xs font-semibold uppercase",
-                                    colorHasInvalidHex &&
-                                      "border-red-300 focus:border-red-500",
-                                  )}
-                                  placeholder="#111827"
-                                />
-                              </div>
-                            </div>
-                            {colorHasInvalidHex && (
-                              <p className="text-[11px] font-semibold text-red-600">
-                                Enter a valid hex color.
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                          <Field label="SKU">
-                            <input
-                              value={variant.sku}
-                              onChange={(event) =>
-                                updateVariant(index, { sku: event.target.value })
-                              }
-                              className={inputClass}
-                              placeholder="Optional"
-                            />
-                          </Field>
-
-                          <Field label="Stock" required>
-                            <input
-                              type="number"
-                              step="1"
-                              min="0"
-                              value={variant.stock}
-                              onChange={(event) =>
-                                updateVariant(index, { stock: event.target.value })
-                              }
-                              className={inputClass}
-                              placeholder="0"
-                            />
-                          </Field>
-                        </div>
-
-                        <div className="mt-2">
-                          <Field label="Variant Image">
-                            <ImageUploader
-                              value={variant.image}
-                              onChange={(url) => updateVariant(index, { image: url })}
-                              disabled={isSubmitting}
-                            />
-                          </Field>
-                        </div>
-
-                        <label className="mt-2 flex items-center gap-2 text-xs font-medium text-gray-700">
-                          <input
-                            type="checkbox"
-                            checked={variant.isActive}
-                            onChange={(event) =>
-                              updateVariant(index, { isActive: event.target.checked })
-                            }
-                            className="h-4 w-4 rounded border-brand-border text-brand-red"
-                          />
-                          Active (available for purchase)
-                        </label>
-
-                        {isDuplicate && (
-                          <p className="mt-2 text-[11px] font-semibold text-red-600">
-                            Duplicate size + color combination.
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+            <Section title="Pricing" description="Buying price stays admin-only; sale and discount prices are customer-facing.">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Field label="Buying price" required>
+                  <input type="number" min="0" step="0.01" value={form.buyingPrice} onChange={(event) => onChange((current) => ({ ...current, buyingPrice: event.target.value }))} className={inputClass} />
+                </Field>
+                <Field label="Sale price" required>
+                  <input type="number" min="0" step="0.01" value={form.salePrice} onChange={(event) => onChange((current) => ({ ...current, salePrice: event.target.value }))} className={inputClass} />
+                </Field>
+                <Field label="Discount price">
+                  <input type="number" min="0" step="0.01" value={form.discountPrice} onChange={(event) => onChange((current) => ({ ...current, discountPrice: event.target.value }))} className={inputClass} />
+                </Field>
               </div>
+            </Section>
 
-              <Field label="Primary Image">
-                <ImageUploader
-                  value={form.image}
-                  onChange={(url) => onChange((prev) => ({ ...prev, image: url }))}
-                  disabled={isSubmitting}
-                />
-              </Field>
+            <Section title="Specifications" description="Flexible technical facts shown as a table on the product page.">
+              <KeyValueEditor
+                rows={form.specifications}
+                onChange={(specifications) => onChange((current) => ({ ...current, specifications }))}
+                keyPlaceholder="Voltage"
+                valuePlaceholder="220 V"
+                addLabel="Specification"
+              />
+            </Section>
 
-              <Field label="Extra Images">
-                <MultiImageUploader
-                  value={normalizeImagesInput(form.images)}
-                  onChange={(urls) =>
-                    onChange((prev) => ({ ...prev, images: urls.join("\n") }))
-                  }
-                  disabled={isSubmitting}
-                />
-              </Field>
-
-              <Field label="Description">
-                <textarea
-                  value={form.description}
-                  onChange={(event) =>
-                    onChange((prev) => ({
-                      ...prev,
-                      description: event.target.value,
-                    }))
-                  }
-                  className="min-h-28 w-full rounded-xl border border-brand-border px-3 py-2 text-sm outline-none transition focus:border-brand-red"
-                  placeholder="Product description"
-                />
-              </Field>
-            </div>
-
-            <div className="border-t border-brand-border bg-brand-white px-5 py-4">
-              <div className="flex items-center justify-end gap-2">
+            <Section title="Variants" description="Each row is one purchasable option combination. Leave all option fields blank only for a single default variant.">
+              <div className="space-y-3">
+                {form.variants.map((variant, index) => (
+                  <article key={index} className="rounded-2xl border border-brand-border bg-white p-4">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-red/10 text-brand-red"><Boxes className="h-4 w-4" /></span>
+                        <div>
+                          <h4 className="text-sm font-bold text-gray-900">Variant {index + 1}</h4>
+                          <p className="text-[11px] text-gray-500">SKU, stock and any option attributes</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => onChange((current) => ({
+                          ...current,
+                          variants: current.variants.filter((_, variantIndex) => variantIndex !== index),
+                        }))}
+                        disabled={form.variants.length === 1}
+                        className="rounded-lg p-2 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"
+                        aria-label={`Remove variant ${index + 1}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <Field label="Option name"><input value={variant.name} onChange={(event) => updateVariant(index, { name: event.target.value })} className={inputClass} placeholder="220 V / Single phase" /></Field>
+                      <Field label="SKU"><input value={variant.sku} onChange={(event) => updateVariant(index, { sku: event.target.value })} className={inputClass} placeholder="Optional unique SKU" /></Field>
+                      <Field label="Variant model"><input value={variant.modelNumber} onChange={(event) => updateVariant(index, { modelNumber: event.target.value })} className={inputClass} placeholder="Optional" /></Field>
+                      <Field label="Stock" required><input type="number" min="0" step="1" value={variant.stock} onChange={(event) => updateVariant(index, { stock: event.target.value })} className={inputClass} /></Field>
+                      <Field label="Size shortcut"><input value={variant.size} onChange={(event) => updateVariant(index, { size: event.target.value })} className={inputClass} placeholder="Optional" /></Field>
+                      <Field label="Color shortcut"><input value={variant.color} onChange={(event) => updateVariant(index, { color: event.target.value })} className={inputClass} placeholder="Name or #hex" /></Field>
+                      <label className="flex items-center gap-2 self-end pb-2 text-sm font-semibold text-gray-700">
+                        <input type="checkbox" checked={variant.isActive} onChange={(event) => updateVariant(index, { isActive: event.target.checked })} className="h-4 w-4 accent-brand-red" /> Active
+                      </label>
+                    </div>
+                    <div className="mt-3">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">Custom option attributes</p>
+                      <KeyValueEditor
+                        rows={variant.attributes}
+                        onChange={(attributes) => updateVariant(index, { attributes })}
+                        keyPlaceholder="Voltage"
+                        valuePlaceholder="220 V"
+                        addLabel="Attribute"
+                      />
+                    </div>
+                    <div className="mt-3">
+                      <Field label="Variant image"><ImageUploader value={variant.image} onChange={(image) => updateVariant(index, { image })} disabled={isSubmitting} /></Field>
+                    </div>
+                  </article>
+                ))}
                 <button
                   type="button"
-                  onClick={onClose}
-                  className="h-10 rounded-xl border border-brand-border px-4 text-sm font-semibold text-foreground transition hover:bg-brand-light-bg"
+                  onClick={() => onChange((current) => ({ ...current, variants: [...current.variants, makeEmptyVariant()] }))}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-brand-border bg-white px-4 text-sm font-semibold text-gray-700 hover:border-brand-red/40 hover:text-brand-red"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  aria-busy={isSubmitting}
-                  className="inline-flex h-10 items-center gap-2 rounded-xl bg-brand-red px-4 text-sm font-semibold text-brand-white transition hover:bg-brand-red-hover disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isSubmitting ? (
-                    <ButtonLoader
-                      label={mode === "create" ? "Creating..." : "Saving..."}
-                    />
-                  ) : mode === "create" ? (
-                    "Create Product"
-                  ) : (
-                    "Save Changes"
-                  )}
+                  <Plus className="h-4 w-4" /> Add variant
                 </button>
               </div>
+            </Section>
+
+            <Section title="Media" description="The first gallery image is used as the storefront card image.">
+              <div className="space-y-4">
+                <Field label="Primary image"><ImageUploader value={form.image} onChange={(image) => onChange((current) => ({ ...current, image }))} disabled={isSubmitting} /></Field>
+                <Field label="Primary image alt text">
+                  <input
+                    value={form.primaryImageAlt}
+                    onChange={(event) => onChange((current) => ({
+                      ...current,
+                      primaryImageAlt: event.target.value,
+                    }))}
+                    className={inputClass}
+                    placeholder="Industrial air compressor viewed from the front"
+                    maxLength={250}
+                  />
+                </Field>
+                <Field label="Gallery images"><MultiImageUploader value={normalizeImagesInput(form.images)} onChange={(images) => onChange((current) => ({ ...current, images: images.join("\n") }))} disabled={isSubmitting} /></Field>
+              </div>
+            </Section>
+
+            <Section title="Search and sharing" description="Optional overrides for search result snippets and social previews.">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <Field label="SEO title">
+                    <input
+                      value={form.seoTitle}
+                      onChange={(event) => onChange((current) => ({
+                        ...current,
+                        seoTitle: event.target.value,
+                      }))}
+                      className={inputClass}
+                      placeholder="Industrial Air Compressor | BangBuy"
+                      maxLength={70}
+                    />
+                  </Field>
+                </div>
+                <div className="sm:col-span-2">
+                  <Field label="Meta description">
+                    <textarea
+                      value={form.metaDescription}
+                      onChange={(event) => onChange((current) => ({
+                        ...current,
+                        metaDescription: event.target.value,
+                      }))}
+                      className="min-h-24 w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-red"
+                      placeholder="Summarize the product for search results."
+                      maxLength={320}
+                    />
+                  </Field>
+                </div>
+                <div className="sm:col-span-2">
+                  <Field label="Social preview image">
+                    <ImageUploader
+                      value={form.ogImage}
+                      onChange={(ogImage) => onChange((current) => ({
+                        ...current,
+                        ogImage,
+                      }))}
+                      disabled={isSubmitting}
+                    />
+                  </Field>
+                </div>
+              </div>
+            </Section>
+
+            <Section title="Description" description="Long-form product information, applications, and buying guidance.">
+              <textarea
+                value={form.description}
+                onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))}
+                className="min-h-36 w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-red"
+                placeholder="Describe the product, intended use, and key benefits."
+              />
+            </Section>
+          </div>
+
+          <footer className="border-t border-brand-border bg-white px-5 py-4">
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={onClose} disabled={isSubmitting} className="h-10 rounded-xl border border-brand-border px-4 text-sm font-semibold text-gray-700 hover:bg-brand-light-bg disabled:opacity-50">Cancel</button>
+              <button type="submit" disabled={isSubmitting} aria-busy={isSubmitting} className="inline-flex h-10 items-center rounded-xl bg-brand-red px-4 text-sm font-semibold text-white hover:bg-brand-red-hover disabled:opacity-60">
+                {isSubmitting ? <ButtonLoader label="Saving..." /> : mode === "create" ? "Create product" : "Save changes"}
+              </button>
             </div>
-          </form>
-        </div>
+          </footer>
+        </form>
       </aside>
     </>
   );

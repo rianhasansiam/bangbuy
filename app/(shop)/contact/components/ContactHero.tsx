@@ -1,5 +1,3 @@
-"use client";
-
 import { Sparkles, MessageCircle, Headphones } from "lucide-react";
 
 import { siteConfig } from "@/lib/seo/site";

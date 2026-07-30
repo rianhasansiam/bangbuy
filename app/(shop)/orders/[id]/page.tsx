@@ -25,5 +25,5 @@ export const metadata: Metadata = {
  */
 export default async function OrderSummaryPage({ params }: Props) {
   const { id } = await params;
-  return <OrderSummaryClient orderId={id} />;
+  return <OrderSummaryClient key={id} orderId={id} />;
 }

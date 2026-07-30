@@ -29,6 +29,26 @@ export type LoginFieldUpdater = <Field extends keyof LoginForm>(
 
 const DEFAULT_REDIRECT = "/";
 const GENERIC_LOGIN_ERROR = "Invalid email or password. Please try again.";
+const CALLBACK_BASE_URL = "https://bangbuy.invalid";
+
+function getSafeCallbackUrl(value: string | null): string {
+  if (
+    !value ||
+    !value.startsWith("/") ||
+    value.startsWith("//") ||
+    /[\u0000-\u001f\u007f]/.test(value)
+  ) {
+    return DEFAULT_REDIRECT;
+  }
+
+  try {
+    const url = new URL(value, CALLBACK_BASE_URL);
+    if (url.origin !== CALLBACK_BASE_URL) return DEFAULT_REDIRECT;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return DEFAULT_REDIRECT;
+  }
+}
 
 /**
  * The page is wrapped in Suspense because `useSearchParams` opts the route
@@ -47,7 +67,7 @@ export default function LoginPage() {
 function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? DEFAULT_REDIRECT;
+  const callbackUrl = getSafeCallbackUrl(searchParams.get("callbackUrl"));
 
   const [form, setForm] = useState<LoginForm>(INITIAL_FORM);
   const [status, setStatus] = useState<LoginStatus>("idle");
@@ -127,9 +147,9 @@ function LoginPageInner() {
 
       <section className="relative z-10 mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 px-4 py-8 sm:px-6 lg:grid-cols-12 lg:gap-8 lg:py-12">
         <BrandPanel
-          badgeText="PixoHouse · Sign in"
+          badgeText="BangBuy · Sign in"
           headlineLead="Welcome back to"
-          headlineEmphasis="PixoHouse."
+          headlineEmphasis="BangBuy."
           subheading="Sign in to keep shopping where you left off, with deals from premium stores in your neighborhood."
           perks={BRAND_PERKS}
           stats={BRAND_STATS}

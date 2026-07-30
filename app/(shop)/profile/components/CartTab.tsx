@@ -11,24 +11,21 @@ import {
   Trash2,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useSession } from "next-auth/react";
+import { useSession } from "@/lib/auth/use-app-session";
 import { useDispatch, useSelector } from "react-redux";
 
 import {
   canUseServerCart,
   fetchServerCartSnapshot,
   removeCartItemOnServer,
-  syncCartToServer,
   updateCartItemOnServer,
 } from "@/features/cart/api";
 import type { CartItem } from "@/features/cart/api";
 import { computeCartSummary } from "@/features/cart/summary";
-import { readLocalCart, writeLocalCart } from "@/features/cart/storage";
+import { writeLocalCart } from "@/features/cart/storage";
 import {
   setCartData,
   setCartError,
-  setCartLoading,
-  setCartMode,
 } from "@/store/slices/cart.slice";
 import type { AppDispatch, RootState } from "@/store";
 import ColorBadge from "@/components/ui/ColorBadge";
@@ -51,9 +48,8 @@ function formatBdt(value: number): string {
 /**
  * Cart preview tab on the profile page.
  *
- * Hydrates from the same server / local storage as `/cart`, but
- * presents a compact list with quantity steppers and a deep link to
- * the full cart for promo codes, "save for later", and checkout.
+ * Consumes the cart hydrated by the root StoreHydrator and presents a
+ * compact list with quantity steppers and a deep link to the full cart.
  */
 export default function CartTab() {
   const dispatch = useDispatch<AppDispatch>();
@@ -74,61 +70,6 @@ export default function CartTab() {
   useEffect(() => {
     itemsRef.current = items;
   }, [items]);
-
-  useEffect(() => {
-    if (status === "loading") return;
-
-    let ignore = false;
-
-    const hydrate = async () => {
-      const localItems = readLocalCart({ dedupeByProductId: true });
-      dispatch(setCartError(null));
-      dispatch(setCartLoading(true));
-
-      if (!canUseServer) {
-        dispatch(setCartMode("local"));
-        dispatch(
-          setCartData({
-            items: localItems,
-            summary: computeCartSummary(localItems),
-          }),
-        );
-        dispatch(setCartLoading(false));
-        return;
-      }
-
-      dispatch(setCartMode("server"));
-
-      try {
-        const serverCart = await syncCartToServer(localItems);
-        if (ignore) return;
-        dispatch(setCartData(serverCart));
-        writeLocalCart(serverCart.items);
-      } catch (err) {
-        if (ignore) return;
-        const message =
-          err instanceof Error ? err.message : "Failed to load cart from server.";
-        dispatch(setCartError(message));
-        dispatch(setCartMode("local"));
-        dispatch(
-          setCartData({
-            items: localItems,
-            summary: computeCartSummary(localItems),
-          }),
-        );
-      } finally {
-        if (!ignore) {
-          dispatch(setCartLoading(false));
-        }
-      }
-    };
-
-    void hydrate();
-
-    return () => {
-      ignore = true;
-    };
-  }, [canUseServer, dispatch, status]);
 
   const handleQuantityChange = async (item: CartItem, nextQty: number) => {
     const safeQty = Math.max(1, Math.min(item.stock || 1, nextQty));
@@ -294,6 +235,13 @@ export default function CartTab() {
                       size={item.size}
                       className="mt-0.5"
                     />
+                  )}
+                  {(item.variantName || item.attributeSummary) && (
+                    <p className="mt-0.5 line-clamp-2 text-[11px] text-gray-500">
+                      {[item.variantName, item.attributeSummary]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
                   )}
                   <p className="mt-0.5 text-xs text-gray-500">
                     {formatBdt(item.unitPrice)}

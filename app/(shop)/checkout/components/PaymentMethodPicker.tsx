@@ -1,6 +1,6 @@
 "use client";
 
-import { Banknote, Clock, CreditCard, ShieldCheck } from "lucide-react";
+import { Banknote, CreditCard, ShieldCheck } from "lucide-react";
 
 import type { CheckoutPaymentMethod } from "@/features/checkout/api";
 import { cn } from "@/lib/utils";
@@ -16,8 +16,6 @@ type PaymentOption = {
   description: string;
   icon: React.ReactNode;
   badge?: string;
-  disabled?: boolean;
-  comingSoon?: boolean;
 };
 
 const OPTIONS: PaymentOption[] = [
@@ -28,14 +26,13 @@ const OPTIONS: PaymentOption[] = [
     icon: <Banknote className="h-5 w-5" />,
     badge: "No prepayment",
   },
-  {
-    value: "ONLINE",
-    label: "Pay now",
-    description: "Card or mobile wallet checkout — gateway integration is on the way.",
-    icon: <CreditCard className="h-5 w-5" />,
-    comingSoon: true,
-    disabled: true,
-  },
+  // {
+  //   value: "SSLCOMMERZ",
+  //   label: "Online payment",
+  //   description: "Secure payment via SSLCommerz.",
+  //   icon: <CreditCard className="h-5 w-5" />,
+  //   badge: "Visa / Mastercard",
+  // },
 ];
 
 export default function PaymentMethodPicker({
@@ -59,25 +56,18 @@ export default function PaymentMethodPicker({
 
       <div className="grid gap-2.5 sm:grid-cols-2">
         {OPTIONS.map((option) => {
-          const active = value === option.value && !option.disabled;
-          const disabled = option.disabled === true;
+          const active = value === option.value;
           return (
             <button
               key={option.value}
               type="button"
-              onClick={() => {
-                if (disabled) return;
-                onChange(option.value);
-              }}
-              disabled={disabled}
-              aria-disabled={disabled || undefined}
+              onClick={() => onChange(option.value)}
               aria-pressed={active}
               className={cn(
                 "group flex items-start gap-3 rounded-2xl border p-3.5 text-left transition-all duration-200",
                 active
                   ? "border-brand-red bg-brand-red/5 shadow-sm ring-2 ring-brand-red/30"
                   : "border-brand-border bg-brand-white hover:border-brand-red/40 hover:bg-brand-light-bg",
-                disabled && "cursor-not-allowed opacity-70 hover:border-brand-border hover:bg-brand-white",
               )}
             >
               <span
@@ -86,27 +76,16 @@ export default function PaymentMethodPicker({
                   active
                     ? "bg-brand-red text-brand-white"
                     : "bg-brand-light-bg text-brand-black group-hover:bg-brand-border",
-                  disabled && "bg-gray-100 text-gray-400 group-hover:bg-gray-100",
                 )}
               >
                 {option.icon}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={cn(
-                      "text-sm font-bold",
-                      disabled ? "text-gray-500" : "text-gray-900",
-                    )}
-                  >
+                  <span className="text-sm font-bold text-gray-900">
                     {option.label}
                   </span>
-                  {option.comingSoon ? (
-                    <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
-                      <Clock className="h-3 w-3" />
-                      Coming soon
-                    </span>
-                  ) : option.badge ? (
+                  {option.badge ? (
                     <span
                       className={cn(
                         "rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
@@ -129,7 +108,6 @@ export default function PaymentMethodPicker({
                   active
                     ? "border-brand-red bg-brand-red"
                     : "border-brand-border bg-brand-white",
-                  disabled && "border-gray-200 bg-gray-100",
                 )}
               >
                 {active && <span className="h-2 w-2 rounded-full bg-white" />}

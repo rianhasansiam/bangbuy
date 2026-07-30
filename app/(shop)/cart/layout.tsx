@@ -11,6 +11,7 @@ export const metadata: Metadata = noIndexMetadata(
   "Your Cart",
   "Review the items in your shopping cart before checkout.",
 );
+export const dynamic = "force-dynamic";
 
 export default function CartLayout({
   children,

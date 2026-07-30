@@ -22,6 +22,7 @@ import {
   type MyOrdersPage,
   type OrderStatus,
 } from "@/features/orders/api";
+import { PAYMENT_STATUS_META } from "@/features/orders/payment";
 import {
   CUSTOMER_CANCELLABLE_STATUSES,
   ORDER_STATUS_META,
@@ -348,13 +349,9 @@ function OrderRow({
                 {tone.label}
               </span>
               <span
-                className={
-                  order.paymentStatus === "PAID"
-                    ? "inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700"
-                    : "inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700"
-                }
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${PAYMENT_STATUS_META[order.paymentStatus].pill}`}
               >
-                {order.paymentStatus === "PAID" ? "Paid" : "Awaiting payment"}
+                {PAYMENT_STATUS_META[order.paymentStatus].label}
               </span>
             </div>
             <p className="mt-1.5 truncate text-sm font-bold text-gray-900">

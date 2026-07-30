@@ -1,14 +1,18 @@
 import type { NextRequest } from "next/server";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
-import { revalidateTag } from "next/cache";
 import { z } from "zod";
 
 import { isAdminRequest, requireAdmin } from "@/lib/api/guards";
 import { jsonError, created, ok } from "@/lib/api/response";
+import {
+  invalidateProductSnapshots,
+  productInvalidationSnapshot,
+} from "@/lib/cache/catalog-invalidation";
 import { logAdminActivity } from "@/lib/services/admin-activity.service";
 import {
   createProduct,
   listProducts,
+  ProductError,
   serializeProduct,
   type ProductWithCategory,
 } from "@/lib/services/product.service";
@@ -42,7 +46,9 @@ export async function GET(request: NextRequest) {
     const query = includeBuyingPrice
       ? parsed.data
       : { ...parsed.data, status: "ACTIVE" as const };
-    const { items, meta } = await listProducts(query);
+    const { items, meta } = await listProducts(query, {
+      publicOnly: !includeBuyingPrice,
+    });
     return ok(
       items.map((item: ProductWithCategory) =>
         serializeProduct(item, { includeBuyingPrice }),
@@ -105,12 +111,16 @@ export async function POST(request: NextRequest) {
       href: "/admin/products",
       actor: guard.session.user,
     });
-    // No dedicated "products" cache exists; the catalog read is uncached.
-    // Bust the cached surfaces that embed product data.
-    revalidateTag("home-categories", "max");
-    revalidateTag("categories", "max");
+    invalidateProductSnapshots([productInvalidationSnapshot(product)], {
+      reason: `product created: ${product.id}`,
+      sitemap: true,
+      categoryTree: true,
+    });
     return created(serializeProduct(product, { includeBuyingPrice: true }));
   } catch (error) {
+    if (error instanceof ProductError) {
+      return jsonError(error.status, error.message, error.details);
+    }
     if (
       error instanceof PrismaClientKnownRequestError &&
       error.code === "P2002"
@@ -121,8 +131,8 @@ export async function POST(request: NextRequest) {
           fieldErrors: { variants: ["Duplicate SKU."] },
         });
       }
-      return jsonError(409, "Each size + color combination must be unique.", {
-        fieldErrors: { variants: ["Duplicate size + color combination."] },
+      return jsonError(409, "Each option combination must be unique.", {
+        fieldErrors: { variants: ["Duplicate option combination."] },
       });
     }
     console.error("[products.POST] failed", error);

@@ -12,6 +12,7 @@ export const metadata: Metadata = noIndexMetadata(
   "Checkout",
   `Complete your ${siteConfig.name} order securely.`,
 );
+export const dynamic = "force-dynamic";
 
 export default function CheckoutLayout({
   children,

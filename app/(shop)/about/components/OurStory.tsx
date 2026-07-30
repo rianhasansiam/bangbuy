@@ -1,7 +1,5 @@
-"use client";
-
 import Image from "next/image";
-import { Heart, PackageCheck, Target } from "lucide-react";
+import { PackageCheck, Target } from "lucide-react";
 
 export default function OurStory() {
   return (
@@ -12,11 +10,10 @@ export default function OurStory() {
           <div className="relative h-72 w-full overflow-hidden rounded-3xl bg-brand-black shadow-xl sm:h-80 lg:h-96">
             <Image
               src="/logo/logo.png"
-              alt="PixoHouse imported product story"
+              alt="BangBuy imported product story"
               fill
               className="object-contain p-10"
               sizes="(max-width: 1024px) 100vw, 50vw"
-              priority={false}
             />
 
             <div className="absolute inset-0 bg-gradient-to-br from-brand-black/70 via-brand-black/35 to-brand-red/30" />
@@ -57,7 +54,7 @@ export default function OurStory() {
           </h2>
 
           <p className="mt-4 text-sm leading-relaxed text-muted-foreground sm:text-base">
-            PixoHouse was created with one clear goal: to make stylish,
+            BangBuy was created with one clear goal: to make stylish,
             useful, and carefully selected China-imported products easier to
             buy online. We focus on sourcing products that match modern trends,
             practical needs, and customer expectations.

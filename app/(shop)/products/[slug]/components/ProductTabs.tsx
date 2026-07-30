@@ -1,33 +1,73 @@
-'use client'
+import { FileText, ListChecks } from "lucide-react";
 
-import React from 'react'
-import { Info } from 'lucide-react'
+type SpecificationValue = string | number | boolean;
+
+function displaySpecificationValue(value: SpecificationValue): string {
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "number") return value.toLocaleString();
+  return value;
+}
 
 const ProductTabs = ({
   description,
+  specifications,
 }: {
-  description: string
+  description: string | null;
+  specifications: Record<string, SpecificationValue> | null;
 }) => {
+  const specificationEntries = Object.entries(specifications ?? {});
+
   return (
-    <div className="bg-white rounded-2xl border border-brand-border overflow-hidden">
-      {/* Tab Header */}
-      <div className="flex border-b border-brand-border">
-        <div className="flex-1 flex items-center justify-center gap-2 px-4 py-4 text-sm font-medium text-brand-red bg-brand-light-bg border-b-2 border-brand-red">
-          <Info className="w-4 h-4" />
-          <span>Description</span>
-        </div>
-      </div>
+    <div className="overflow-hidden rounded-2xl border border-brand-border bg-white">
+      {description?.trim() && (
+        <section aria-labelledby="product-description-heading">
+          <div className="flex items-center gap-2 border-b border-brand-border bg-brand-light-bg px-5 py-4 text-sm font-semibold text-brand-red">
+            <FileText className="h-4 w-4" aria-hidden="true" />
+            <h2 id="product-description-heading">Description</h2>
+          </div>
+          <div className="p-5 sm:p-6">
+            <p className="whitespace-pre-line leading-relaxed text-gray-600">
+              {description}
+            </p>
+          </div>
+        </section>
+      )}
 
-      {/* Tab Content */}
-      <div className="p-6">
-        <div className="prose max-w-none">
-          <p className="text-gray-600 leading-relaxed whitespace-pre-line">
-            {description}
-          </p>
-        </div>
-      </div>
+      {specificationEntries.length > 0 && (
+        <section
+          aria-labelledby="product-specifications-heading"
+          className={description?.trim() ? "border-t border-brand-border" : undefined}
+        >
+          <div className="flex items-center gap-2 border-b border-brand-border bg-brand-light-bg px-5 py-4 text-sm font-semibold text-brand-red">
+            <ListChecks className="h-4 w-4" aria-hidden="true" />
+            <h2 id="product-specifications-heading">Technical specifications</h2>
+          </div>
+          <div className="overflow-x-auto p-5 sm:p-6">
+            <table className="w-full border-collapse text-left text-sm">
+              <caption className="sr-only">
+                Technical specifications for this product
+              </caption>
+              <tbody className="divide-y divide-gray-100">
+                {specificationEntries.map(([label, value]) => (
+                  <tr key={label}>
+                    <th
+                      scope="row"
+                      className="w-2/5 py-3 pr-4 align-top font-semibold text-gray-900"
+                    >
+                      {label}
+                    </th>
+                    <td className="py-3 text-gray-600">
+                      {displaySpecificationValue(value)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </div>
-  )
-}
+  );
+};
 
-export default ProductTabs
+export default ProductTabs;

@@ -2,12 +2,12 @@
 
 import type {
   CarouselFormState,
+  CategoryBannerCategoryOption,
   CategoryBannerFormState,
   DealFormState,
   PromoFormState,
   TopFormState,
 } from "@/features/admin-banners/api";
-import type { CategoryOption } from "@/features/admin-products/api";
 import { ButtonLoader } from "@/components/ui/loading";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +39,7 @@ export default function BannerFormDrawer({
 }: {
   editing: EditingState;
   isSubmitting: boolean;
-  categories: CategoryOption[];
+  categories: CategoryBannerCategoryOption[];
   carouselForm: CarouselFormState;
   setCarouselForm: React.Dispatch<React.SetStateAction<CarouselFormState>>;
   categoryForm: CategoryBannerFormState;

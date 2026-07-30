@@ -4,7 +4,7 @@ import React, { useState, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { ShoppingBag } from 'lucide-react'
-import { useSession } from 'next-auth/react'
+import { useSession } from '@/lib/auth/use-app-session'
 import { useDispatch } from 'react-redux'
 
 import {

@@ -3,6 +3,7 @@ import {
   KeyRound,
   LayoutDashboard,
   Package,
+  ReceiptText,
   ShoppingBag,
   UserCog,
   type LucideIcon,
@@ -20,6 +21,7 @@ import { ORDER_STATUS_META } from "@/lib/orders/status";
 export type ProfileTabId =
   | "overview"
   | "orders"
+  | "transactions"
   | "wishlist"
   | "cart"
   | "settings"
@@ -44,6 +46,12 @@ export const PROFILE_TABS: readonly ProfileTab[] = [
     label: "Orders",
     description: "Track and re-order purchases.",
     icon: Package,
+  },
+  {
+    id: "transactions",
+    label: "Transactions",
+    description: "Review your payment history.",
+    icon: ReceiptText,
   },
   {
     id: "wishlist",
