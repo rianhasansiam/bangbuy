@@ -129,9 +129,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         console.error("[auth/google] sign-in rejected: no email on profile");
         return false;
       }
-      // Only reject when Google explicitly says the email isn't verified.
-      // `undefined` (older flows) is treated as OK.
-      if (emailVerified === false) {
+      // Identity linking requires affirmative verification from Google.
+      if (emailVerified !== true) {
         console.error("[auth/google] sign-in rejected: email not verified", {
           email,
         });
@@ -139,26 +138,43 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
 
       try {
-        // Upsert keeps the email column as the join key. We never overwrite a
-        // password set during Credentials signup — that field stays untouched.
-        // `provider` is stamped GOOGLE on create. An existing CREDENTIAL row
-        // keeps its provider so the audit trail (and the password-recovery
-        // flow that depends on it) stays accurate.
-        const dbUser = await prisma.user.upsert({
+        const existingUser = await prisma.user.findUnique({
           where: { email },
-          create: {
-            email,
-            name: user.name ?? email.split("@")[0],
-            image: user.image ?? null,
-            provider: "GOOGLE",
-          },
-          update: {
-            // Refresh display fields, but only when Google actually has them.
-            ...(user.name ? { name: user.name } : {}),
-            ...(user.image ? { image: user.image } : {}),
-          },
-          select: { id: true, role: true },
+          select: { id: true, role: true, provider: true },
         });
+
+        // Never auto-link a Google identity to a password account based on
+        // email alone. Account linking needs a separate, authenticated flow.
+        if (existingUser) {
+          if (existingUser.provider !== "GOOGLE") {
+            console.error(
+              "[auth/google] sign-in rejected: account requires explicit linking",
+            );
+            return false;
+          }
+
+          await prisma.user.update({
+            where: { id: existingUser.id },
+            data: {
+              ...(user.name ? { name: user.name } : {}),
+              ...(user.image ? { image: user.image } : {}),
+            },
+          });
+        }
+
+        // A concurrent credential registration can win the unique-email race.
+        // In that case create() fails closed instead of linking the accounts.
+        const dbUser =
+          existingUser ??
+          (await prisma.user.create({
+            data: {
+              email,
+              name: user.name ?? email.split("@")[0],
+              image: user.image ?? null,
+              provider: "GOOGLE",
+            },
+            select: { id: true, role: true, provider: true },
+          }));
 
         // Mutate the `user` object so the jwt() callback (which runs next,
         // with `user` populated only on this initial sign-in) picks up our IDs.
@@ -167,7 +183,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         return true;
       } catch (error) {
-        console.error("[auth/google] upsert failed", error);
+        console.error("[auth/google] persistence failed", error);
         return false;
       }
     },
