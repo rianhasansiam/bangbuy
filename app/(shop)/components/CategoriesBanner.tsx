@@ -12,7 +12,7 @@ type SaleBanner = {
 
 export function CategoriesBanner({ saleBanner }: { saleBanner: SaleBanner }) {
   return (
-    <div className="group relative hidden w-52 shrink-0 overflow-hidden rounded-2xl bg-brand-black p-4 text-brand-white shadow-lg transition-all duration-300 hover:shadow-xl lg:flex lg:flex-col lg:justify-center">
+    <div className="group relative order-first flex min-h-56 w-full shrink-0 flex-col justify-center overflow-hidden rounded-2xl bg-brand-black p-4 text-brand-white shadow-lg transition-all duration-300 hover:shadow-xl lg:order-none lg:w-52">
       <Image
         src={saleBanner.image}
         alt={saleBanner.heading}

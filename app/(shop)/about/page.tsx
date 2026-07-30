@@ -28,7 +28,6 @@ export default async function AboutPage() {
     <div className="min-h-screen bg-brand-light-bg">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-10 sm:space-y-14">
         <AboutHero />
-        {/* <AboutStats /> */}
         <OurStory />
         <WhyChooseUs />
         <OurValues />

@@ -125,11 +125,10 @@ npx prisma validate
 npx prisma migrate status
 npm run lint
 npx tsc --noEmit
-npx vitest run
 npm run build
 ```
 
-The focused regression coverage includes site URL validation, metadata sanitization/noindex behavior, JSON-LD truthfulness, products query indexing, cache admission, tag dependency/invalidation, API private headers, sitemap filtering/failure behavior, redirects/entity dependencies, validation, inventory, reviews, and category hierarchy behavior. The full test command remains the release gate; focused tests are diagnostic, not a substitute.
+Automated regression coverage is not currently present. Before treating this runbook as a complete release gate, add coverage for site URL validation, metadata sanitization/noindex behavior, JSON-LD truthfulness, products query indexing, cache admission, tag dependency/invalidation, API private headers, sitemap filtering/failure behavior, redirects/entity dependencies, validation, inventory, reviews, and category hierarchy behavior.
 
 ### Production-mode smoke checks
 

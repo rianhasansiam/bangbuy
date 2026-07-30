@@ -17,6 +17,12 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "picsum.photos",
+        port: "",
+        pathname: "/seed/**",
+      },
+      {
+        protocol: "https",
         hostname: "i.ibb.co",
         port: "",
         pathname: "/**",

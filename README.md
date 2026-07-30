@@ -4,7 +4,7 @@
 >
 > **Purpose:** a compact source of truth for developers and AI assistants working on this repository.
 >
-> **Status:** the application has strong foundations and passing static/unit checks, but it is **not production-release-ready** until the P0 security, dependency, environment, and database migration blockers below are resolved.
+> **Status:** the application has strong foundations and passing static checks, but it is **not production-release-ready** until the P0 security, dependency, environment, and database migration blockers below are resolved.
 
 This document describes the repository as it existed at the snapshot above. Source code, `prisma/schema.prisma`, migrations, and current command output take precedence if this README becomes stale. No secrets, live credentials, database hostnames, customer records, or demo passwords are recorded here.
 
@@ -26,8 +26,6 @@ The application contains a broad functional storefront, credential and Google au
 | Service implementation files | 26 |
 | Redux slice files | 15, of which 13 are registered |
 | Explicit `"use client"` files | 160 |
-| Test files | 44 |
-| Passing tests | 176 |
 | Prisma models | 28 |
 
 Counts are descriptive rather than architectural contracts and will drift as the repository changes. File counts came from `rg --files`, respecting repository ignores; authored line counts cover TS, TSX, CSS, and Prisma files under the application/source directories, excluding `app/generated`.
@@ -44,7 +42,7 @@ Counts are descriptive rather than architectural contracts and will drift as the
 | Database | PostgreSQL, Prisma `7.8.0`, `@prisma/adapter-pg` |
 | Caching and SEO | ISR, `unstable_cache`, tag/path revalidation, metadata APIs, JSON-LD, sitemap, robots, permanent catalog redirects |
 | Reports and documents | jsPDF and jsPDF AutoTable |
-| Testing and quality | Vitest 4, ESLint 9 with Next.js core-web-vitals/TypeScript rules, strict TypeScript |
+| Quality | ESLint 9 with Next.js core-web-vitals/TypeScript rules, strict TypeScript |
 | Package manager | npm with a committed `package-lock.json` |
 
 Next.js 16 requires Node.js `>=20.9.0`; the repository does not currently pin a Node version in an engine, version-manager, or container file.
@@ -388,11 +386,10 @@ Provider-risk, duplicate-charge, late-charge, and validation-mismatch findings p
 ```powershell
 npm run lint
 npx tsc --noEmit
-npx vitest run
 npm run build
 ```
 
-`package.json` currently has no `test` or `typecheck` scripts, so the explicit Vitest and TypeScript commands are intentional.
+`package.json` currently has no `typecheck` script, so the explicit TypeScript command is intentional.
 
 ### Demo seed
 
@@ -406,7 +403,7 @@ The Prisma seed creates broad demo catalog, user, order, banner, financial, and 
 4. Run Prisma validation and migration status.
 5. Deploy pending additive migrations before building code that reads their columns.
 6. Generate the Prisma client if the install lifecycle did not.
-7. Run lint, TypeScript, tests, dependency audit, and production build.
+7. Run lint, TypeScript, dependency audit, and production build.
 8. Deploy the exact tested artifact and perform public/private smoke checks. For a self-hosted Node deployment, start it with `npm start`; no hosting target is established in this repository.
 
 ## Verified health snapshot
@@ -417,7 +414,6 @@ These commands were run from the repository root on 2026-07-25 without modifying
 | --- | --- | --- |
 | `npm run lint` | Pass | ESLint completed with exit code 0 |
 | `npx tsc --noEmit` | Pass | Strict project type-check completed with exit code 0 |
-| `npx vitest run` | Pass | 44 files and 176 tests passed |
 | `npm run build` | Fail | Compilation and TypeScript pass; initial page collection rejects the local HTTP `SITE_URL` in production mode |
 | Build with a temporary HTTPS origin | Fail | Page collection reaches Prisma, then the connected database lacks `Category.seoTitle` from the pending migration |
 | `npx prisma migrate status` | Fail/release blocker | `20260722000000_catalog_seo_redirects` is not applied to the inspected database |
@@ -431,7 +427,7 @@ Audit output is time-sensitive. At this snapshot, direct upgrade candidates incl
 
 ## Verified strengths
 
-- Strict TypeScript, Next.js ESLint rules, and all current automated tests pass.
+- Strict TypeScript and Next.js ESLint rules pass.
 - Server-only boundaries make accidental database/secret imports into client code less likely.
 - API response envelopes, validation, authorization helpers, service errors, and admin handlers are centralized.
 - Checkout and order logic recalculate authoritative values, use database transactions and stock guards, preserve snapshots, and write inventory/status history.
@@ -473,7 +469,7 @@ Priority labels here combine exploitability, data exposure, release impact, and 
 | Several navigation/actions are broken | Navbar `/orders` has no page; forgot-password loops to login; terms/privacy links in auth/contact point to `/about`; product list-view wishlist control has no handler. | Fix destinations/actions together with route/component tests and a browser smoke journey. |
 | Product promises conflict with behavior | Policy copy promises guest checkout, but checkout redirects to login. Same-day claims conflict with a hardcoded four-day estimate. | Settle the product rules, make UI/policies/calculation agree, and treat policy text as release-controlled content. |
 | Accessibility has material gaps | Some visual labels lack reliable `id`/`htmlFor`; confirmation/admin navigation focus management is incomplete; reduced-motion coverage is sparse; some shells lack a main landmark; homepage H1 can disappear. | Correct accessible names/landmarks, implement modal/drawer focus and inert behavior, respect reduced motion, and add automated plus manual screen-reader/keyboard checks. |
-| Automated coverage is layer-heavy | Existing tests focus on services, validation, caching, and a few routes. There is no CI, browser E2E suite, automated accessibility suite, or meaningful component coverage; no `test` script exists. | Add stable scripts and CI gates first, then cover P0 regressions and core browse→cart→login→checkout→order/admin journeys. |
+| Automated coverage is absent | There is no unit, component, route, browser E2E, or automated accessibility suite, and no `test` script or CI workflow exists. | Add stable scripts and CI gates first, then cover P0 regressions and core browse→cart→login→checkout→order/admin journeys. |
 
 ### P2 — maintainability and product-quality debt
 
@@ -515,7 +511,7 @@ Priority labels here combine exploitability, data exposure, release impact, and 
 
 ## Audit limitations
 
-This snapshot included repository-wide static inspection, configuration/schema/migration review, installed Next.js 16 documentation review, lint, strict type-checking, all current Vitest tests, dependency audit, Prisma migration status, and production build attempts.
+This snapshot included repository-wide static inspection, configuration/schema/migration review, installed Next.js 16 documentation review, lint, strict type-checking, dependency audit, Prisma migration status, and production build attempts.
 
 It did **not** include:
 
@@ -552,13 +548,11 @@ When this README is attached to a ChatGPT/Codex project:
 
 Use this precedence when documents disagree:
 
-1. Current implementation, tests, Prisma schema, and applied database migrations.
+1. Current implementation, Prisma schema, and applied database migrations.
 2. [`AGENTS.md`](AGENTS.md) for repository working rules.
 3. [`docs/seo-performance-architecture.md`](docs/seo-performance-architecture.md) for the implemented SEO/cache/release design.
 4. [`.env.example`](.env.example) for environment key names only.
 5. This README for the dated cross-project summary and audit.
-
-`SEO_plan.md` is historical planning/prompt input. It is useful for intent, but it is not authoritative evidence that every requested behavior is currently implemented or verified.
 
 ## Keeping this document current
 

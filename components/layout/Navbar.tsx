@@ -464,10 +464,7 @@ export default function Navbar({
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link href="/orders">
-                        <Package className="h-4 w-4" />
-                        My Orders
-                      </Link>
+                     
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/wishlist">
