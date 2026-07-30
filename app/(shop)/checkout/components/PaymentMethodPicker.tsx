@@ -26,13 +26,13 @@ const OPTIONS: PaymentOption[] = [
     icon: <Banknote className="h-5 w-5" />,
     badge: "No prepayment",
   },
-  {
-    value: "SSLCOMMERZ",
-    label: "Online payment",
-    description: "Secure payment via SSLCommerz.",
-    icon: <CreditCard className="h-5 w-5" />,
-    badge: "Visa / Mastercard",
-  },
+  // {
+  //   value: "SSLCOMMERZ",
+  //   label: "Online payment",
+  //   description: "Secure payment via SSLCommerz.",
+  //   icon: <CreditCard className="h-5 w-5" />,
+  //   badge: "Visa / Mastercard",
+  // },
 ];
 
 export default function PaymentMethodPicker({
