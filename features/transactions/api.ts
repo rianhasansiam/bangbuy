@@ -215,6 +215,8 @@ export function paymentProviderLabel(provider: string): string {
   switch (provider.toUpperCase()) {
     case "SSLCOMMERZ":
       return "SSLCommerz";
+    case "AIRWALLEX":
+      return "Airwallex";
     case "CASH_ON_DELIVERY":
       return "Cash on delivery";
     case "ADMIN_ADVANCE":

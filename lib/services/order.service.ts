@@ -59,6 +59,44 @@ export class OrderError extends ServiceError {
   }
 }
 
+function isGatewayManagedPaymentMethod(method: string): boolean {
+  return method === "SSLCOMMERZ" || method === "AIRWALLEX";
+}
+
+type CancellationPaymentSnapshot = {
+  provider: string;
+  status: string;
+  requiresReview: boolean;
+};
+
+const TERMINAL_AIRWALLEX_CANCELLATION_STATUSES = new Set([
+  "CANCELLED",
+  "REFUNDED",
+  "EXPIRED",
+]);
+
+function gatewayPaymentBlocksCancellation(input: {
+  paymentMethod: string;
+  paymentStatus: string;
+  payments: readonly CancellationPaymentSnapshot[];
+}): boolean {
+  if (!isGatewayManagedPaymentMethod(input.paymentMethod)) return false;
+  if (input.paymentStatus === "PAID") return true;
+
+  return input.payments
+    .filter((payment) => payment.provider === input.paymentMethod)
+    .some((payment) => {
+      if (payment.status === "SUCCESS" || payment.requiresReview) return true;
+      if (input.paymentMethod !== "AIRWALLEX") return false;
+
+      // Initiation releases the order lock during the provider HTTP request,
+      // so even CREATED can be in-flight. A failed PaymentAttempt can also
+      // leave its PaymentIntent reusable. Stock remains reserved until an
+      // authoritative cancellation/refund/expiry makes release safe.
+      return !TERMINAL_AIRWALLEX_CANCELLATION_STATUSES.has(payment.status);
+    });
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Selects / shapes                                                          */
 /* -------------------------------------------------------------------------- */
@@ -92,7 +130,6 @@ const orderInclude = {
   // and provider evidence remain server-side.
   payments: {
     where: {
-      provider: "SSLCOMMERZ",
       requiresReview: true,
     },
     select: { id: true },
@@ -263,26 +300,23 @@ export async function cancelOrderAsCustomer(orderId: string, userId: string) {
         items: true,
         payments: {
           where: {
-            provider: "SSLCOMMERZ",
-            OR: [{ status: "SUCCESS" }, { requiresReview: true }],
+            provider: { in: ["SSLCOMMERZ", "AIRWALLEX"] },
           },
-          select: { id: true, status: true, requiresReview: true },
+          select: {
+            id: true,
+            provider: true,
+            status: true,
+            requiresReview: true,
+          },
         },
       },
     });
     if (!order) throw new OrderError(404, "Order not found.");
 
-    if (
-      order.paymentMethod === "SSLCOMMERZ" &&
-      (order.paymentStatus === "PAID" ||
-        order.payments.some(
-          (payment) =>
-            payment.status === "SUCCESS" || payment.requiresReview,
-        ))
-    ) {
+    if (gatewayPaymentBlocksCancellation(order)) {
       throw new OrderError(
         409,
-        "This online payment has succeeded or requires investigation; cancellation needs a verified refund resolution.",
+        "This online payment is active, succeeded, or requires investigation; cancellation is unavailable until the provider reaches a safe terminal state.",
       );
     }
 
@@ -311,7 +345,7 @@ export async function cancelOrderAsCustomer(orderId: string, userId: string) {
       where: { id: order.id },
       data: {
         status: "CANCELLED",
-        ...(order.paymentMethod === "SSLCOMMERZ"
+        ...(isGatewayManagedPaymentMethod(order.paymentMethod)
           ? { paymentStatus: "FAILED" as const }
           : {}),
       },
@@ -372,10 +406,9 @@ export async function listOrdersForAdmin(query: AdminOrderQueryInput) {
         paymentStatus: true,
         payments: {
           where: {
-            provider: "SSLCOMMERZ",
             requiresReview: true,
           },
-          select: { status: true, reviewReason: true },
+          select: { provider: true, status: true, reviewReason: true },
         },
         customerName: true,
         customerPhone: true,
@@ -409,11 +442,13 @@ export async function listOrdersForAdmin(query: AdminOrderQueryInput) {
         ),
       ],
       paymentReviewApprovalAllowed:
+        rest.paymentMethod === "SSLCOMMERZ" &&
         payments.length > 0 &&
         rest.paymentStatus === "PAID" &&
         !["CANCELLED", "REFUNDED"].includes(rest.status) &&
         payments.every((payment) => payment.status === "SUCCESS"),
       paymentReviewRefundCancellationAllowed:
+        rest.paymentMethod === "SSLCOMMERZ" &&
         payments.length > 0 &&
         (["CANCELLED", "REFUNDED"].includes(rest.status) ||
           STATUS_TRANSITIONS[rest.status].includes("CANCELLED")),
@@ -483,10 +518,14 @@ export async function updateOrderStatus(
         items: true,
         payments: {
           where: {
-            provider: "SSLCOMMERZ",
-            OR: [{ status: "SUCCESS" }, { requiresReview: true }],
+            provider: { in: ["SSLCOMMERZ", "AIRWALLEX"] },
           },
-          select: { id: true, status: true, requiresReview: true },
+          select: {
+            id: true,
+            provider: true,
+            status: true,
+            requiresReview: true,
+          },
         },
       },
     });
@@ -500,14 +539,17 @@ export async function updateOrderStatus(
     const requiresPaymentReview = order.payments.some(
       (payment) => payment.requiresReview,
     );
-    if (order.paymentMethod === "SSLCOMMERZ" && requiresPaymentReview) {
+    if (
+      isGatewayManagedPaymentMethod(order.paymentMethod) &&
+      requiresPaymentReview
+    ) {
       throw new OrderError(
         409,
         "This payment requires fraud or operations review before fulfillment.",
       );
     }
     if (
-      order.paymentMethod === "SSLCOMMERZ" &&
+      isGatewayManagedPaymentMethod(order.paymentMethod) &&
       next === "PAYMENT_CONFIRMED" &&
       order.paymentStatus !== "PAID"
     ) {
@@ -517,14 +559,13 @@ export async function updateOrderStatus(
       );
     }
     if (
-      order.paymentMethod === "SSLCOMMERZ" &&
+      isGatewayManagedPaymentMethod(order.paymentMethod) &&
       next === "CANCELLED" &&
-      (order.paymentStatus === "PAID" ||
-        order.payments.some((payment) => payment.status === "SUCCESS"))
+      gatewayPaymentBlocksCancellation(order)
     ) {
       throw new OrderError(
         409,
-        "A paid online order requires a refund before cancellation.",
+        "An active or paid online payment must reach a safe provider terminal state before cancellation.",
       );
     }
 
@@ -543,7 +584,10 @@ export async function updateOrderStatus(
       if (next === "CANCELLED") {
         await releasePromotionUsage(tx, order.id);
       }
-      if (next === "CANCELLED" && order.paymentMethod === "SSLCOMMERZ") {
+      if (
+        next === "CANCELLED" &&
+        order.paymentMethod === "SSLCOMMERZ"
+      ) {
         await tx.paymentTransaction.updateMany({
           where: {
             orderId: order.id,
@@ -559,7 +603,8 @@ export async function updateOrderStatus(
       where: { id: order.id },
       data: {
         status: next,
-        ...(next === "CANCELLED" && order.paymentMethod === "SSLCOMMERZ"
+        ...(next === "CANCELLED" &&
+        isGatewayManagedPaymentMethod(order.paymentMethod)
           ? { paymentStatus: "FAILED" as const }
           : {}),
       },
@@ -804,10 +849,10 @@ export async function updatePaymentStatus(
   });
   if (!existing) throw new OrderError(404, "Order not found.");
 
-  if (existing.paymentMethod === "SSLCOMMERZ") {
+  if (isGatewayManagedPaymentMethod(existing.paymentMethod)) {
     throw new OrderError(
       409,
-      "SSLCommerz payment status is controlled by verified gateway notifications.",
+      "Online payment status is controlled by verified gateway notifications.",
     );
   }
 

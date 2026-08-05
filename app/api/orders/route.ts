@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  if (parsed.data.paymentMethod === "SSLCOMMERZ") {
+  if (parsed.data.paymentMethod !== "CASH_ON_DELIVERY") {
     return jsonError(
       400,
       "Online payment must be initiated through /api/checkout.",

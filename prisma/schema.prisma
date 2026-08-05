@@ -352,6 +352,7 @@ model Order {
   taxAmount      Decimal @default(0) @db.Decimal(12, 2)
   totalAmount    Decimal @db.Decimal(12, 2)
   advancePayment Decimal @default(0) @db.Decimal(12, 2)
+  currency       String  @default("BDT")
 
   customerName       String
   customerPhone      String
@@ -416,6 +417,7 @@ enum PaymentMethod {
   CASH_ON_DELIVERY
   ONLINE
   SSLCOMMERZ
+  AIRWALLEX
   PAYPAL
 }
 
@@ -659,6 +661,9 @@ model PaymentTransaction {
   amount                    Decimal                  @db.Decimal(12, 2)
   currency                  String                   @default("BDT")
   status                    PaymentTransactionStatus @default(PENDING)
+  providerStatus            String?
+  failureCode               String?
+  failureMessage            String?
   rawResponse               Json?                    @db.JsonB
   paidAt                    DateTime?
   requiresReview            Boolean                  @default(false)
@@ -667,6 +672,12 @@ model PaymentTransaction {
   reviewResolvedBy          String?
   reviewResolution          String?
   reviewResolutionReference String?
+  lastReconciledAt          DateTime?
+  reconciliationResult      String?
+  reconciliationAttempts    Int                      @default(0)
+
+  airwallexWebhookEvents AirwallexWebhookEvent[]
+  events                 PaymentTransactionEvent[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -680,6 +691,7 @@ model PaymentTransaction {
   @@index([createdAt, id])
   @@index([status, createdAt])
   @@index([provider, status, createdAt])
+  @@index([provider, status, updatedAt])
   @@index([provider, requiresReview, createdAt])
 }
 
@@ -690,6 +702,71 @@ enum PaymentTransactionStatus {
   CANCELLED
   REFUNDED
   EXPIRED
+  CREATED
+  REQUIRES_PAYMENT_METHOD
+  PENDING_REVIEW
+  PROCESSING
+  REQUIRES_REVIEW
+}
+
+enum AirwallexEventProcessingStatus {
+  PENDING
+  PROCESSING
+  RETRY_PENDING
+  PROCESSED
+  REQUIRES_REVIEW
+}
+
+model AirwallexWebhookEvent {
+  id              String  @id @default(cuid())
+  eventId         String  @unique
+  eventName       String
+  paymentIntentId String
+  accountId       String?
+  apiVersion      String?
+
+  receivedAt         DateTime                       @default(now())
+  processingStatus   AirwallexEventProcessingStatus @default(PENDING)
+  processingAttempts Int                            @default(0)
+  sanitizedPayload   Json                           @db.JsonB
+  processedAt        DateTime?
+  processingError    String?
+  nextAttemptAt      DateTime                       @default(now())
+  lockedAt           DateTime?
+  lockToken          String?
+
+  paymentTransactionId String?
+  paymentTransaction   PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id], onDelete: SetNull)
+
+  @@index([processingStatus, nextAttemptAt, receivedAt], map: "AirwallexEvent_claimable_idx")
+  @@index([processingStatus, lockedAt], map: "AirwallexEvent_stale_claim_idx")
+  @@index([paymentIntentId, receivedAt], map: "AirwallexEvent_intent_received_idx")
+  @@index([paymentTransactionId, receivedAt], map: "AirwallexEvent_attempt_received_idx")
+}
+
+enum PaymentTransactionEventSource {
+  INITIATION
+  WEBHOOK
+  RECONCILIATION
+  MANUAL
+}
+
+model PaymentTransactionEvent {
+  id                   String                        @id @default(cuid())
+  paymentTransactionId String
+  paymentTransaction   PaymentTransaction            @relation(fields: [paymentTransactionId], references: [id], onDelete: Cascade)
+  source               PaymentTransactionEventSource
+  eventName            String
+  fromStatus           PaymentTransactionStatus?
+  toStatus             PaymentTransactionStatus
+  providerStatus       String?
+  providerEventId      String?
+  reasonCode           String?
+  requiresReview       Boolean                       @default(false)
+  createdAt            DateTime                      @default(now())
+
+  @@index([paymentTransactionId, createdAt], map: "PaymentTransactionEvent_attempt_created_idx")
+  @@index([providerEventId], map: "PaymentTransactionEvent_provider_event_idx")
 }
 
 model InventoryLog {

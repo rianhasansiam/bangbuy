@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -21,6 +21,7 @@ import { useSession } from "@/lib/auth/use-app-session";
 
 import { fetchOrderDetail, type OrderDetail } from "@/features/orders/api";
 import {
+  isAwaitingAirwallexConfirmation,
   isAwaitingSslCommerzConfirmation,
   paymentMethodLabel,
   PAYMENT_STATUS_META,
@@ -30,6 +31,8 @@ import { clearOrderSnapshot } from "@/features/orders/storage";
 import { ORDER_STATUS_META } from "@/lib/orders/status";
 import ColorBadge from "@/components/ui/ColorBadge";
 import { ButtonLoader, OrderDetailsPageSkeleton } from "@/components/ui/loading";
+import { AirwallexPayButton } from "@/lib/airwallex/components/AirwallexPayButton";
+import { AirwallexPaymentStatus } from "@/lib/airwallex/components/AirwallexPaymentStatus";
 import OrderTracker from "./OrderTracker";
 
 const FALLBACK_IMAGE =
@@ -172,6 +175,18 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
     return Math.max(0, order.discountAmount);
   }, [order]);
 
+  const refreshSettledAirwallexOrder = useCallback(() => {
+    void (async () => {
+      try {
+        const nextOrder = await fetchOrderDetail(orderId);
+        setState({ status: "ready", order: nextOrder });
+      } catch {
+        // Keep the already-rendered owner-scoped order on a transient failure.
+        // The Airwallex status card retains a manual refresh action.
+      }
+    })();
+  }, [orderId]);
+
   const handleDownload = async () => {
     if (!order || downloading) return;
     setDownloadError(null);
@@ -247,6 +262,16 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
     order.paymentMethod === "SSLCOMMERZ" &&
     (paymentReturnOutcome !== null || order.requiresPaymentReview);
   const paymentUnderReview = order.requiresPaymentReview;
+  const isAirwallexOrder = order.paymentMethod === "AIRWALLEX";
+  const canPayWithAirwallex =
+    isAirwallexOrder &&
+    !paymentUnderReview &&
+    order.status === "PENDING" &&
+    (isAwaitingAirwallexConfirmation(
+      order.paymentMethod,
+      order.paymentStatus,
+    ) || order.paymentStatus === "FAILED");
+  const currency = order.currency || "BDT";
 
   const addressLines = [
     order.customerAddress,
@@ -416,6 +441,41 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
           </section>
         )}
 
+        {isAirwallexOrder ? (
+          <div className="mt-5 space-y-4">
+            <AirwallexPaymentStatus
+              orderId={order.id}
+              autoPoll={false}
+              showOrderLink={false}
+              embedded
+              onSettled={refreshSettledAirwallexOrder}
+            />
+            {canPayWithAirwallex ? (
+              <section className="rounded-3xl border border-brand-border bg-white p-5 shadow-sm sm:p-6">
+                <h2 className="text-lg font-bold text-gray-900">
+                  {order.paymentStatus === "FAILED"
+                    ? "Try payment again"
+                    : "Complete your payment"}
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-gray-600">
+                  Your order and inventory are reserved. Continue to
+                  Airwallex&apos;s hosted checkout; BangBuy does not collect your
+                  card details.
+                </p>
+                <AirwallexPayButton
+                  orderId={order.id}
+                  label={
+                    order.paymentStatus === "FAILED"
+                      ? "Retry secure payment"
+                      : "Continue to secure payment"
+                  }
+                  className="mt-4 h-12 w-full rounded-2xl bg-brand-red px-5 text-base font-bold text-white sm:w-auto"
+                />
+              </section>
+            ) : null}
+          </div>
+        ) : null}
+
         {/* Tracking timeline */}
         <OrderTracker
           status={order.status}
@@ -521,11 +581,12 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                           </p>
                         )}
                         <p className="mt-0.5 text-xs text-gray-500">
-                          Qty {item.quantity} · BDT {item.unitPrice.toLocaleString()} each
+                          Qty {item.quantity} · {currency}{" "}
+                          {item.unitPrice.toLocaleString()} each
                         </p>
                       </div>
                       <p className="text-sm font-bold text-gray-900">
-                        BDT {item.totalPrice.toLocaleString()}
+                        {currency} {item.totalPrice.toLocaleString()}
                       </p>
                     </li>
                   );
@@ -539,7 +600,11 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
             <section className="rounded-3xl border border-brand-border bg-brand-white p-5 shadow-sm sm:p-6">
               <h2 className="text-lg font-bold text-gray-900">Total</h2>
               <div className="mt-4 space-y-2.5 text-sm">
-                <SummaryRow label="Subtotal" value={order.subtotal} />
+                <SummaryRow
+                  label="Subtotal"
+                  value={order.subtotal}
+                  currency={currency}
+                />
                 {order.discountAmount > 0 && (
                   <SummaryRow
                     label={
@@ -549,15 +614,21 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                     }
                     value={-order.discountAmount}
                     tone="success"
+                    currency={currency}
                   />
                 )}
                 <SummaryRow
                   label="Delivery charge"
                   value={order.deliveryCharge}
                   freeLabel={order.deliveryCharge === 0 ? "FREE" : undefined}
+                  currency={currency}
                 />
                 {order.taxAmount > 0 && (
-                  <SummaryRow label="Tax" value={order.taxAmount} />
+                  <SummaryRow
+                    label="Tax"
+                    value={order.taxAmount}
+                    currency={currency}
+                  />
                 )}
                 {order.advancePayment > 0 && (
                   <>
@@ -565,6 +636,7 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                       label="Advance payment"
                       value={-order.advancePayment}
                       tone="success"
+                      currency={currency}
                     />
                     <SummaryRow
                       label="Balance due"
@@ -572,6 +644,7 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                         order.totalAmount - order.advancePayment,
                         0,
                       )}
+                      currency={currency}
                     />
                   </>
                 )}
@@ -582,12 +655,12 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                     Grand total
                   </span>
                   <span className="text-2xl font-extrabold text-brand-red sm:text-3xl">
-                    BDT {order.totalAmount.toLocaleString()}
+                    {currency} {order.totalAmount.toLocaleString()}
                   </span>
                 </div>
                 {totalSavings > 0 && (
                   <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-                    You saved BDT {totalSavings.toLocaleString()}
+                    You saved {currency} {totalSavings.toLocaleString()}
                   </p>
                 )}
               </div>
@@ -691,11 +764,13 @@ function SummaryRow({
   value,
   tone = "default",
   freeLabel,
+  currency = "BDT",
 }: {
   label: string;
   value: number;
   tone?: "default" | "success";
   freeLabel?: string;
+  currency?: string;
 }) {
   return (
     <div className="flex items-center justify-between">
@@ -710,7 +785,8 @@ function SummaryRow({
             tone === "success" ? "text-emerald-600" : "text-gray-900"
           }`}
         >
-          {value < 0 ? "-" : ""}BDT {Math.abs(value).toLocaleString()}
+          {value < 0 ? "-" : ""}{currency}{" "}
+          {Math.abs(value).toLocaleString()}
         </span>
       )}
     </div>

@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 import { requireUser } from "@/lib/api/guards";
@@ -10,9 +11,15 @@ import {
   CommittedPaymentError,
   initiateSslCommerzCheckout,
 } from "@/lib/payments";
-import { placeOrder } from "@/lib/services/checkout.service";
+import {
+  CheckoutError,
+  placeOrder,
+  reserveOrderForAirwallex,
+} from "@/lib/services/checkout.service";
 import { handleServiceError } from "@/lib/services/service-error";
 import { checkoutSchema } from "@/lib/validations/checkout.validation";
+import { airwallexConfig } from "@/lib/airwallex/config/airwallex.config";
+import { deriveAirwallexRequestId } from "@/lib/airwallex/security/airwallex-idempotency";
 
 /**
  * POST /api/checkout
@@ -57,13 +64,36 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result =
-      parsed.data.paymentMethod === "SSLCOMMERZ"
-        ? await initiateSslCommerzCheckout(
-            guard.session.user.id,
-            parsed.data,
-          )
-        : await placeOrder(guard.session.user.id, parsed.data);
+    const userId = guard.session.user.id;
+    let result;
+    if (parsed.data.paymentMethod === "SSLCOMMERZ") {
+      result = await initiateSslCommerzCheckout(userId, parsed.data);
+    } else if (parsed.data.paymentMethod === "AIRWALLEX") {
+      if (!airwallexConfig.enabled) {
+        throw new CheckoutError(
+          503,
+          "Airwallex payments are temporarily unavailable. Please choose another payment method.",
+        );
+      }
+      if (!parsed.data.idempotencyKey) {
+        throw new CheckoutError(400, "A payment request ID is required.");
+      }
+      const reserved = await reserveOrderForAirwallex(userId, parsed.data, {
+        id: randomUUID(),
+        provider: "AIRWALLEX",
+        idempotencyKey: deriveAirwallexRequestId(
+          userId,
+          parsed.data.idempotencyKey,
+        ),
+      });
+      result = {
+        order: reserved.order,
+        summary: reserved.summary,
+        promo: reserved.promo,
+      };
+    } else {
+      result = await placeOrder(userId, parsed.data);
+    }
     // Order placement decrements stock and empties the cart. Bust the
     // cached surfaces that embed product/stock data. (The cart itself is
     // uncached and refetched fresh by the client.)

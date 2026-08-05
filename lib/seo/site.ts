@@ -8,7 +8,7 @@
  */
 
 const PRODUCTION_SITE_URL = "https://bangbuy.net";
-const LOCAL_SITE_URL = "http://localhost:3000";
+const LOCAL_SITE_URL = "https:rian-test-payment.vercel.app";
 
 type SiteUrlEnvironment = {
   NODE_ENV?: string;

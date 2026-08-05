@@ -5,7 +5,10 @@ import {
 } from "@/features/http/api-envelope";
 import type { OrderDetail } from "@/features/orders/api";
 
-export type CheckoutPaymentMethod = "CASH_ON_DELIVERY" | "SSLCOMMERZ";
+export type CheckoutPaymentMethod =
+  | "CASH_ON_DELIVERY"
+  | "SSLCOMMERZ"
+  | "AIRWALLEX";
 export type DeliveryZone = "INSIDE_DHAKA" | "OUTSIDE_DHAKA";
 
 export type CheckoutItemInput = {
@@ -67,6 +70,7 @@ export type CheckoutPreview = {
   items: CheckoutItemPriced[];
   summary: CheckoutSummary;
   promo: CheckoutPromo;
+  availablePaymentMethods: CheckoutPaymentMethod[];
 };
 
 export type PreviewRequest = {
@@ -107,7 +111,7 @@ export type PlaceOrderRequest = {
   promoCode?: string | null;
   clearCart?: boolean;
   /**
-   * Stable key for retrying the same SSLCommerz checkout submission.
+   * Stable key for retrying the same online-payment checkout submission.
    * It identifies the attempt only; prices and totals remain server-owned.
    */
   idempotencyKey?: string;

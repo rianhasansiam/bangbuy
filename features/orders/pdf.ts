@@ -11,6 +11,7 @@ import {
   drawCard,
   drawSectionLabel,
   ensureSpace,
+  formatCurrency,
   formatBDT,
   formatStamp,
   getAutoTableEndY,
@@ -227,8 +228,8 @@ function drawItemsTable(doc: Doc, y: number, order: OrderDetail): number {
       safeText(item.productName, "Item"),
       buildVariantText(item),
       String(item.quantity),
-      formatBDT(item.unitPrice),
-      formatBDT(item.totalPrice),
+      formatCurrency(item.unitPrice, order.currency),
+      formatCurrency(item.totalPrice, order.currency),
     ]),
     theme: "striped",
     headStyles: {
@@ -264,25 +265,38 @@ function drawTotals(doc: Doc, y: number, order: OrderDetail): number {
   const w = 88;
   const x = pw - PAGE_MARGIN - w;
 
-  const rows: Array<[string, string]> = [["Subtotal", formatBDT(order.subtotal)]];
+  const rows: Array<[string, string]> = [
+    ["Subtotal", formatCurrency(order.subtotal, order.currency)],
+  ];
   if (order.discountAmount > 0) {
     const label = order.promoCode
       ? `Discount (${safeText(order.promoCode)})`
       : "Discount";
-    rows.push([label, `- ${formatBDT(order.discountAmount)}`]);
+    rows.push([
+      label,
+      `- ${formatCurrency(order.discountAmount, order.currency)}`,
+    ]);
   }
   rows.push([
     "Delivery charge",
-    order.deliveryCharge === 0 ? "FREE" : formatBDT(order.deliveryCharge),
+    order.deliveryCharge === 0
+      ? "FREE"
+      : formatCurrency(order.deliveryCharge, order.currency),
   ]);
   if (order.taxAmount > 0) {
-    rows.push(["Tax", formatBDT(order.taxAmount)]);
+    rows.push(["Tax", formatCurrency(order.taxAmount, order.currency)]);
   }
   if (order.advancePayment > 0) {
-    rows.push(["Advance payment", `- ${formatBDT(order.advancePayment)}`]);
+    rows.push([
+      "Advance payment",
+      `- ${formatCurrency(order.advancePayment, order.currency)}`,
+    ]);
     rows.push([
       "Balance due",
-      formatBDT(Math.max(order.totalAmount - order.advancePayment, 0)),
+      formatCurrency(
+        Math.max(order.totalAmount - order.advancePayment, 0),
+        order.currency,
+      ),
     ]);
   }
 
@@ -314,7 +328,7 @@ function drawTotals(doc: Doc, y: number, order: OrderDetail): number {
   doc.setFontSize(9);
   doc.text("GRAND TOTAL", x + 8, barY + grandH / 2 + 1);
   doc.setFontSize(13);
-  doc.text(formatBDT(order.totalAmount), x + w - 8, barY + grandH / 2 + 1.2, {
+  doc.text(formatCurrency(order.totalAmount, order.currency), x + w - 8, barY + grandH / 2 + 1.2, {
     align: "right",
   });
 
@@ -356,7 +370,7 @@ function drawNoteCard(doc: Doc, y: number, note: string): number {
 /*  Public API                                                                */
 /* -------------------------------------------------------------------------- */
 
-export { formatBDT };
+export { formatBDT, formatCurrency };
 
 export async function generateOrderPdf(order: OrderDetail): Promise<jsPDF> {
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });

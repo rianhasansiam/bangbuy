@@ -87,7 +87,7 @@ SITE_URL=https://bangbuy.net
 NEXT_PUBLIC_SITE_URL=https://bangbuy.net
 ```
 
-`SITE_URL` takes precedence. `NEXT_PUBLIC_SITE_URL` remains only for compatibility and should match it. The resolver requires an absolute HTTP(S) origin without credentials, path, query, hash, or trailing route. Non-local production origins must use HTTPS. When no valid server value exists, production falls back to `https://bangbuy.net`; local development falls back to `http://localhost:3000`. A legacy localhost public value is deliberately ignored during a production build.
+`SITE_URL` takes precedence. `NEXT_PUBLIC_SITE_URL` remains only for compatibility and should match it. The resolver requires an absolute HTTP(S) origin without credentials, path, query, hash, or trailing route. Non-local production origins must use HTTPS. When no valid server value exists, production falls back to `https://bangbuy.net`; local development falls back to `https:rian-test-payment.vercel.app`. A legacy localhost public value is deliberately ignored during a production build.
 
 Changing the canonical origin requires a rebuild/redeploy because metadata, JSON-LD, robots, and sitemap output use this configuration during rendering/build. Validate a staging deployment before exposing it to crawlers; a wrong origin contaminates every canonical URL.
 
@@ -136,13 +136,13 @@ Start the built application and use representative active product, category, and
 
 ```powershell
 npm start
-curl.exe -I http://localhost:3000/
-curl.exe -I http://localhost:3000/products/ACTIVE-PRODUCT-SLUG
-curl.exe -I http://localhost:3000/categories/ACTIVE/CATEGORY-PATH
-curl.exe -I http://localhost:3000/brands/ACTIVE-BRAND-SLUG
-curl.exe -I http://localhost:3000/sitemap.xml
-curl.exe -I http://localhost:3000/robots.txt
-curl.exe -I http://localhost:3000/api/catalog/facets
+curl.exe -I https:rian-test-payment.vercel.app/
+curl.exe -I https:rian-test-payment.vercel.app/products/ACTIVE-PRODUCT-SLUG
+curl.exe -I https:rian-test-payment.vercel.app/categories/ACTIVE/CATEGORY-PATH
+curl.exe -I https:rian-test-payment.vercel.app/brands/ACTIVE-BRAND-SLUG
+curl.exe -I https:rian-test-payment.vercel.app/sitemap.xml
+curl.exe -I https:rian-test-payment.vercel.app/robots.txt
+curl.exe -I https:rian-test-payment.vercel.app/api/catalog/facets
 ```
 
 Verify in returned HTML and browser developer tools:
@@ -173,10 +173,10 @@ For a multi-instance deployment, run this test across different instances. The d
 Run Lighthouse against a production build with a warm cache for `/`, one representative product, one category, and one brand. Lighthouse defaults to mobile emulation:
 
 ```powershell
-npx lighthouse http://localhost:3000/ --only-categories=performance,seo,best-practices,accessibility --output=html --output-path=lighthouse-home.html
-npx lighthouse http://localhost:3000/products/ACTIVE-PRODUCT-SLUG --only-categories=performance,seo,best-practices,accessibility --output=html --output-path=lighthouse-product.html
-npx lighthouse http://localhost:3000/categories/ACTIVE/CATEGORY-PATH --only-categories=performance,seo,best-practices,accessibility --output=html --output-path=lighthouse-category.html
-npx lighthouse http://localhost:3000/brands/ACTIVE-BRAND-SLUG --only-categories=performance,seo,best-practices,accessibility --output=html --output-path=lighthouse-brand.html
+npx lighthouse https:rian-test-payment.vercel.app/ --only-categories=performance,seo,best-practices,accessibility --output=html --output-path=lighthouse-home.html
+npx lighthouse https:rian-test-payment.vercel.app/products/ACTIVE-PRODUCT-SLUG --only-categories=performance,seo,best-practices,accessibility --output=html --output-path=lighthouse-product.html
+npx lighthouse https:rian-test-payment.vercel.app/categories/ACTIVE/CATEGORY-PATH --only-categories=performance,seo,best-practices,accessibility --output=html --output-path=lighthouse-category.html
+npx lighthouse https:rian-test-payment.vercel.app/brands/ACTIVE-BRAND-SLUG --only-categories=performance,seo,best-practices,accessibility --output=html --output-path=lighthouse-brand.html
 ```
 
 Use an approved pinned Lighthouse version in CI. Record scores and trace evidence in the release artifact rather than claiming a score from development mode. Suggested release targets are LCP at or below 2.5 seconds, CLS at or below 0.1, no serious accessibility/SEO finding, and no regression in transferred JavaScript. Lighthouse cannot validate field INP; use real-user monitoring for the 200 ms INP target. Review the `next build` route output and browser coverage/trace before adding a bundle analyzer dependency.

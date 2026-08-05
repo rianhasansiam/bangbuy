@@ -59,11 +59,11 @@ const LOGO_SRC = "/logo/logo.png";
 /* -------------------------------------------------------------------------- */
 
 /**
- * Money formatter. Always prefixed with "BDT", comma-grouped, and only
+ * Money formatter. Uses an authoritative ISO currency prefix, comma-grouped, and only
  * shows decimals when they carry information — so we render `BDT 2,342`
  * and `BDT 2,579.10` but never a raw float like `BDT 2579.1`.
  */
-export function formatBDT(value: number): string {
+export function formatCurrency(value: number, currency = "BDT"): string {
   const safe = Number.isFinite(value) ? value : 0;
   const rounded = Math.round((safe + Number.EPSILON) * 100) / 100;
   const hasFraction = Math.abs(rounded % 1) > 0.0001;
@@ -71,7 +71,14 @@ export function formatBDT(value: number): string {
     minimumFractionDigits: hasFraction ? 2 : 0,
     maximumFractionDigits: 2,
   });
-  return `BDT ${formatted}`;
+  const safeCurrency = /^[A-Z]{3}$/.test(currency.trim().toUpperCase())
+    ? currency.trim().toUpperCase()
+    : "BDT";
+  return `${safeCurrency} ${formatted}`;
+}
+
+export function formatBDT(value: number): string {
+  return formatCurrency(value, "BDT");
 }
 
 /** Strip control characters and trim; fall back when empty/missing. */

@@ -12,7 +12,11 @@ import { z } from "zod";
  *    the customer's choices (items, address, promo code, payment).
  */
 
-const PAYMENT_METHOD = ["CASH_ON_DELIVERY", "SSLCOMMERZ"] as const;
+const PAYMENT_METHOD = [
+  "CASH_ON_DELIVERY",
+  "SSLCOMMERZ",
+  "AIRWALLEX",
+] as const;
 const DELIVERY_ZONES = ["INSIDE_DHAKA", "OUTSIDE_DHAKA"] as const;
 
 const checkoutItem = z.object({
@@ -116,7 +120,11 @@ const checkoutBaseSchema = z.object({
 });
 
 export const checkoutSchema = checkoutBaseSchema.superRefine((value, context) => {
-  if (value.paymentMethod === "SSLCOMMERZ" && !value.idempotencyKey) {
+  if (
+    (value.paymentMethod === "SSLCOMMERZ" ||
+      value.paymentMethod === "AIRWALLEX") &&
+    !value.idempotencyKey
+  ) {
     context.addIssue({
       code: "custom",
       path: ["idempotencyKey"],

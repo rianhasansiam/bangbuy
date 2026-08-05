@@ -4,7 +4,7 @@ export type CheckoutIdempotencyAttempt = {
 };
 
 /**
- * Reuse one key when an identical SSLCommerz submission is retried, while
+ * Reuse one key when an identical online-payment submission is retried, while
  * creating a fresh key after the customer changes any checkout input.
  */
 export function resolveCheckoutIdempotencyAttempt(

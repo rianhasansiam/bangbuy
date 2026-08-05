@@ -42,6 +42,8 @@ export function paymentMethodLabel(
       return "Cash on delivery";
     case "SSLCOMMERZ":
       return "SSLCommerz (Visa / Mastercard)";
+    case "AIRWALLEX":
+      return "Airwallex secure payment";
     case "PAYPAL":
       return "PayPal";
     case "ONLINE":
@@ -49,6 +51,16 @@ export function paymentMethodLabel(
     default:
       return method;
   }
+}
+
+export function isAwaitingAirwallexConfirmation(
+  method: OrderPaymentMethod,
+  status: PaymentStatus,
+): boolean {
+  return (
+    method === "AIRWALLEX" &&
+    (status === "PENDING" || status === "UNPAID")
+  );
 }
 
 export function isAwaitingSslCommerzConfirmation(

@@ -22,6 +22,7 @@ export type PaymentStatus =
 export type OrderPaymentMethod =
   | "CASH_ON_DELIVERY"
   | "SSLCOMMERZ"
+  | "AIRWALLEX"
   | "PAYPAL"
   | "ONLINE";
 
@@ -76,6 +77,7 @@ export type OrderDetail = {
   taxAmount: number;
   totalAmount: number;
   advancePayment: number;
+  currency: string;
   promoCode: string | null;
 
   status: OrderStatus;
@@ -120,6 +122,7 @@ export type MyOrderSummary = {
   orderNumber: string;
   totalAmount: number;
   advancePayment: number;
+  currency: string;
   status: OrderStatus;
   paymentMethod: OrderPaymentMethod;
   paymentStatus: PaymentStatus;

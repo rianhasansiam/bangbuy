@@ -29,6 +29,7 @@ import type {
   CheckoutInput,
   CheckoutPreviewInput,
 } from "@/lib/validations/checkout.validation";
+import { createAirwallexAttempt } from "@/lib/airwallex/repositories/airwallex-payment.repository";
 
 /**
  * Single home for checkout pricing + order creation.
@@ -468,7 +469,7 @@ function summarize(
     shippingFee,
     isOutsideDhaka: outsideDhaka,
     isFreeShippingApplied: isFreeShipping,
-    currency: settings.currency,
+    currency: settings.currency.trim().toUpperCase(),
   };
 }
 
@@ -538,16 +539,28 @@ const orderInclude = {
   items: true,
 } satisfies Prisma.OrderInclude;
 
+type SslCommerzPaymentAttempt = {
+  id: string;
+  provider: "SSLCOMMERZ";
+  transactionId: string;
+  idempotencyKey: string;
+};
+
+type AirwallexPaymentAttempt = {
+  id: string;
+  provider: "AIRWALLEX";
+  idempotencyKey: string;
+};
+
+type OnlinePaymentAttempt =
+  | SslCommerzPaymentAttempt
+  | AirwallexPaymentAttempt;
+
 type OrderPaymentOptions = {
   /** Amount collected by an admin at order creation; not a discount. */
   advancePayment?: number;
-  /** Persisted before any provider request for an SSLCommerz checkout. */
-  paymentAttempt?: {
-    id: string;
-    provider: "SSLCOMMERZ";
-    transactionId: string;
-    idempotencyKey: string;
-  };
+  /** Persisted atomically with inventory before any provider request. */
+  paymentAttempt?: OnlinePaymentAttempt;
 };
 
 async function lockCheckoutCatalogRows(
@@ -571,13 +584,24 @@ async function placeOrderInternal(
   input: CheckoutInput,
   options: OrderPaymentOptions = {},
 ) {
-  const isSslCommerz = input.paymentMethod === "SSLCOMMERZ";
-  if (isSslCommerz !== Boolean(options.paymentAttempt)) {
+  const isOnlinePayment =
+    input.paymentMethod === "SSLCOMMERZ" ||
+    input.paymentMethod === "AIRWALLEX";
+  if (isOnlinePayment !== Boolean(options.paymentAttempt)) {
     throw new CheckoutError(
       400,
-      isSslCommerz
+      isOnlinePayment
         ? "Online payment must be initiated through the payment service."
         : "Payment attempt metadata is not valid for this payment method.",
+    );
+  }
+  if (
+    options.paymentAttempt &&
+    input.paymentMethod !== options.paymentAttempt.provider
+  ) {
+    throw new CheckoutError(
+      400,
+      "Payment attempt metadata does not match the selected payment method.",
     );
   }
 
@@ -688,6 +712,7 @@ async function placeOrderInternal(
           taxAmount: summary.tax,
           totalAmount: summary.total,
           advancePayment: round2(advancePayment),
+          currency: summary.currency,
           customerName: input.customerName,
           customerPhone: input.customerPhone,
           customerAddress: input.customerAddress,
@@ -696,7 +721,7 @@ async function placeOrderInternal(
           customerPostalCode,
           customerNote,
           paymentMethod: input.paymentMethod,
-          paymentStatus: isSslCommerz
+          paymentStatus: isOnlinePayment
             ? "PENDING"
             : isPaidInFull
               ? "PAID"
@@ -739,7 +764,7 @@ async function placeOrderInternal(
         data: {
           orderId: order.id,
           status: "PENDING",
-          note: isSslCommerz
+          note: isOnlinePayment
             ? "Order created; awaiting verified online payment."
             : "Order placed.",
           updatedBy: userId,
@@ -747,18 +772,26 @@ async function placeOrderInternal(
       });
 
       const paymentAttempt = options.paymentAttempt
-        ? await tx.paymentTransaction.create({
-            data: {
+        ? options.paymentAttempt.provider === "AIRWALLEX"
+          ? await createAirwallexAttempt(tx, {
               id: options.paymentAttempt.id,
               orderId: order.id,
-              provider: options.paymentAttempt.provider,
-              transactionId: options.paymentAttempt.transactionId,
-              idempotencyKey: options.paymentAttempt.idempotencyKey,
-              amount: summary.total,
-              currency: settings.currency.toUpperCase(),
-              status: "PENDING",
-            },
-          })
+              requestId: options.paymentAttempt.idempotencyKey,
+              amount: toDecimal(summary.total),
+              currency: summary.currency,
+            })
+          : await tx.paymentTransaction.create({
+              data: {
+                id: options.paymentAttempt.id,
+                orderId: order.id,
+                provider: options.paymentAttempt.provider,
+                transactionId: options.paymentAttempt.transactionId,
+                idempotencyKey: options.paymentAttempt.idempotencyKey,
+                amount: summary.total,
+                currency: summary.currency,
+                status: "PENDING",
+              },
+            })
         : null;
 
       // Bump usedCount when a real promo was applied.
@@ -839,7 +872,7 @@ export async function placeOrder(userId: string, input: CheckoutInput) {
 export async function reserveOrderForSslCommerz(
   userId: string,
   input: CheckoutInput,
-  paymentAttempt: NonNullable<OrderPaymentOptions["paymentAttempt"]>,
+  paymentAttempt: SslCommerzPaymentAttempt,
 ) {
   if (input.paymentMethod !== "SSLCOMMERZ") {
     throw new CheckoutError(400, "SSLCommerz payment method is required.");
@@ -847,10 +880,103 @@ export async function reserveOrderForSslCommerz(
 
   const result = await placeOrderInternal(userId, input, { paymentAttempt });
   const persistedAttempt = result.paymentAttempt;
-  if (!persistedAttempt) {
+  if (!persistedAttempt || persistedAttempt.provider !== "SSLCOMMERZ") {
     throw new CheckoutError(500, "Payment attempt could not be persisted.");
   }
   return { ...result, paymentAttempt: persistedAttempt };
+}
+
+async function findAirwallexReservationReplay(
+  userId: string,
+  idempotencyKey: string,
+) {
+  const persisted = await prisma.paymentTransaction.findFirst({
+    where: {
+      provider: "AIRWALLEX",
+      idempotencyKey,
+      order: { userId },
+    },
+    include: {
+      order: { include: orderInclude },
+    },
+  });
+  if (!persisted) return null;
+
+  const { order, ...paymentAttempt } = persisted;
+  const deliveryCharge = round2(order.deliveryCharge);
+  const discountAmount = round2(order.discountAmount);
+  return {
+    order,
+    summary: {
+      subtotal: round2(order.subtotal),
+      // The reservation snapshot does not retain per-product strike-through
+      // savings; zero is safer than recomputing against mutable catalog data.
+      totalSavings: 0,
+      discount: discountAmount,
+      shipping: deliveryCharge,
+      tax: round2(order.taxAmount),
+      total: round2(order.totalAmount),
+      taxRate: 0,
+      freeShippingThreshold: 0,
+      shippingFee: deliveryCharge,
+      isOutsideDhaka: false,
+      isFreeShippingApplied: deliveryCharge === 0,
+      currency: order.currency.trim().toUpperCase(),
+    },
+    promo: order.promoCode
+      ? {
+          ok: true as const,
+          code: order.promoCode,
+          description: null,
+          discount: discountAmount,
+        }
+      : null,
+    paymentAttempt,
+    idempotentReplay: true as const,
+  };
+}
+
+/** Reserve inventory/promo and persist an Airwallex attempt atomically. */
+export async function reserveOrderForAirwallex(
+  userId: string,
+  input: CheckoutInput,
+  paymentAttempt: AirwallexPaymentAttempt,
+) {
+  if (input.paymentMethod !== "AIRWALLEX") {
+    throw new CheckoutError(400, "Airwallex payment method is required.");
+  }
+
+  const existing = await findAirwallexReservationReplay(
+    userId,
+    paymentAttempt.idempotencyKey,
+  );
+  if (existing) return existing;
+
+  let result: Awaited<ReturnType<typeof placeOrderInternal>>;
+  try {
+    result = await placeOrderInternal(userId, input, { paymentAttempt });
+  } catch (error) {
+    if (
+      error instanceof CheckoutError &&
+      error.details?.code === "PAYMENT_IDEMPOTENCY_CONFLICT"
+    ) {
+      const replay = await findAirwallexReservationReplay(
+        userId,
+        paymentAttempt.idempotencyKey,
+      );
+      if (replay) return replay;
+    }
+    throw error;
+  }
+  const persistedAttempt = result.paymentAttempt;
+  if (!persistedAttempt || persistedAttempt.provider !== "AIRWALLEX") {
+    throw new CheckoutError(500, "Payment attempt could not be persisted.");
+  }
+  return {
+    ...result,
+    paymentAttempt: persistedAttempt,
+    idempotentReplay: false as const,
+  };
 }
 
 /**

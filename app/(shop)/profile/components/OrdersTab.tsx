@@ -73,8 +73,8 @@ function formatDate(value: string): string {
   }
 }
 
-function formatBdt(value: number): string {
-  return `BDT ${Math.round(value).toLocaleString()}`;
+function formatCurrency(value: number, currency: string): string {
+  return `${currency || "BDT"} ${Math.round(value).toLocaleString()}`;
 }
 
 /**
@@ -306,7 +306,10 @@ function OrderRow({
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
   const previewItems = order.items.slice(0, 3);
   const moreItems = order.items.length - previewItems.length;
-  const canCancel = CANCELLABLE_STATUSES.has(order.status);
+  const canCancel =
+    CANCELLABLE_STATUSES.has(order.status) &&
+    !order.requiresPaymentReview &&
+    order.paymentMethod !== "AIRWALLEX";
   // After delivery, point the customer at the first ordered product so
   // they can leave a review on its detail page.
   const reviewableProductId =
@@ -373,7 +376,7 @@ function OrderRow({
 
         <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-end lg:justify-center">
           <p className="text-left text-lg font-extrabold text-brand-red sm:text-right">
-            {formatBdt(order.totalAmount)}
+            {formatCurrency(order.totalAmount, order.currency)}
           </p>
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
             <Link

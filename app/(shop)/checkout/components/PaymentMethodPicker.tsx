@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 type PaymentMethodPickerProps = {
   value: CheckoutPaymentMethod;
   onChange: (value: CheckoutPaymentMethod) => void;
+  airwallexEnabled: boolean;
 };
 
 type PaymentOption = {
@@ -26,6 +27,13 @@ const OPTIONS: PaymentOption[] = [
     icon: <Banknote className="h-5 w-5" />,
     badge: "No prepayment",
   },
+  {
+    value: "AIRWALLEX",
+    label: "Pay securely online",
+    description: "Continue to Airwallex's hosted checkout to complete payment.",
+    icon: <CreditCard className="h-5 w-5" />,
+    badge: "Card / wallet",
+  },
   // {
   //   value: "SSLCOMMERZ",
   //   label: "Online payment",
@@ -38,7 +46,11 @@ const OPTIONS: PaymentOption[] = [
 export default function PaymentMethodPicker({
   value,
   onChange,
+  airwallexEnabled,
 }: PaymentMethodPickerProps) {
+  const options = airwallexEnabled
+    ? OPTIONS
+    : OPTIONS.filter((option) => option.value !== "AIRWALLEX");
   return (
     <section className="rounded-3xl border border-brand-border bg-brand-white p-5 shadow-sm sm:p-6">
       <header className="mb-3 flex items-center justify-between">
@@ -55,7 +67,7 @@ export default function PaymentMethodPicker({
       </header>
 
       <div className="grid gap-2.5 sm:grid-cols-2">
-        {OPTIONS.map((option) => {
+        {options.map((option) => {
           const active = value === option.value;
           return (
             <button

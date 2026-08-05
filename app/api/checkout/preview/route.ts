@@ -8,6 +8,7 @@ import { toAppSession } from "@/lib/auth/session";
 import { previewCheckout } from "@/lib/services/checkout.service";
 import { handleServiceError } from "@/lib/services/service-error";
 import { checkoutPreviewSchema } from "@/lib/validations/checkout.validation";
+import { airwallexConfig } from "@/lib/airwallex/config/airwallex.config";
 
 /**
  * POST /api/checkout/preview
@@ -40,7 +41,13 @@ export async function POST(request: NextRequest) {
   try {
     const session = toAppSession((await auth()) as Session | null);
     const preview = await previewCheckout(session?.user.id ?? null, parsed.data);
-    return ok(preview);
+    return ok({
+      ...preview,
+      availablePaymentMethods: [
+        "CASH_ON_DELIVERY" as const,
+        ...(airwallexConfig.enabled ? (["AIRWALLEX"] as const) : []),
+      ],
+    });
   } catch (error) {
     return handleServiceError("checkout.preview.POST", error);
   }

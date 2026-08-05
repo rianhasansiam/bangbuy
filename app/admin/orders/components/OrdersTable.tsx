@@ -107,7 +107,9 @@ export default function OrdersTable({
             {orders.map((order) => {
               const isBusy = busyOrderId === order.id;
               const isExpanded = expandedId === order.id;
-              const isGatewayManaged = order.paymentMethod === "SSLCOMMERZ";
+              const isGatewayManaged =
+                order.paymentMethod === "SSLCOMMERZ" ||
+                order.paymentMethod === "AIRWALLEX";
               const allowedNext = STATUS_TRANSITIONS[order.status].filter(
                 (status) =>
                   !(
@@ -116,7 +118,8 @@ export default function OrdersTable({
                       (status === "PAYMENT_CONFIRMED" &&
                         order.paymentStatus !== "PAID") ||
                       (status === "CANCELLED" &&
-                        order.paymentStatus === "PAID"))
+                        (order.paymentStatus === "PAID" ||
+                          order.paymentMethod === "AIRWALLEX")))
                   ),
               );
 

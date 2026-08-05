@@ -35,6 +35,7 @@ import {
 import { computeCartSummary } from "@/features/cart/summary";
 import type { AppDispatch, RootState } from "@/store";
 import { toast } from "@/lib/feedback";
+import { startAirwallexHostedCheckout } from "@/lib/airwallex/components/AirwallexPayButton";
 import {
   CheckoutPageSkeleton,
   FullPageLoader,
@@ -134,7 +135,7 @@ function CheckoutPageInner() {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const submitInFlightRef = useRef(false);
-  const sslIdempotencyAttemptRef =
+  const onlineIdempotencyAttemptRef =
     useRef<CheckoutIdempotencyAttempt | null>(null);
 
   const [fieldErrors, setFieldErrors] = useState<
@@ -369,6 +370,7 @@ function CheckoutPageInner() {
     submitInFlightRef.current = true;
     setIsPlacingOrder(true);
     let handingOffToGateway = false;
+    let reservedAirwallexOrderId: string | null = null;
 
     try {
       const checkoutRequest: PlaceOrderRequest = {
@@ -387,13 +389,16 @@ function CheckoutPageInner() {
         clearCart: source.kind === "cart",
       };
 
-      if (paymentMethod === "SSLCOMMERZ") {
+      if (
+        paymentMethod === "SSLCOMMERZ" ||
+        paymentMethod === "AIRWALLEX"
+      ) {
         const attempt = resolveCheckoutIdempotencyAttempt(
-          sslIdempotencyAttemptRef.current,
+          onlineIdempotencyAttemptRef.current,
           JSON.stringify(checkoutRequest),
           () => window.crypto.randomUUID(),
         );
-        sslIdempotencyAttemptRef.current = attempt;
+        onlineIdempotencyAttemptRef.current = attempt;
         checkoutRequest.idempotencyKey = attempt.key;
       }
 
@@ -420,9 +425,26 @@ function CheckoutPageInner() {
         return;
       }
 
+      if (paymentMethod === "AIRWALLEX") {
+        reservedAirwallexOrderId = result.order.id;
+        toast.info("Opening Airwallex secure checkout...");
+        await startAirwallexHostedCheckout(result.order.id);
+        handingOffToGateway = true;
+        return;
+      }
+
       toast.success("Order placed successfully!");
       router.push(`/orders/${result.order.id}?just-placed=1`);
     } catch (error) {
+      if (reservedAirwallexOrderId) {
+        toast.info(
+          "Your order is reserved. Open it to retry the secure payment.",
+        );
+        router.push(
+          `/orders/${reservedAirwallexOrderId}?payment=failed`,
+        );
+        return;
+      }
       if (
         error instanceof CheckoutSubmissionError &&
         error.orderId &&
@@ -539,6 +561,10 @@ function CheckoutPageInner() {
               <PaymentMethodPicker
                 value={paymentMethod}
                 onChange={setPaymentMethod}
+                airwallexEnabled={
+                  preview?.availablePaymentMethods.includes("AIRWALLEX") ??
+                  false
+                }
               />
 
               <CheckoutItemsCard

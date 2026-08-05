@@ -113,7 +113,13 @@ function parsePaymentStatus(value: unknown): PaymentStatus {
 
 function parsePaymentMethod(value: unknown): PaymentMethod {
   return (
-    ["CASH_ON_DELIVERY", "SSLCOMMERZ", "PAYPAL", "ONLINE"] as const
+    [
+      "CASH_ON_DELIVERY",
+      "SSLCOMMERZ",
+      "AIRWALLEX",
+      "PAYPAL",
+      "ONLINE",
+    ] as const
   ).includes(value as PaymentMethod)
     ? (value as PaymentMethod)
     : "CASH_ON_DELIVERY";

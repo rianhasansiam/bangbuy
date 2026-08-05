@@ -59,11 +59,13 @@ export default function OrderSummaryCard({
     : 0;
 
   const buttonLabel = isPlacing
-    ? paymentMethod === "SSLCOMMERZ"
-      ? "Starting secure payment..."
+    ? paymentMethod === "SSLCOMMERZ" || paymentMethod === "AIRWALLEX"
+      ? "Starting secure checkout..."
       : "Placing order..."
     : paymentMethod === "SSLCOMMERZ"
       ? "Pay securely with SSLCommerz"
+      : paymentMethod === "AIRWALLEX"
+        ? "Pay securely with Airwallex"
       : "Place order";
   const isApplyingPromo = isLoading && Boolean(promoCode.trim()) && !appliedPromo;
 
@@ -95,7 +97,7 @@ export default function OrderSummaryCard({
               </p>
               {summary && (
                 <p className="truncate text-xs text-emerald-700">
-                  -BDT {summary.discount.toLocaleString()} off
+                  -{summary.currency} {summary.discount.toLocaleString()} off
                 </p>
               )}
             </div>
@@ -166,12 +168,17 @@ export default function OrderSummaryCard({
           </div>
         ) : (
           <>
-            <SummaryRow label="Subtotal" value={summary.subtotal} />
+            <SummaryRow
+              label="Subtotal"
+              value={summary.subtotal}
+              currency={summary.currency}
+            />
             {summary.discount > 0 && appliedPromo && (
               <SummaryRow
                 label={`Promo (${appliedPromo})`}
                 value={-summary.discount}
                 tone="success"
+                currency={summary.currency}
               />
             )}
             <SummaryRow
@@ -182,10 +189,12 @@ export default function OrderSummaryCard({
               }
               value={summary.shipping}
               freeLabel={summary.shipping === 0 ? "FREE" : undefined}
+              currency={summary.currency}
             />
             <SummaryRow
               label={`Tax (${Math.round(summary.taxRate * 100)}%)`}
               value={summary.tax}
+              currency={summary.currency}
             />
           </>
         )}
@@ -196,13 +205,13 @@ export default function OrderSummaryCard({
           <div className="flex items-baseline justify-between">
             <span className="text-sm font-semibold text-gray-700">Total</span>
             <span className="text-2xl font-extrabold text-brand-red sm:text-3xl">
-              BDT {summary.total.toLocaleString()}
+              {summary.currency} {summary.total.toLocaleString()}
             </span>
           </div>
           {totalSaved > 0 && (
             <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
               <Sparkles className="h-3 w-3" />
-              You saved BDT {totalSaved.toLocaleString()}
+              You saved {summary.currency} {totalSaved.toLocaleString()}
             </p>
           )}
         </div>
@@ -245,6 +254,12 @@ export default function OrderSummaryCard({
           You&apos;ll continue to SSLCommerz to complete your secure payment.
         </p>
       )}
+      {paymentMethod === "AIRWALLEX" && (
+        <p className="-mt-1 text-center text-[11px] font-medium text-gray-600">
+          You&apos;ll continue to Airwallex&apos;s hosted checkout. BangBuy never
+          collects your card details.
+        </p>
+      )}
 
       <div className="flex items-center justify-center gap-1.5 text-[11px] text-gray-500">
         <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
@@ -259,11 +274,13 @@ function SummaryRow({
   value,
   tone = "default",
   freeLabel,
+  currency = "BDT",
 }: {
   label: string;
   value: number;
   tone?: "default" | "success";
   freeLabel?: string;
+  currency?: string;
 }) {
   return (
     <div className="flex items-center justify-between">
@@ -278,7 +295,8 @@ function SummaryRow({
             tone === "success" ? "text-emerald-600" : "text-gray-900"
           }`}
         >
-          {value < 0 ? "-" : ""}BDT {Math.abs(value).toLocaleString()}
+          {value < 0 ? "-" : ""}{currency}{" "}
+          {Math.abs(value).toLocaleString()}
         </span>
       )}
     </div>

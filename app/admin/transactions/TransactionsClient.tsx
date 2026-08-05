@@ -32,6 +32,7 @@ const inputClass =
 
 const PROVIDER_OPTIONS = [
   { value: "SSLCOMMERZ", label: "SSLCommerz" },
+  { value: "AIRWALLEX", label: "Airwallex" },
   { value: "ADMIN_ADVANCE", label: "Admin advance" },
   { value: "CASH_ON_DELIVERY", label: "Cash on delivery" },
   { value: "ONLINE", label: "Legacy online payment" },
