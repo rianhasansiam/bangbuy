@@ -37,12 +37,12 @@ export function resolveSiteUrl(
       : null;
   const isProduction = environment.NODE_ENV === "production";
 
-  // A developer's checked-out `.env` commonly keeps the legacy public value
-  // on localhost. Do not let that client compatibility value poison a
-  // production build when the canonical server-only variable is absent.
-  if (!serverUrl && publicUrl && isProduction) {
+  // A developer's checked-out `.env` commonly points either URL variable at
+  // localhost. `next build` always runs in production mode, so ignore that
+  // local-only value and use the production canonical origin for the build.
+  if (configured && isProduction) {
     try {
-      if (isLocalHostname(new URL(publicUrl).hostname)) configured = null;
+      if (isLocalHostname(new URL(configured.value).hostname)) configured = null;
     } catch {
       // Preserve the normal validation error below for malformed values.
     }

@@ -19,7 +19,10 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/modules/airwallex/tests/**/*.test.ts"],
+    include: [
+      "src/modules/airwallex/tests/**/*.test.ts",
+      "__tests__/**/*.test.ts",
+    ],
     clearMocks: true,
     restoreMocks: true,
   },

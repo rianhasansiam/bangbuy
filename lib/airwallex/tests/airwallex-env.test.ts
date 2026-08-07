@@ -74,18 +74,20 @@ describe("parseAirwallexEnvironment", () => {
     ).toThrow();
   });
 
-  it("allows localhost HTTP only outside production", () => {
+  it("allows localhost HTTP only for the Airwallex sandbox", () => {
     expect(
       parseAirwallexEnvironment({
-        NODE_ENV: "test",
-        AIRWALLEX_RETURN_URL: "https:rian-test-payment.vercel.app/orders/payment-return",
+        AIRWALLEX_ENV: "sandbox",
+        NODE_ENV: "production",
+        AIRWALLEX_RETURN_URL: "http://localhost:3000/orders/payment-return",
       }).returnUrl,
-    ).toBe("https:rian-test-payment.vercel.app/orders/payment-return");
+    ).toBe("http://localhost:3000/orders/payment-return");
 
     expect(() =>
       parseAirwallexEnvironment({
-        NODE_ENV: "production",
-        AIRWALLEX_RETURN_URL: "https:rian-test-payment.vercel.app/orders/payment-return",
+        AIRWALLEX_ENV: "production",
+        NODE_ENV: "development",
+        AIRWALLEX_RETURN_URL: "http://localhost:3000/orders/payment-return",
       }),
     ).toThrow();
   });

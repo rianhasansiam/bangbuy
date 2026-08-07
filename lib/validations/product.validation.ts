@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { deriveVariantKey } from "@/lib/catalog/variant-options";
+import { productDescriptionBlocksArraySchema } from "@/lib/validations/product-description-blocks.validation";
 
 /**
  * Zod schemas for the Product API.
@@ -35,8 +36,9 @@ const HEX_COLOR_VALUE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
 /** Common reusable fragments. */
 const name = z
-  .string()
+  .string({ message: "Product name is required." })
   .trim()
+  .min(1, "Product name is required.")
   .min(2, "Product name is too short.")
   .max(150, "Product name is too long.");
 
@@ -59,26 +61,26 @@ const description = z
 
 /** Business purchase/source cost. Required, admin-only, never negative. */
 const buyingPrice = z
-  .number({ error: "Buying price must be a number." })
-  .finite()
+  .number({ message: "Buying price is required." })
+  .finite("Buying price must be a valid number.")
   .nonnegative("Buying price cannot be negative.");
 
 /** Normal customer selling price. Required, never negative. */
 const salePrice = z
-  .number({ error: "Sale price must be a number." })
-  .finite()
+  .number({ message: "Sale price is required." })
+  .finite("Sale price must be a valid number.")
   .nonnegative("Sale price cannot be negative.");
 
 /** Optional discounted selling price. Nullable, never negative. */
 const discountPrice = z
-  .number({ error: "Discount price must be a number." })
-  .finite()
+  .number({ message: "Discount price must be a valid number." })
+  .finite("Discount price must be a valid number.")
   .nonnegative("Discount price cannot be negative.")
   .optional()
   .nullable();
 
 const stock = z
-  .number({ error: "Stock must be a number." })
+  .number({ message: "Stock is required." })
   .int("Stock must be a whole number.")
   .nonnegative("Stock cannot be negative.");
 
@@ -255,6 +257,7 @@ export const createProductSchema = z
     modelNumber: optionalText(100),
     series: optionalText(100),
     specifications,
+    descriptionBlocks: productDescriptionBlocksArraySchema.optional().nullable(),
     buyingPrice,
     salePrice,
     discountPrice,
@@ -309,6 +312,7 @@ export const updateProductSchema = z
     modelNumber: optionalText(100),
     series: optionalText(100),
     specifications,
+    descriptionBlocks: productDescriptionBlocksArraySchema.optional().nullable(),
     buyingPrice: buyingPrice.optional(),
     salePrice: salePrice.optional(),
     discountPrice,

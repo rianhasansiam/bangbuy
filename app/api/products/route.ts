@@ -3,7 +3,7 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 import { z } from "zod";
 
 import { isAdminRequest, requireAdmin } from "@/lib/api/guards";
-import { jsonError, created, ok } from "@/lib/api/response";
+import { created, jsonError, ok } from "@/lib/api/response";
 import {
   invalidateProductSnapshots,
   productInvalidationSnapshot,
@@ -16,7 +16,10 @@ import {
   serializeProduct,
   type ProductWithCategory,
 } from "@/lib/services/product.service";
-import {createProductSchema, productQuerySchema,} from "@/lib/validations/product.validation";
+import {
+  createProductSchema,
+  productQuerySchema,
+} from "@/lib/validations/product.validation";
 
 /**
  * GET /api/products
@@ -24,10 +27,6 @@ import {createProductSchema, productQuerySchema,} from "@/lib/validations/produc
  * Public listing with pagination, search, filtering, and sorting.
  * All knobs come from the query string; see `productQuerySchema`.
  */
-
-
-
-
 export async function GET(request: NextRequest) {
   const params = Object.fromEntries(request.nextUrl.searchParams);
   const parsed = productQuerySchema.safeParse(params);
@@ -61,18 +60,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
 /**
  * POST /api/products
  *
@@ -96,8 +83,16 @@ export async function POST(request: NextRequest) {
 
   const parsed = createProductSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonError(400, "Please review the highlighted fields and try again.", {
-      fieldErrors: z.flattenError(parsed.error).fieldErrors,
+    const fieldErrors = z.flattenError(parsed.error).fieldErrors;
+    const messages = Object.values(fieldErrors)
+      .flat()
+      .filter((msg): msg is string => typeof msg === "string" && Boolean(msg.trim()));
+    const errorMessage =
+      messages.length > 0
+        ? messages.join(". ")
+        : "Missing or invalid required fields.";
+    return jsonError(400, errorMessage, {
+      fieldErrors,
     });
   }
 

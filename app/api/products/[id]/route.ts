@@ -21,13 +21,7 @@ import { updateProductSchema } from "@/lib/validations/product.validation";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-
-
-
-
-
 /** GET /api/products/[id] — public, returns product + category. */
-
 export async function GET(_request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
 
@@ -44,21 +38,10 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   }
 }
 
-
-
-
-
-
-
-
-
-
 /** PATCH /api/products/[id] — admin only, partial update. */
 export async function PATCH(request: NextRequest, context: RouteContext) {
-
   const guard = await requireAdmin();
   if (!guard.ok) return guard.response;
-
 
   const { id } = await context.params;
 
@@ -66,8 +49,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   if (!contentType.toLowerCase().includes("application/json")) {
     return jsonError(415, "Content-Type must be application/json.");
   }
-
-
 
   let body: unknown;
   try {
@@ -77,15 +58,20 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   const parsed = updateProductSchema.safeParse(body);
-  
   if (!parsed.success) {
-    return jsonError(400, "Please review the highlighted fields and try again.", {
-      fieldErrors: z.flattenError(parsed.error).fieldErrors,
+    const fieldErrors = z.flattenError(parsed.error).fieldErrors;
+    const messages = Object.values(fieldErrors)
+      .flat()
+      .filter((msg): msg is string => typeof msg === "string" && Boolean(msg.trim()));
+    const errorMessage =
+      messages.length > 0
+        ? messages.join(". ")
+        : "Missing or invalid required fields.";
+    return jsonError(400, errorMessage, {
+      fieldErrors,
     });
   }
 
-  // Cross-field check: if either salePrice or discountPrice is being
-  // updated, the resulting pair must still satisfy discount <= sale.
   const existing = await getProductById(id);
   if (!existing) return jsonError(404, "Product not found.");
 
@@ -154,19 +140,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return jsonError(500, "Failed to update product.");
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /**
  * DELETE /api/products/[id]

@@ -177,6 +177,12 @@ model Product {
   // Add a PostgreSQL GIN index through the provided SQL migration.
   specifications Json? @db.JsonB
 
+  // Structured block-based product description builder output.
+  // Each element is a discriminated-union block (richText, featureGrid,
+  // imageText, specificationTable). The legacy `description` field is
+  // used as a plain-text fallback when this column is absent or empty.
+  descriptionBlocks Json? @db.JsonB
+
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 

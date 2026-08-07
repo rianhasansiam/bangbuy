@@ -44,6 +44,7 @@ import type { AppDispatch, RootState } from "@/store";
 type ProductWriteBody = {
   name: string;
   description: string | null;
+  descriptionBlocks: unknown[] | null;
   seoTitle: string | null;
   metaDescription: string | null;
   ogImage: string | null;
@@ -235,8 +236,29 @@ export default function AdminProductsPage() {
   }, [isSubmitting]);
 
   const buildBody = (): ProductWriteBody => {
+    const missingFields: string[] = [];
     const name = form.name.trim();
-    if (!name) throw new Error("Product name is required.");
+    if (!name) missingFields.push("Product name");
+
+    if (!form.categoryId) missingFields.push("Category");
+
+    if (!form.buyingPrice.trim()) missingFields.push("Buying price");
+    if (!form.salePrice.trim()) missingFields.push("Sale price");
+
+    if (form.variants.length === 0) {
+      missingFields.push("At least one variant");
+    }
+
+    form.variants.forEach((variant, index) => {
+      if (!variant.stock.trim()) {
+        missingFields.push(`Variant ${index + 1} stock`);
+      }
+    });
+
+    if (missingFields.length > 0) {
+      throw new Error(`Missing mandatory field(s): ${missingFields.join(", ")}.`);
+    }
+
     if (
       panelMode === "edit" &&
       !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(form.slug.trim())
@@ -245,7 +267,7 @@ export default function AdminProductsPage() {
         "Canonical slug must use lowercase letters, numbers, and single hyphens.",
       );
     }
-    if (!form.categoryId) throw new Error("Category is required.");
+
     const buyingPrice = parseNumericField(form.buyingPrice, "Buying price");
     const salePrice = parseNumericField(form.salePrice, "Sale price");
     if (buyingPrice < 0 || salePrice < 0) throw new Error("Prices cannot be negative.");
@@ -255,7 +277,6 @@ export default function AdminProductsPage() {
     if (discountPrice !== null && (discountPrice < 0 || discountPrice > salePrice)) {
       throw new Error("Discount price must be between zero and the sale price.");
     }
-    if (form.variants.length === 0) throw new Error("Add at least one variant.");
 
     const seenCombinations = new Set<string>();
     const seenSkus = new Set<string>();
@@ -298,6 +319,10 @@ export default function AdminProductsPage() {
     return {
       name,
       description: optional(form.description),
+      descriptionBlocks:
+        Array.isArray(form.descriptionBlocks) && form.descriptionBlocks.length > 0
+          ? form.descriptionBlocks
+          : null,
       seoTitle: optional(form.seoTitle),
       metaDescription: optional(form.metaDescription),
       ogImage: optional(form.ogImage),

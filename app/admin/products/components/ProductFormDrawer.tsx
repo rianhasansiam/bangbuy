@@ -1,7 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, lazy, Suspense } from "react";
 import { Boxes, Plus, Trash2, X } from "lucide-react";
+
+const ProductDescriptionBuilder = lazy(
+  () => import("@/components/product-description/ProductDescriptionBuilder"),
+);
 
 import ImageUploader from "@/components/ui/ImageUploader";
 import MultiImageUploader from "@/components/ui/MultiImageUploader";
@@ -16,6 +20,7 @@ import {
   type ProductFormState,
   type VariantFormRow,
 } from "@/features/admin-products/api";
+import type { ProductDescriptionBlock } from "@/lib/types/product-description-blocks";
 import { cn } from "@/lib/utils";
 
 import Field from "./Field";
@@ -500,13 +505,20 @@ export default function ProductFormDrawer({
               </div>
             </Section>
 
-            <Section title="Description" description="Long-form product information, applications, and buying guidance.">
-              <textarea
-                value={form.description}
-                onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))}
-                className="min-h-36 w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-red"
-                placeholder="Describe the product, intended use, and key benefits."
-              />
+            <Section title="Description" description="Build the product description by adding, editing, and reordering content blocks. Blocks are stored as structured data — not raw HTML.">
+              <Suspense fallback={
+                <div className="flex h-32 items-center justify-center rounded-2xl border border-brand-border bg-brand-light-bg">
+                  <span className="text-sm text-gray-400">Loading editor…</span>
+                </div>
+              }>
+                <ProductDescriptionBuilder
+                  value={form.descriptionBlocks as ProductDescriptionBlock[]}
+                  onChange={(blocks) =>
+                    onChange((current) => ({ ...current, descriptionBlocks: blocks }))
+                  }
+                  disabled={isSubmitting}
+                />
+              </Suspense>
             </Section>
           </div>
 

@@ -45,6 +45,7 @@ import ProductActions from "./components/ProductActions";
 import ProductGallery from "./components/ProductGallery";
 import ProductInfo from "./components/ProductInfo";
 import ProductTabs from "./components/ProductTabs";
+import ProductDescriptionRenderer from "@/components/product/product-description/ProductDescriptionRenderer";
 import PromoBanners from "./components/PromoBanners";
 import RecentProducts from "./components/RecentProducts";
 
@@ -734,14 +735,36 @@ export default async function ProductDetailsPage({ params }: Props) {
           </div>
         </div>
 
-        {(product.description?.trim() || specifications) && (
-          <div className="mt-10">
-            <ProductTabs
-              description={product.description}
-              specifications={specifications}
-            />
-          </div>
-        )}
+        {/* Block-based description (primary) */}
+        {(() => {
+          const hasBlocks = Array.isArray(product.descriptionBlocks) &&
+            (product.descriptionBlocks as unknown[]).length > 0;
+          const hasLegacyTabs = product.description?.trim() || specifications;
+
+          return (
+            <>
+              {hasBlocks && (
+                <div className="mt-10">
+                  <h2 className="sr-only">Product description</h2>
+                  <ProductDescriptionRenderer
+                    blocks={product.descriptionBlocks}
+                    legacyDescription={product.description}
+                  />
+                </div>
+              )}
+
+              {/* Legacy tabs: always show specs; only show description tab when no block-based content */}
+              {(!hasBlocks && hasLegacyTabs || specifications) && (
+                <div className="mt-10">
+                  <ProductTabs
+                    description={hasBlocks ? null : product.description}
+                    specifications={specifications}
+                  />
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         <div className="mt-10">
           <DeferredDealsCarousel

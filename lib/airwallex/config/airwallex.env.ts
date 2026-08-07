@@ -34,14 +34,17 @@ function isSecureHttpUrl(value: string): boolean {
   }
 }
 
-function isTrustedReturnUrl(value: string, nodeEnvironment: string): boolean {
+function isTrustedReturnUrl(
+  value: string,
+  airwallexEnvironment: "sandbox" | "production",
+): boolean {
   try {
     const url = new URL(value);
     if (url.username || url.password || url.hash) return false;
     if (url.protocol === "https:") return true;
     const localHostnames = new Set(["localhost", "127.0.0.1", "::1"]);
     return (
-      nodeEnvironment !== "production" &&
+      airwallexEnvironment === "sandbox" &&
       url.protocol === "http:" &&
       localHostnames.has(url.hostname)
     );
@@ -85,7 +88,7 @@ const rawEnvironmentSchema = z
   })
   .superRefine((value, context) => {
     if (
-      !isTrustedReturnUrl(value.AIRWALLEX_RETURN_URL, value.NODE_ENV)
+      !isTrustedReturnUrl(value.AIRWALLEX_RETURN_URL, value.AIRWALLEX_ENV)
     ) {
       context.addIssue({
         code: "custom",
@@ -186,4 +189,3 @@ export function parseAirwallexEnvironment(
     returnUrl: parsed.AIRWALLEX_RETURN_URL,
   });
 }
-

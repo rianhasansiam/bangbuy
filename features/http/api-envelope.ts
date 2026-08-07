@@ -14,11 +14,31 @@ export function readApiError(payload: unknown, fallback: string): string {
   const record = asRecord(payload);
   if (!record) return fallback;
 
+  if (record.fieldErrors && typeof record.fieldErrors === "object") {
+    const fieldEntries = Object.entries(
+      record.fieldErrors as Record<string, string[] | undefined>,
+    );
+    const messages = fieldEntries
+      .flatMap(([_, errors]) => errors || [])
+      .filter(
+        (msg): msg is string => typeof msg === "string" && Boolean(msg.trim()),
+      );
+    if (messages.length > 0) {
+      return messages.join(". ");
+    }
+  }
+
+  const GENERIC_MSG = "Please review the highlighted fields";
+
   if (typeof record.message === "string" && record.message.trim()) {
-    return record.message;
+    if (!record.message.includes(GENERIC_MSG)) {
+      return record.message;
+    }
   }
   if (typeof record.error === "string" && record.error.trim()) {
-    return record.error;
+    if (!record.error.includes(GENERIC_MSG)) {
+      return record.error;
+    }
   }
 
   return fallback;

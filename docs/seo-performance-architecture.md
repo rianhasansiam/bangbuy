@@ -87,7 +87,7 @@ SITE_URL=https://bangbuy.net
 NEXT_PUBLIC_SITE_URL=https://bangbuy.net
 ```
 
-`SITE_URL` takes precedence. `NEXT_PUBLIC_SITE_URL` remains only for compatibility and should match it. The resolver requires an absolute HTTP(S) origin without credentials, path, query, hash, or trailing route. Non-local production origins must use HTTPS. When no valid server value exists, production falls back to `https://bangbuy.net`; local development falls back to `https:rian-test-payment.vercel.app`. A legacy localhost public value is deliberately ignored during a production build.
+`SITE_URL` takes precedence. `NEXT_PUBLIC_SITE_URL` remains only for compatibility and should match it. The resolver requires an absolute HTTP(S) origin without credentials, path, query, hash, or trailing route. Non-local production origins must use HTTPS. When no valid server value exists, production falls back to `https://bangbuy.net`; local development falls back to `https:rian-test-payment.vercel.app`. Localhost values from either variable are deliberately ignored during a production build so a developer's local `.env` cannot poison production metadata.
 
 Changing the canonical origin requires a rebuild/redeploy because metadata, JSON-LD, robots, and sitemap output use this configuration during rendering/build. Validate a staging deployment before exposing it to crawlers; a wrong origin contaminates every canonical URL.
 

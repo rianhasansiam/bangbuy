@@ -11,44 +11,6 @@ import { handleServiceError } from "@/lib/services/service-error";
 
 /**
  * Shared wrappers for admin API routes.
- *
- * Why this exists
- * ---------------
- * Every admin route in `app/api/admin/**` repeats the same six steps:
- *   1. `requireAdmin()` → 401 / 403 short-circuit.
- *   2. (write methods) verify `Content-Type: application/json`.
- *   3. (write methods) `await request.json()` with a 400 fallback.
- *   4. (write methods) Zod `safeParse` with a 400 + `fieldErrors` body.
- *   5. Call a service and wrap the result in `ok` / `created`.
- *   6. `try/catch` → `handleServiceError(scope, error)` on the way out,
- *      occasionally with a Prisma `P2025` → 404 short-circuit before it.
- *
- * That boilerplate is mechanical, easy to drift on, and obscures the one
- * line of each route that actually does work (the service call). These
- * helpers move the boilerplate here and keep the route file focused on
- * "what service does this hit, with what tags to bust".
- *
- * Design goals
- * ------------
- *   - **Zero behavior change.** Status codes, error message strings,
- *     `fieldErrors` shape, response envelopes, and `handleServiceError`
- *     scope strings all match the hand-written routes exactly.
- *   - **Declarative cache busting.** `revalidate: ["tag-a", "tag-b"]`
- *     replaces hand-rolled `bustTags()` helpers. Tags are only flushed
- *     on a successful (non-throwing) handler run, matching today's
- *     behavior of placing `revalidateTag` inside the `try` block.
- *   - **Composable, not magic.** No reflection, no decorator metadata.
- *     Each helper is a plain function that returns a Next.js route
- *     handler — easy to read, easy to delete.
- *   - **Type-safe handler args.** The handler receives the validated
- *     body (when a schema is provided), the resolved params (when the
- *     caller declares them), the admin session, and the original
- *     request — all narrowed by inference.
- *
- * Cache profile note
- * ------------------
- * This project calls `revalidateTag(tag, "max")` everywhere. The shared
- * cache helper preserves that signature so route files only declare tags.
  */
 
 type AdminSession = Extract<
@@ -143,16 +105,6 @@ function envelope<TData>(result: AdminHandlerResult<TData>): Response {
 
 /**
  * Build a JSON-body admin route handler (POST / PATCH / PUT).
- *
- * Behavior matches the hand-written routes step-for-step:
- *   - 401/403 from `requireAdmin`
- *   - 415 if `Content-Type` isn't JSON
- *   - 400 `"Invalid JSON payload."` on `request.json()` failure
- *   - 400 `"Please review the highlighted fields and try again."` with
- *     `fieldErrors` from `z.flattenError` on schema failure
- *   - 404 + custom message if `notFoundOn` matches the thrown error
- *   - `handleServiceError(scope, error)` for everything else
- *   - blocking tag expiry for each declared tag on success
  */
 export function adminJsonRoute<
   TSchema extends ZodType,
@@ -184,11 +136,15 @@ export function adminJsonRoute<
 
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
-      return jsonError(
-        400,
-        "Please review the highlighted fields and try again.",
-        { fieldErrors: z.flattenError(parsed.error).fieldErrors },
-      );
+      const fieldErrors = z.flattenError(parsed.error).fieldErrors;
+      const messages = Object.values(fieldErrors)
+        .flat()
+        .filter((msg): msg is string => typeof msg === "string" && Boolean(msg.trim()));
+      const errorMessage =
+        messages.length > 0
+          ? messages.join(". ")
+          : "Missing or invalid required fields.";
+      return jsonError(400, errorMessage, { fieldErrors });
     }
 
     try {
@@ -220,12 +176,6 @@ export function adminJsonRoute<
 
 /**
  * Build a no-body admin route handler (GET / DELETE).
- *
- * Same guarantees as `adminJsonRoute` minus the JSON body steps. When a
- * `querySchema` is supplied it parses `request.nextUrl.searchParams` and
- * passes the parsed object as `query` to the handler; failure returns the
- * same 400 + `fieldErrors` shape as the body-validation path so admin
- * UIs that already render those errors keep working.
  */
 export function adminRoute<
   TData,

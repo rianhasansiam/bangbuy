@@ -33,6 +33,8 @@ export type AdminProduct = {
   name: string;
   slug: string;
   description: string | null;
+  /** Structured description blocks (JSON). null when using legacy description. */
+  descriptionBlocks: unknown | null;
   seoTitle: string | null;
   metaDescription: string | null;
   ogImage: string | null;
@@ -124,6 +126,8 @@ export type ProductFormState = {
   manufacturerId: string;
   specifications: KeyValueFormRow[];
   variants: VariantFormRow[];
+  /** Structured block-based description. Serialised as JSON string for the API. */
+  descriptionBlocks: unknown[];
 };
 
 export type ApiMeta = {
@@ -186,6 +190,7 @@ export const EMPTY_FORM: ProductFormState = {
   manufacturerId: "",
   specifications: [],
   variants: [makeEmptyVariant()],
+  descriptionBlocks: [],
 };
 
 function record(value: unknown): UnknownRecord | null {
@@ -315,6 +320,7 @@ export function parseProductsPayload(payload: unknown): AdminProduct[] {
       name: string(row.name) ?? "Untitled Product",
       slug: string(row.slug) ?? "",
       description: string(row.description),
+      descriptionBlocks: Array.isArray(row.descriptionBlocks) ? row.descriptionBlocks : null,
       seoTitle: string(row.seoTitle),
       metaDescription: string(row.metaDescription),
       ogImage: string(row.ogImage),
@@ -483,11 +489,14 @@ export function buildFormFromProduct(product: AdminProduct): ProductFormState {
           isActive: variant.isActive,
         }))
       : [makeEmptyVariant()],
+    descriptionBlocks: Array.isArray(product.descriptionBlocks) ? (product.descriptionBlocks as unknown[]) : [],
   };
 }
 
 export function parseNumericField(raw: string, field: string): number {
-  const value = Number(raw);
+  const trimmed = raw.trim();
+  if (!trimmed) throw new Error(`${field} is required.`);
+  const value = Number(trimmed);
   if (!Number.isFinite(value)) throw new Error(`${field} must be a valid number.`);
   return value;
 }

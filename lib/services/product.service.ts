@@ -162,6 +162,7 @@ export function serializeProduct(
     name: product.name,
     slug: product.slug,
     description: product.description,
+    descriptionBlocks: product.descriptionBlocks ?? null,
     seoTitle: product.seoTitle,
     metaDescription: product.metaDescription,
     ogImage: product.ogImage,
@@ -863,6 +864,7 @@ export async function createProduct(input: CreateProductInput) {
             modelNumber: input.modelNumber ?? null,
             series: input.series ?? null,
             specifications: nullableJson(input.specifications),
+            descriptionBlocks: nullableJson(input.descriptionBlocks ?? null),
             status: input.status,
             categoryId: input.categoryId,
             brandId: input.brandId ?? null,
@@ -974,6 +976,9 @@ export async function updateProduct(id: string, input: UpdateProductInput) {
     if (input.series !== undefined) data.series = input.series;
     if (input.specifications !== undefined) {
       data.specifications = nullableJson(input.specifications);
+    }
+    if (input.descriptionBlocks !== undefined) {
+      data.descriptionBlocks = nullableJson(input.descriptionBlocks ?? null);
     }
     if (input.status !== undefined) data.status = input.status;
     if (input.categoryId !== undefined) {
