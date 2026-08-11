@@ -101,13 +101,6 @@ function gatewayPaymentBlocksCancellation(input: {
 /*  Selects / shapes                                                          */
 /* -------------------------------------------------------------------------- */
 
-/** Compact product info we embed inside order items. */
-const orderItemProductSelect = {
-  id: true,
-  name: true,
-  slug: true,
-} as const;
-
 const orderItemInclude = {
   // Order items carry their own productName/productImage/sku snapshot,
   // so we only need the live product link for navigation (it may be null
@@ -867,6 +860,3 @@ export async function updatePaymentStatus(
   });
   return serializeOrder(updated);
 }
-
-// `orderItemProductSelect` is exported only for tests / future use.
-export { orderItemProductSelect };

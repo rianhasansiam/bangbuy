@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:airwallex": "vitest run src/modules/airwallex/tests",
+    "test:airwallex": "vitest run lib/airwallex/tests",
     "test:watch": "vitest"
   },
   "dependencies": {

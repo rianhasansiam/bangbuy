@@ -5,7 +5,7 @@ import { defineConfig } from "vitest/config";
 const projectRoot = fileURLToPath(new URL("./", import.meta.url));
 const serverOnlyStub = fileURLToPath(
   new URL(
-    "./src/modules/airwallex/tests/server-only.stub.ts",
+    "./lib/airwallex/tests/server-only.stub.ts",
     import.meta.url,
   ),
 );
@@ -20,7 +20,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: [
-      "src/modules/airwallex/tests/**/*.test.ts",
+      "lib/airwallex/tests/**/*.test.ts",
       "__tests__/**/*.test.ts",
     ],
     clearMocks: true,

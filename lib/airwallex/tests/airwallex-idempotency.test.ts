@@ -7,8 +7,21 @@ import {
 } from "../security/airwallex-idempotency";
 
 describe("Airwallex request IDs", () => {
-  it("creates a provider-safe random request ID", () => {
-    expect(isAirwallexRequestId(createAirwallexRequestId())).toBe(true);
+  it("creates a provider-safe UUID v4 within Airwallex's length limit", () => {
+    const requestId = createAirwallexRequestId();
+
+    expect(requestId.length).toBeLessThanOrEqual(64);
+    expect(isAirwallexRequestId(requestId)).toBe(true);
+  });
+
+  it("rejects malformed, non-v4, and oversized request IDs", () => {
+    expect(isAirwallexRequestId("not-a-uuid")).toBe(false);
+    expect(
+      isAirwallexRequestId("6ba7b810-9dad-11d1-80b4-00c04fd430c8"),
+    ).toBe(false);
+    expect(
+      isAirwallexRequestId(`123e4567-e89b-42d3-a456-${"0".repeat(60)}`),
+    ).toBe(false);
   });
 
   it("derives the same opaque request ID for the same owner checkout retry", () => {

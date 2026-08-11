@@ -4,35 +4,12 @@ import { Decimal } from "@prisma/client/runtime/client";
 vi.mock("@/lib/db/prisma", () => ({ prisma: {} }));
 
 import {
-  createAirwallexRequestId,
-  isAirwallexRequestId,
-} from "../security/airwallex-idempotency";
-import {
   isLegalAirwallexTransition,
   isTerminalAirwallexStatus,
   mapAirwallexPaymentStatus,
   toPublicAirwallexStatus,
 } from "../services/airwallex-payment-status.service";
 import { findAirwallexVerificationMismatch } from "../services/airwallex-payment-verification.service";
-
-describe("Airwallex request IDs", () => {
-  it("creates UUID v4 request IDs within Airwallex's length limit", () => {
-    const requestId = createAirwallexRequestId();
-
-    expect(requestId.length).toBeLessThanOrEqual(64);
-    expect(isAirwallexRequestId(requestId)).toBe(true);
-  });
-
-  it("rejects malformed, non-v4, and oversized request IDs", () => {
-    expect(isAirwallexRequestId("not-a-uuid")).toBe(false);
-    expect(
-      isAirwallexRequestId("6ba7b810-9dad-11d1-80b4-00c04fd430c8"),
-    ).toBe(false);
-    expect(isAirwallexRequestId(`123e4567-e89b-42d3-a456-${"0".repeat(60)}`)).toBe(
-      false,
-    );
-  });
-});
 
 describe("Airwallex payment status mapping", () => {
   it("does not treat lifecycle request_id changes as an identity mismatch", () => {
@@ -88,9 +65,6 @@ describe("Airwallex payment status mapping", () => {
   });
 
   it("quarantines unknown statuses without terminalizing failed attempts", () => {
-    expect(mapAirwallexPaymentStatus("A_NEW_PROVIDER_STATUS")).toBe(
-      "REQUIRES_REVIEW",
-    );
     expect(mapAirwallexPaymentStatus("A_NEW_PROVIDER_STATUS")).toBe(
       "REQUIRES_REVIEW",
     );
