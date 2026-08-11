@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+import {
+  isSixDigitProductColor,
+  normalizeProductColor,
+  PRODUCT_COLOR_HEX_PATTERN,
+  PRODUCT_COLOR_VALIDATION_MESSAGE,
+} from "@/lib/catalog/product-color";
 import { deriveVariantKey } from "@/lib/catalog/variant-options";
 import { productDescriptionBlocksArraySchema } from "@/lib/validations/product-description-blocks.validation";
 
@@ -32,8 +38,6 @@ const SORT_VALUES = [
   "rating",
   "popular",
 ] as const;
-const HEX_COLOR_VALUE = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
-
 /** Common reusable fragments. */
 const name = z
   .string({ message: "Product name is required." })
@@ -84,14 +88,24 @@ const stock = z
   .int("Stock must be a whole number.")
   .nonnegative("Stock cannot be negative.");
 
-const variantColor = z
+/** Every color written for a new variant must be strict six-digit HEX. */
+export const productColorSchema = z
   .string()
   .trim()
-  .min(1, "Color is required.")
+  .regex(PRODUCT_COLOR_HEX_PATTERN, PRODUCT_COLOR_VALIDATION_MESSAGE)
+  .transform(normalizeProductColor);
+
+/**
+ * PATCH initially accepts the historic storage shape. The product service
+ * compares each id-bearing row with its locked database row and applies
+ * `productColorSchema` semantics to every new or changed value. Keeping this
+ * structural parser legacy-compatible prevents unrelated edits from rejecting
+ * unchanged names, three-digit HEX, or alpha HEX already in the database.
+ */
+const legacyCompatibleVariantColor = z
+  .string()
   .max(40)
-  .refine((value) => !value.startsWith("#") || HEX_COLOR_VALUE.test(value), {
-    message: "Color hex code must be valid.",
-  });
+  .refine((value) => value.trim().length > 0, "Color is required.");
 
 const image = z
   .string()
@@ -174,20 +188,48 @@ const specifications = z
  * `sku` is optional but unique when provided (enforced by the DB + the
  * service). `id` is present only when editing an existing variant.
  */
-const variantInput = z.object({
+const variantInputFields = {
   id: z.string().trim().min(1).optional(),
   name: optionalText(120),
   size: optionalText(40),
-  color: variantColor.optional().nullable(),
   modelNumber: optionalText(100),
   sku: z.string().trim().min(1).max(80).optional().nullable(),
   stock: stock.default(0),
   image: image,
   attributes,
   isActive: z.boolean().default(true),
+};
+
+const createVariantInput = z.object({
+  ...variantInputFields,
+  color: productColorSchema.optional().nullable(),
 });
 
-export type ProductVariantInput = z.infer<typeof variantInput>;
+const updateVariantInput = z
+  .object({
+    ...variantInputFields,
+    color: legacyCompatibleVariantColor.optional().nullable(),
+  })
+  .superRefine((variant, context) => {
+    if (
+      !variant.id &&
+      variant.color != null &&
+      !isSixDigitProductColor(variant.color.trim())
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["color"],
+        message: PRODUCT_COLOR_VALIDATION_MESSAGE,
+      });
+    }
+  })
+  .transform((variant) =>
+    !variant.id && variant.color != null
+      ? { ...variant, color: normalizeProductColor(variant.color.trim()) }
+      : variant,
+  );
+
+export type ProductVariantInput = z.infer<typeof updateVariantInput>;
 
 /** Cross-field guards shared by create/update. */
 function discountWithinSale(data: {
@@ -268,7 +310,7 @@ export const createProductSchema = z
     categoryId: z.string().trim().min(1, "Category is required."),
     brandId: entityId,
     manufacturerId: entityId,
-    variants: z.array(variantInput).min(1, "Add at least one variant."),
+    variants: z.array(createVariantInput).min(1, "Add at least one variant."),
   })
   .refine(discountWithinSale, {
     path: ["discountPrice"],
@@ -323,7 +365,7 @@ export const updateProductSchema = z
     categoryId: z.string().trim().min(1).optional(),
     brandId: entityId,
     manufacturerId: entityId,
-    variants: z.array(variantInput).min(1).optional(),
+    variants: z.array(updateVariantInput).min(1).optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "Provide at least one field to update.",

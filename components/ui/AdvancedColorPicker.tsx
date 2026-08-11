@@ -31,6 +31,8 @@ export type AdvancedColorPickerProps = {
   label?: string;
   /** Show the opacity slider + accept 8-digit hex. Default: true. */
   alpha?: boolean;
+  /** Show the picker's built-in HEX field. Default: true. */
+  showHexInput?: boolean;
   disabled?: boolean;
   className?: string;
 };
@@ -83,6 +85,7 @@ export function AdvancedColorPicker({
   onChange,
   label = "Color",
   alpha = true,
+  showHexInput = true,
   disabled = false,
   className,
 }: AdvancedColorPickerProps) {
@@ -133,7 +136,7 @@ export function AdvancedColorPicker({
   };
 
   // Trigger swatch shows the resolved color (with its alpha) over a checkerboard.
-  const swatchColor = joinColor(base, currentAlpha);
+  const swatchColor = joinColor(base, alpha ? currentAlpha : 1);
 
   return (
     <div ref={containerRef} className={cn("relative w-full", className)}>
@@ -210,17 +213,18 @@ export function AdvancedColorPicker({
             </div>
           )}
 
-          {/* HEX display / input box. */}
-          <div className="mt-3 flex items-center rounded-xl bg-gray-900 px-3 py-2.5">
-            <span className="text-base font-bold text-gray-500">#</span>
-            <input
-              value={(value || "#000000").replace(/^#/, "").toUpperCase()}
-              onChange={handleHexInput}
-              spellCheck={false}
-              aria-label={`${label} hex value`}
-              className="w-full bg-transparent px-1 font-mono text-base font-bold uppercase tracking-wider text-white outline-none"
-            />
-          </div>
+          {showHexInput && (
+            <div className="mt-3 flex items-center rounded-xl bg-gray-900 px-3 py-2.5">
+              <span className="text-base font-bold text-gray-500">#</span>
+              <input
+                value={(value || "#000000").replace(/^#/, "").toUpperCase()}
+                onChange={handleHexInput}
+                spellCheck={false}
+                aria-label={`${label} hex value`}
+                className="w-full bg-transparent px-1 font-mono text-base font-bold uppercase tracking-wider text-white outline-none"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -4,6 +4,7 @@ import { Prisma } from "@/app/generated/prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 
 import { cleanOptionalText } from "@/lib/catalog/catalog-entity";
+import { resolveProductColorWrite } from "@/lib/catalog/product-color";
 import {
   cleanVariantAttributes,
   deriveVariantKey,
@@ -774,6 +775,22 @@ function variantData(variant: ProductVariantInput) {
   };
 }
 
+function validatedVariantData(
+  variant: ProductVariantInput,
+  index: number,
+  storedColor?: { value: string | null },
+) {
+  const color = resolveProductColorWrite(variant.color, storedColor);
+  if (!color.success) {
+    const message = `Variant ${index + 1} color: ${color.message}`;
+    throw new ProductError(400, message, {
+      fieldErrors: { variants: [message] },
+    });
+  }
+
+  return variantData({ ...variant, color: color.value });
+}
+
 async function assertReferences(
   client: Prisma.TransactionClient,
   input: {
@@ -842,7 +859,9 @@ function productImageAlt(
 export async function createProduct(input: CreateProductInput) {
   const slug = await uniqueSlug(input.name);
   const images = uniqueImages(input);
-  const variants = input.variants.map(variantData);
+  const variants = input.variants.map((variant, index) =>
+    validatedVariantData(variant, index),
+  );
   const MAX_ATTEMPTS = 5;
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
@@ -1016,15 +1035,14 @@ export async function updateProduct(id: string, input: UpdateProductInput) {
       );
       const existing = await tx.productVariant.findMany({
         where: { productId: id },
-        select: { id: true, stock: true },
+        select: { id: true, stock: true, color: true },
       });
       const existingById = new Map(
         existing.map((variant) => [variant.id, variant]),
       );
       const keptIds = new Set<string>();
 
-      for (const variant of input.variants) {
-        const next = variantData(variant);
+      for (const [index, variant] of input.variants.entries()) {
         if (variant.id) {
           const previous = existingById.get(variant.id);
           if (!previous) {
@@ -1038,6 +1056,9 @@ export async function updateProduct(id: string, input: UpdateProductInput) {
               },
             );
           }
+          const next = validatedVariantData(variant, index, {
+            value: previous.color,
+          });
           keptIds.add(variant.id);
           await tx.productVariant.update({
             where: { id: variant.id },
@@ -1055,6 +1076,7 @@ export async function updateProduct(id: string, input: UpdateProductInput) {
             });
           }
         } else {
+          const next = validatedVariantData(variant, index);
           const created = await tx.productVariant.create({
             data: { productId: id, ...next },
             select: { id: true },

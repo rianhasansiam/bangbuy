@@ -9,6 +9,7 @@ const ProductDescriptionBuilder = lazy(
 
 import ImageUploader from "@/components/ui/ImageUploader";
 import MultiImageUploader from "@/components/ui/MultiImageUploader";
+import AdvancedColorPicker from "@/components/ui/AdvancedColorPicker";
 import { ButtonLoader } from "@/components/ui/loading";
 import type { CatalogEntityOption } from "@/features/admin-catalog-entities/api";
 import {
@@ -21,12 +22,23 @@ import {
   type VariantFormRow,
 } from "@/features/admin-products/api";
 import type { ProductDescriptionBlock } from "@/lib/types/product-description-blocks";
+import {
+  isSixDigitProductColor,
+  normalizeProductColor,
+} from "@/lib/catalog/product-color";
 import { cn } from "@/lib/utils";
 
 import Field from "./Field";
 
 const inputClass =
   "h-10 w-full rounded-xl border border-brand-border bg-white px-3 text-sm outline-none transition focus:border-brand-red disabled:cursor-not-allowed disabled:bg-gray-50";
+
+function normalizeManualColorInput(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const uppercase = normalizeProductColor(trimmed);
+  return uppercase.startsWith("#") ? uppercase : `#${uppercase}`;
+}
 
 function Section({
   title,
@@ -113,6 +125,7 @@ export default function ProductFormDrawer({
   open,
   mode,
   form,
+  originalVariantColors,
   categories,
   currentCategory,
   brands,
@@ -126,6 +139,7 @@ export default function ProductFormDrawer({
   open: boolean;
   mode: "create" | "edit";
   form: ProductFormState;
+  originalVariantColors: ReadonlyMap<string, string | null>;
   categories: CategoryOption[];
   currentCategory: { id: string; label: string } | null;
   brands: CatalogEntityOption[];
@@ -382,8 +396,31 @@ export default function ProductFormDrawer({
 
             <Section title="Variants" description="Each row is one purchasable option combination. Leave all option fields blank only for a single default variant.">
               <div className="space-y-3">
-                {form.variants.map((variant, index) => (
-                  <article key={index} className="rounded-2xl border border-brand-border bg-white p-4">
+                {form.variants.map((variant, index) => {
+                  const variantId = variant.id;
+                  const hasOriginalColor =
+                    mode === "edit" &&
+                    variantId !== undefined &&
+                    originalVariantColors.has(variantId);
+                  const originalColor =
+                    hasOriginalColor && variantId !== undefined
+                      ? originalVariantColors.get(variantId) ?? null
+                      : null;
+                  const colorWasUnchanged =
+                    hasOriginalColor && variant.color === (originalColor ?? "");
+                  const enteredColor = variant.color.trim();
+                  const colorIsStrict =
+                    enteredColor.length === 0 ||
+                    isSixDigitProductColor(enteredColor);
+                  const hasInvalidColor = !colorWasUnchanged && !colorIsStrict;
+                  const hasUnchangedLegacyColor =
+                    colorWasUnchanged &&
+                    enteredColor.length > 0 &&
+                    !isSixDigitProductColor(enteredColor);
+                  const colorHelpId = `variant-${index + 1}-color-help`;
+
+                  return (
+                    <article key={index} className="rounded-2xl border border-brand-border bg-white p-4">
                     <div className="mb-3 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-red/10 text-brand-red"><Boxes className="h-4 w-4" /></span>
@@ -411,7 +448,66 @@ export default function ProductFormDrawer({
                       <Field label="Variant model"><input value={variant.modelNumber} onChange={(event) => updateVariant(index, { modelNumber: event.target.value })} className={inputClass} placeholder="Optional" /></Field>
                       <Field label="Stock" required><input type="number" min="0" step="1" value={variant.stock} onChange={(event) => updateVariant(index, { stock: event.target.value })} className={inputClass} /></Field>
                       <Field label="Size shortcut"><input value={variant.size} onChange={(event) => updateVariant(index, { size: event.target.value })} className={inputClass} placeholder="Optional" /></Field>
-                      <Field label="Color shortcut"><input value={variant.color} onChange={(event) => updateVariant(index, { color: event.target.value })} className={inputClass} placeholder="Name or #hex" /></Field>
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                          Color shortcut
+                        </span>
+                        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem]">
+                          <AdvancedColorPicker
+                            label={`Variant ${index + 1} color`}
+                            alpha={false}
+                            showHexInput={false}
+                            value={variant.color}
+                            onChange={(color) =>
+                              updateVariant(index, {
+                                color: normalizeProductColor(color),
+                              })
+                            }
+                            disabled={isSubmitting}
+                          />
+                          <input
+                            value={variant.color}
+                            onChange={(event) =>
+                              updateVariant(index, {
+                                color: normalizeManualColorInput(event.target.value),
+                              })
+                            }
+                            disabled={isSubmitting}
+                            spellCheck={false}
+                            autoCapitalize="characters"
+                            inputMode="text"
+                            maxLength={9}
+                            aria-label={`Variant ${index + 1} hex color`}
+                            aria-invalid={hasInvalidColor}
+                            aria-describedby={
+                              hasInvalidColor || hasUnchangedLegacyColor
+                                ? colorHelpId
+                                : undefined
+                            }
+                            className={cn(
+                              inputClass,
+                              "font-mono text-xs font-semibold",
+                              hasInvalidColor &&
+                                "border-red-300 focus:border-red-500",
+                            )}
+                            placeholder="#112233"
+                          />
+                        </div>
+                        {hasInvalidColor && (
+                          <p
+                            id={colorHelpId}
+                            role="alert"
+                            className="text-[11px] font-semibold text-red-600"
+                          >
+                            Use exactly 6 hexadecimal digits, for example #112233.
+                          </p>
+                        )}
+                        {hasUnchangedLegacyColor && (
+                          <p id={colorHelpId} className="text-[11px] text-amber-700">
+                            Legacy color preserved. Leave it unchanged or replace it with #RRGGBB.
+                          </p>
+                        )}
+                      </div>
                       <label className="flex items-center gap-2 self-end pb-2 text-sm font-semibold text-gray-700">
                         <input type="checkbox" checked={variant.isActive} onChange={(event) => updateVariant(index, { isActive: event.target.checked })} className="h-4 w-4 accent-brand-red" /> Active
                       </label>
@@ -429,8 +525,9 @@ export default function ProductFormDrawer({
                     <div className="mt-3">
                       <Field label="Variant image"><ImageUploader value={variant.image} onChange={(image) => updateVariant(index, { image })} disabled={isSubmitting} /></Field>
                     </div>
-                  </article>
-                ))}
+                    </article>
+                  );
+                })}
                 <button
                   type="button"
                   onClick={() => onChange((current) => ({ ...current, variants: [...current.variants, makeEmptyVariant()] }))}

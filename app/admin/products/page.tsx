@@ -33,6 +33,11 @@ import {
   notifyActionError,
   notifyActionSuccess,
 } from "@/lib/admin-feedback";
+import {
+  isSixDigitProductColor,
+  normalizeProductColor,
+  PRODUCT_COLOR_VALIDATION_MESSAGE,
+} from "@/lib/catalog/product-color";
 import { deriveVariantKey } from "@/lib/catalog/variant-options";
 import {
   setAdminProducts,
@@ -129,6 +134,16 @@ export default function AdminProductsPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [successNote, setSuccessNote] = useState<string | null>(null);
+
+  const originalVariantColors = useMemo<ReadonlyMap<string, string | null>>(
+    () =>
+      new Map(
+        (editingProduct?.variants ?? []).flatMap((variant) =>
+          variant.id ? [[variant.id, variant.color] as const] : [],
+        ),
+      ),
+    [editingProduct],
+  );
 
   const refreshProducts = useCallback(async () => {
     dispatch(setAdminProductsLoading(true));
@@ -285,10 +300,33 @@ export default function AdminProductsPage() {
       if (!Number.isInteger(stock) || stock < 0) {
         throw new Error(`Variant ${index + 1} stock must be a non-negative whole number.`);
       }
+      const variantId = variant.id;
+      const hasOriginalColor =
+        panelMode === "edit" &&
+        variantId !== undefined &&
+        originalVariantColors.has(variantId);
+      const originalColor =
+        hasOriginalColor && variantId !== undefined
+          ? originalVariantColors.get(variantId) ?? null
+          : null;
+      const colorWasUnchanged =
+        hasOriginalColor && variant.color === (originalColor ?? "");
+      const enteredColor = optional(variant.color);
+      let color = enteredColor;
+      if (colorWasUnchanged) {
+        color = originalColor;
+      } else if (enteredColor !== null) {
+        if (!isSixDigitProductColor(enteredColor)) {
+          throw new Error(
+            `Variant ${index + 1} color: ${PRODUCT_COLOR_VALIDATION_MESSAGE}`,
+          );
+        }
+        color = normalizeProductColor(enteredColor);
+      }
       const attributes = rowsToStringMap(variant.attributes);
       const variantKey = deriveVariantKey({
         size: optional(variant.size),
-        color: optional(variant.color),
+        color,
         attributes,
       });
       if (seenCombinations.has(variantKey)) throw new Error(`Variant ${index + 1} duplicates another option combination.`);
@@ -303,7 +341,7 @@ export default function AdminProductsPage() {
         ...(variant.id ? { id: variant.id } : {}),
         name: optional(variant.name),
         size: optional(variant.size),
-        color: optional(variant.color),
+        color,
         modelNumber: optional(variant.modelNumber),
         sku,
         stock,
@@ -486,6 +524,7 @@ export default function AdminProductsPage() {
         open={panelOpen}
         mode={panelMode}
         form={form}
+        originalVariantColors={originalVariantColors}
         categories={categories}
         currentCategory={
           editingProduct
