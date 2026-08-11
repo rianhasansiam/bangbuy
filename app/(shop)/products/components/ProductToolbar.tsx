@@ -17,7 +17,6 @@ type ViewMode = "grid" | "list";
 type Props = {
   resultsCount: number;
   totalCount: number;
-  page: number;
   pageSize: number;
   activeFilterCount: number;
   sort: ProductSortOption;
@@ -43,7 +42,6 @@ const SORT_OPTIONS = Object.keys(SORT_LABELS) as ProductSortOption[];
 export default function ProductToolbar({
   resultsCount,
   totalCount,
-  page,
   pageSize,
   activeFilterCount,
   sort,
@@ -55,9 +53,6 @@ export default function ProductToolbar({
   sidebarOpen,
   onToggleSidebar,
 }: Props) {
-  const firstResult = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
-  const lastResult = totalCount === 0 ? 0 : firstResult + resultsCount - 1;
-
   return (
     <div className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-brand-border bg-white px-3 py-2.5 shadow-sm transition-shadow duration-300 hover:shadow-md sm:px-4">
       <div className="flex items-center gap-2">
@@ -96,10 +91,7 @@ export default function ProductToolbar({
         </Button>
 
         <p className="hidden text-xs text-gray-600 sm:block sm:text-sm">
-          Showing <span className="font-semibold text-gray-900">{firstResult}</span>
-          {lastResult !== firstResult && (
-            <>–<span className="font-semibold text-gray-900">{lastResult}</span></>
-          )}{" "}
+          Showing <span className="font-semibold text-gray-900">{resultsCount}</span>{" "}
           of <span className="font-semibold text-gray-900">{totalCount}</span>
         </p>
         <p className="text-xs text-gray-600 sm:hidden">

@@ -1,12 +1,19 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
-import Link from "next/link";
+import { LoaderCircle, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 
 import { ProductGridSkeleton } from "@/components/ui/loading";
 import {
+  fetchProductsFromApi,
   type ApiMeta,
   type CatalogFacets,
   type Product,
@@ -15,6 +22,7 @@ import {
 import {
   parseProductsPageQuery,
   PRODUCTS_PAGE_SIZE,
+  toProductQueryInput,
 } from "@/lib/catalog/products-page-query";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +54,17 @@ type ProductsExplorerProps = {
   initialFacets: CatalogFacets;
 };
 
+function mergeUniqueProducts(current: Product[], incoming: Product[]) {
+  const seenIds = new Set(current.map((product) => product.id));
+  const merged = [...current];
+  for (const product of incoming) {
+    if (seenIds.has(product.id)) continue;
+    seenIds.add(product.id);
+    merged.push(product);
+  }
+  return merged;
+}
+
 export default function ProductsExplorer({
   initialProducts,
   initialMeta,
@@ -71,13 +90,93 @@ export default function ProductsExplorer({
     stock: query.stock,
   };
 
-  const products = initialProducts;
-  const meta = initialMeta ?? EMPTY_META;
+  const safeInitialMeta = initialMeta ?? EMPTY_META;
   const facets = initialFacets ?? EMPTY_FACETS;
+  const [products, setProducts] = useState(() =>
+    mergeUniqueProducts([], initialProducts),
+  );
+  const [meta, setMeta] = useState(safeInitialMeta);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const [endReached, setEndReached] = useState(
+    safeInitialMeta.page >= safeInitialMeta.totalPages ||
+      initialProducts.length === 0,
+  );
   const [isPending, startTransition] = useTransition();
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const currentPageRef = useRef(safeInitialMeta.page);
+  const requestedPageRef = useRef<number | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const hasMore = !endReached && meta.page < meta.totalPages;
+
+  const loadMoreProducts = useCallback(async () => {
+    const nextPage = currentPageRef.current + 1;
+    if (requestedPageRef.current !== null || nextPage > meta.totalPages) return;
+
+    requestedPageRef.current = nextPage;
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    setIsLoadingMore(true);
+    setLoadMoreError(null);
+
+    try {
+      const result = await fetchProductsFromApi(
+        { ...toProductQueryInput(query), page: nextPage },
+        { signal: controller.signal },
+      );
+      if (controller.signal.aborted) return;
+
+      const advanced = result.meta.page > currentPageRef.current;
+      currentPageRef.current = result.meta.page;
+      setProducts((current) => mergeUniqueProducts(current, result.items));
+      setMeta(result.meta);
+      setEndReached(
+        !advanced ||
+          result.items.length === 0 ||
+          result.meta.page >= result.meta.totalPages,
+      );
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      setLoadMoreError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load more products.",
+      );
+    } finally {
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+        requestedPageRef.current = null;
+        if (!controller.signal.aborted) setIsLoadingMore(false);
+      }
+    }
+  }, [meta.totalPages, query]);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target || !hasMore || loadMoreError) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          void loadMoreProducts();
+        }
+      },
+      { rootMargin: "600px 0px" },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasMore, loadMoreError, loadMoreProducts]);
+
+  useEffect(
+    () => () => {
+      abortControllerRef.current?.abort();
+    },
+    [],
+  );
 
   const updateUrl = useCallback(
     (updates: Record<string, string | number | null | undefined>) => {
@@ -172,7 +271,6 @@ export default function ProductsExplorer({
             <ProductToolbar
               resultsCount={products.length}
               totalCount={meta.total}
-              page={meta.page}
               pageSize={meta.pageSize}
               activeFilterCount={activeFilterCount}
               sort={query.sort}
@@ -204,17 +302,41 @@ export default function ProductsExplorer({
                   onClearFilters={resetFilters}
                   wide={!sidebarOpen}
                 />
-                <Pagination
-                  page={meta.page}
-                  totalPages={meta.totalPages}
-                  hrefForPage={(page) => {
-                    const params = new URLSearchParams(serializedParams);
-                    if (page === 1) params.delete("page");
-                    else params.set("page", String(page));
-                    const next = params.toString();
-                    return next ? `${pathname}?${next}` : pathname;
-                  }}
-                />
+                <div
+                  ref={loadMoreRef}
+                  className="mt-6 flex min-h-12 items-center justify-center"
+                  aria-live="polite"
+                >
+                  {isLoadingMore ? (
+                    <div
+                      role="status"
+                      className="flex items-center gap-2 text-sm font-medium text-gray-600"
+                    >
+                      <LoaderCircle
+                        className="h-5 w-5 animate-spin text-brand-red"
+                        aria-hidden="true"
+                      />
+                      Loading more products…
+                    </div>
+                  ) : loadMoreError ? (
+                    <div className="text-center">
+                      <p role="alert" className="text-sm text-red-600">
+                        {loadMoreError}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void loadMoreProducts()}
+                        className="mt-2 rounded-lg border border-brand-red px-3 py-1.5 text-sm font-semibold text-brand-red transition-colors hover:bg-brand-red hover:text-white"
+                      >
+                        Try again
+                      </button>
+                    </div>
+                  ) : !hasMore && products.length > 0 ? (
+                    <p className="text-sm text-gray-500">
+                      You’ve reached the end of the products.
+                    </p>
+                  ) : null}
+                </div>
               </>
             )}
           </main>
@@ -299,100 +421,5 @@ function ActiveFilterChips({
         </button>
       ))}
     </div>
-  );
-}
-
-function Pagination({
-  page,
-  totalPages,
-  hrefForPage,
-}: {
-  page: number;
-  totalPages: number;
-  hrefForPage: (page: number) => string;
-}) {
-  if (totalPages <= 1) return null;
-  const pages = new Set([1, totalPages, page - 1, page, page + 1]);
-  const pageNumbers = [...pages]
-    .filter((value) => value >= 1 && value <= totalPages)
-    .sort((a, b) => a - b);
-
-  return (
-    <nav
-      aria-label="Product pagination"
-      className="mt-8 flex flex-wrap items-center justify-center gap-1.5"
-    >
-      <PaginationButton
-        label="Previous page"
-        disabled={page <= 1}
-        href={hrefForPage(page - 1)}
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </PaginationButton>
-      {pageNumbers.map((pageNumber, index) => {
-        const previous = pageNumbers[index - 1];
-        return (
-          <span key={pageNumber} className="contents">
-            {previous != null && pageNumber - previous > 1 && (
-              <span className="px-1 text-sm text-gray-400" aria-hidden="true">
-                …
-              </span>
-            )}
-            <Link
-              href={hrefForPage(pageNumber)}
-              aria-current={pageNumber === page ? "page" : undefined}
-              className={cn(
-                "h-9 min-w-9 rounded-lg border px-2 text-sm font-semibold transition-colors",
-                pageNumber === page
-                  ? "border-brand-red bg-brand-red text-white"
-                  : "border-gray-200 bg-white text-gray-700 hover:border-brand-red hover:text-brand-red",
-              )}
-            >
-              {pageNumber}
-            </Link>
-          </span>
-        );
-      })}
-      <PaginationButton
-        label="Next page"
-        disabled={page >= totalPages}
-        href={hrefForPage(page + 1)}
-      >
-        <ChevronRight className="h-4 w-4" />
-      </PaginationButton>
-    </nav>
-  );
-}
-
-function PaginationButton({
-  label,
-  disabled,
-  href,
-  children,
-}: {
-  label: string;
-  disabled: boolean;
-  href: string;
-  children: React.ReactNode;
-}) {
-  if (disabled) {
-    return (
-      <span
-        aria-label={label}
-        aria-disabled="true"
-        className="flex h-9 min-w-9 cursor-not-allowed items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 opacity-40"
-      >
-        {children}
-      </span>
-    );
-  }
-  return (
-    <Link
-      href={href}
-      aria-label={label}
-      className="flex h-9 min-w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-700 transition-colors hover:border-brand-red hover:text-brand-red"
-    >
-      {children}
-    </Link>
   );
 }

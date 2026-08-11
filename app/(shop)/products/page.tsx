@@ -96,6 +96,7 @@ export default async function ProductsPage({ searchParams }: Props) {
       }
     >
       <ProductsExplorer
+        key={productsPageDataKey(initialQuery)}
         initialProducts={initialProducts}
         initialMeta={meta}
         initialFacets={facets}
