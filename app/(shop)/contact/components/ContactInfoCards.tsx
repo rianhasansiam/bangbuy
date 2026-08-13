@@ -1,4 +1,4 @@
-import { Mail, Phone, MapPin, Clock } from "lucide-react";
+import { Building2, Mail, MapPin, Phone } from "lucide-react";
 
 import { siteConfig } from "@/lib/seo/site";
 
@@ -22,17 +22,17 @@ const cards = [
   {
     icon: MapPin,
     title: "Visit Us",
-    value: "Mirpur, Dhaka",
+    value: siteConfig.contact.address,
     helper: "Dhaka, Bangladesh",
     href: "#location",
     color: "bg-brand-red",
   },
   {
-    icon: Clock,
-    title: "Working Hours",
-    value: "9:00 - 21:00",
-    helper: "All days of the week",
-    href: "#hours",
+    icon: Building2,
+    title: "Company Info",
+    value: siteConfig.contact.companyName,
+    helper: siteConfig.contact.companyAddress,
+    href: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(siteConfig.contact.companyAddress)}`,
     color: "bg-brand-red",
   },
 ];

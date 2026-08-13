@@ -21,10 +21,7 @@ export default function ContactMap() {
           </span>
         </div>
         <h2 className="mt-3 text-2xl font-black tracking-tight text-foreground sm:text-3xl lg:text-4xl">
-          Find us across{" "}
-          <span className="text-brand-red">
-            the country
-          </span>
+          Find us in <span className="text-brand-red">Dhaka</span>
         </h2>
       </div>
 
@@ -36,7 +33,7 @@ export default function ContactMap() {
           <div className="relative h-72 overflow-hidden rounded-3xl shadow-lg ring-1 ring-brand-border sm:h-80 lg:h-full lg:min-h-[420px]">
             <iframe
               title={`${siteConfig.name} HQ`}
-              src="https://www.google.com/maps?q=Mirpur+Dhaka&output=embed"
+              src={`https://www.google.com/maps?q=${encodeURIComponent(siteConfig.contact.address)}&output=embed`}
               className="h-full w-full border-0"
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"

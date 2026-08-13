@@ -126,13 +126,17 @@ export const siteConfig = {
    */
   contact: {
     /** Public support email. */
-    email: "BangBuy@gmail.com",
-    /** Local Bangladeshi mobile number (display + tel: form). */
-    phone: "01932600504",
+    email: "bangbuyif@gmail.com",
+    /** Public support number (display + tel: form). */
+    phone: "+8801349492455",
     /** International (E.164) form for `tel:` links. */
-    phoneIntl: "+8801932600504",
-    /** Physical / HQ address. */
-    address: "Mirpur, Dhaka, Bangladesh",
+    phoneIntl: "+8801349492455",
+    /** Public service location. */
+    address: "Uttara, Dhaka",
+    /** Registered company details. */
+    companyName: "Xianhao Yida (Hong Kong) Limited",
+    companyAddress:
+      "S027, 2/F, Capital Plaza, 61-65 Chatham Rd S, TST, Hong Kong",
   },
   /**
    * Default / fallback Open Graph image (absolute URL). Used on the home
@@ -147,7 +151,7 @@ export const siteConfig = {
    * Add more here as they are confirmed.
    */
   social: {
-    facebook: "https://www.facebook.com/enterfly26",
+    facebook: "https://www.facebook.com/",
   },
 } as const;
 

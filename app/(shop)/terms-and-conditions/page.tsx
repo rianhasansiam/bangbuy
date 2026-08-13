@@ -261,7 +261,7 @@ export default function TermsAndConditionsPage() {
 
       <PolicySection
         title="16. Governing Law"
-        intro="These Terms & Conditions are governed by the laws of the People's Republic of Bangladesh, without regard to its conflict-of-laws principles. Any disputes arising from these terms shall be subject to the jurisdiction of the competent courts located in Dhaka, Bangladesh."
+        intro="These Terms & Conditions are governed by the laws of the People's Republic of Bangladesh, without regard to its conflict-of-laws principles. Any disputes arising from these terms shall be subject to the jurisdiction of the competent courts located in Hong Kong, China"
       />
 
       <PolicySection

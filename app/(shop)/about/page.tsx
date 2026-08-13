@@ -31,7 +31,7 @@ export default async function AboutPage() {
         <OurStory />
         <WhyChooseUs />
         <OurValues />
-        <TeamSection />
+        {/* <TeamSection /> */}
         <Testimonials testimonials={testimonials} />
         <AboutCTA />
       </div>
