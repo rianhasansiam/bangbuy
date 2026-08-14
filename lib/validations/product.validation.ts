@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 import {
-  isSixDigitProductColor,
+  isValidProductColor,
   normalizeProductColor,
-  PRODUCT_COLOR_HEX_PATTERN,
+  PRODUCT_COLOR_MAX_LENGTH,
   PRODUCT_COLOR_VALIDATION_MESSAGE,
 } from "@/lib/catalog/product-color";
 import { deriveVariantKey } from "@/lib/catalog/variant-options";
@@ -88,11 +88,12 @@ const stock = z
   .int("Stock must be a whole number.")
   .nonnegative("Stock cannot be negative.");
 
-/** Every color written for a new variant must be strict six-digit HEX. */
+/** New variants accept a readable color name or strict six-digit HEX. */
 export const productColorSchema = z
   .string()
   .trim()
-  .regex(PRODUCT_COLOR_HEX_PATTERN, PRODUCT_COLOR_VALIDATION_MESSAGE)
+  .max(PRODUCT_COLOR_MAX_LENGTH, PRODUCT_COLOR_VALIDATION_MESSAGE)
+  .refine(isValidProductColor, PRODUCT_COLOR_VALIDATION_MESSAGE)
   .transform(normalizeProductColor);
 
 /**
@@ -100,7 +101,7 @@ export const productColorSchema = z
  * compares each id-bearing row with its locked database row and applies
  * `productColorSchema` semantics to every new or changed value. Keeping this
  * structural parser legacy-compatible prevents unrelated edits from rejecting
- * unchanged names, three-digit HEX, or alpha HEX already in the database.
+ * unchanged three-digit HEX or alpha HEX already in the database.
  */
 const legacyCompatibleVariantColor = z
   .string()
@@ -214,7 +215,7 @@ const updateVariantInput = z
     if (
       !variant.id &&
       variant.color != null &&
-      !isSixDigitProductColor(variant.color.trim())
+      !isValidProductColor(variant.color.trim())
     ) {
       context.addIssue({
         code: "custom",

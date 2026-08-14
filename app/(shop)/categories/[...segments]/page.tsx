@@ -165,7 +165,7 @@ export default async function CategoryPage({ params }: Props) {
           </ol>
         </nav>
 
-        <header className="mb-7 overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm">
+        {/* <header className="mb-7 overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm">
           <div className="flex min-h-44 flex-col justify-center gap-5 p-6 sm:flex-row sm:items-center sm:justify-between lg:p-8">
             <div className="max-w-3xl">
               <p className="text-xs font-bold uppercase tracking-widest text-brand-red">
@@ -204,7 +204,7 @@ export default async function CategoryPage({ params }: Props) {
               </div>
             )}
           </div>
-        </header>
+        </header> */}
 
         {category.children.length > 0 && (
           <section aria-labelledby="subcategory-heading" className="mb-9">
@@ -222,23 +222,37 @@ export default async function CategoryPage({ params }: Props) {
                 Filter all products
               </Link>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="-mx-3 flex snap-x snap-proximity gap-4 overflow-x-auto px-3 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3 xl:grid-cols-4">
               {category.children.map((child) => (
                 <Link
                   key={child.id}
                   href={`/categories/${child.path}`}
-                  className="group flex items-center justify-between gap-3 rounded-xl border border-brand-border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-red/30 hover:shadow-md"
+                  className="group flex w-24 shrink-0 snap-start flex-col items-center text-center transition hover:-translate-y-0.5 sm:w-auto sm:min-w-0 sm:flex-row sm:gap-3 sm:rounded-xl sm:border sm:border-brand-border sm:bg-white sm:p-4 sm:text-left sm:shadow-sm sm:hover:border-brand-red/30 sm:hover:shadow-md"
                 >
-                  <div>
-                    <h3 className="font-bold text-gray-900 group-hover:text-brand-red">
+                  <span className="relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-brand-border bg-brand-light-bg shadow-sm transition-colors group-hover:border-brand-red/40 sm:size-16 sm:shadow-none">
+                    {child.image ? (
+                      <Image
+                        src={child.image}
+                        alt=""
+                        fill
+                        sizes="(min-width: 640px) 64px, 80px"
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <Boxes className="h-8 w-8 text-brand-red/60 sm:h-7 sm:w-7" />
+                    )}
+                  </span>
+
+                  <div className="mt-2 min-w-0 w-full sm:mt-0 sm:flex-1">
+                    <h3 className="line-clamp-2 min-h-8 text-xs font-bold leading-4 text-gray-900 group-hover:text-brand-red sm:line-clamp-1 sm:min-h-0 sm:text-base">
                       {child.name}
                     </h3>
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-2 text-[11px] text-gray-500 sm:mt-1 sm:text-xs">
                       {child.totalProductCount}{" "}
                       {child.totalProductCount === 1 ? "product" : "products"}
                     </p>
                   </div>
-                  <ArrowRight className="h-4 w-4 shrink-0 text-brand-red transition group-hover:translate-x-1" />
+                  <ArrowRight className="hidden h-4 w-4 shrink-0 text-brand-red transition group-hover:translate-x-1 sm:block" />
                 </Link>
               ))}
             </div>

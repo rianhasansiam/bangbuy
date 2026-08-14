@@ -114,8 +114,9 @@ const checkoutBaseSchema = z.object({
     .max(40)
     .optional()
     .nullable(),
-  // Whether to clear the user's cart after a successful order. Only
-  // meaningful when the order's items came from the persisted cart.
+  // Whether to remove purchased products from the user's cart after a
+  // successful order. Full-cart checkout clears every line; an explicit cart
+  // selection clears only matching variants.
   clearCart: z.boolean().default(true),
 });
 

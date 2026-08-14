@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { resolveBannerBackground } from "@/components/ui/tailwind-palette";
+
+const AUTO_ROTATE_INTERVAL_MS = 3_000;
 
 /**
  * Home page hero carousel.
@@ -57,6 +59,16 @@ function cardBackground(slide: CarouselSlide): string {
 
 export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
   const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    if (slides.length <= 1) return;
+
+    const intervalId = window.setInterval(() => {
+      setActiveIndex((currentIndex) => (currentIndex + 1) % slides.length);
+    }, AUTO_ROTATE_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [slides.length]);
 
   if (slides.length === 0) return null;
 

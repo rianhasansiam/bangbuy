@@ -7,7 +7,7 @@ type CartHeaderProps = {
 
 export default function CartHeader({ itemCount }: CartHeaderProps) {
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-brand-border bg-brand-black px-5 py-6 text-brand-white shadow-lg sm:px-8 sm:py-8">
+    <section className="relative hidden overflow-hidden rounded-3xl border border-brand-border bg-brand-black px-5 py-6 text-brand-white shadow-lg sm:block sm:px-8 sm:py-8">
       <div className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full bg-brand-white/10 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-brand-red/20 blur-3xl" />
       <div

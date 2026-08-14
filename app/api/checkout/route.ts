@@ -27,7 +27,8 @@ import { deriveAirwallexRequestId } from "@/lib/airwallex/security/airwallex-ide
  * Authenticated users only. Totals are recomputed from the DB so
  * nothing in the body can shift the price. Customers can omit `items`
  * to have their persisted cart used, or pass `items` directly for the
- * "Buy now" flow. The order is always attached to the session userId.
+ * Buy Now or selected-cart flow. The order is always attached to the session
+ * userId.
  */
 export async function POST(request: NextRequest) {
   const guard = await requireUser();

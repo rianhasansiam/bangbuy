@@ -1,6 +1,6 @@
 "use client";
 
-import { Heart, ShoppingCart, Star } from "lucide-react";
+import { Heart, ListFilter, ShoppingCart, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -88,6 +88,7 @@ export default function ProductCard({
   const discount = originalPrice
     ? Math.round(((originalPrice - price) / originalPrice) * 100)
     : 0;
+  const requiresOptionSelection = variantCount > 1;
 
   // Prefer the SEO-friendly slug; fall back to id for callers that
   // haven't been threaded with a slug yet (the route resolves both).
@@ -174,7 +175,7 @@ export default function ProductCard({
 
     // Products with multiple size/color variants can't be blindly added —
     // send the customer to the product page to choose a variant.
-    if (variantCount > 1) {
+    if (requiresOptionSelection) {
       router.push(productHref);
       return;
     }
@@ -225,7 +226,11 @@ export default function ProductCard({
   return (
     <div className="group relative overflow-hidden rounded-xl border border-brand-border bg-brand-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-brand-border hover:shadow-lg">
       <div className="relative aspect-4/3 overflow-hidden bg-brand-light-bg">
-        <Link href={productHref}>
+        <Link
+          href={productHref}
+          aria-label={`View ${name}`}
+          className="absolute inset-0 z-0"
+        >
           <Image
             src={image}
             alt={name}
@@ -236,27 +241,29 @@ export default function ProductCard({
         </Link>
 
         {badge && (
-          <span className="absolute left-2 top-2 rounded-full bg-brand-red px-2 py-0.5 text-[10px] font-semibold text-brand-white">
+          <span className="absolute left-2 top-2 z-10 rounded-full bg-brand-red px-2 py-0.5 text-[10px] font-semibold text-brand-white">
             {badge}
           </span>
         )}
 
         {discount > 0 && !badge && (
-          <span className="absolute left-2 top-2 rounded-full bg-brand-red px-2 py-0.5 text-[10px] font-semibold text-brand-white">
+          <span className="absolute left-2 top-2 z-10 rounded-full bg-brand-red px-2 py-0.5 text-[10px] font-semibold text-brand-white">
             -{discount}%
           </span>
         )}
 
         <button
           type="button"
-          onClick={() => {
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
             void handleToggleWishlist();
           }}
           disabled={isBusy}
           aria-busy={isBusy}
           aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
           aria-pressed={isWishlisted}
-          className="absolute right-2 top-2 rounded-full bg-brand-white/90 p-1.5 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:bg-brand-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+          className="absolute right-2 top-2 z-20 rounded-full bg-brand-white/90 p-1.5 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:bg-brand-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isBusy ? (
             <LoadingSpinner decorative size="sm" className="text-brand-red" />
@@ -273,13 +280,17 @@ export default function ProductCard({
 
         <button
           type="button"
-          onClick={() => {
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
             void handleAddToCart();
           }}
           disabled={isCartBusy}
           aria-busy={isCartBusy}
-          aria-label="Add to cart"
-          className="absolute right-2 top-11 flex items-center gap-1.5 rounded-full bg-brand-white/95 p-1.5 text-xs font-semibold text-brand-red opacity-100 shadow-md backdrop-blur-sm transition-all duration-300 hover:bg-brand-red hover:text-brand-white sm:bottom-2 sm:left-1/2 sm:right-auto sm:top-auto sm:-translate-x-1/2 sm:px-3 sm:py-1.5 sm:can-hover:translate-y-2 sm:can-hover:opacity-0 sm:can-hover:group-hover:translate-y-0 sm:can-hover:group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label={
+            requiresOptionSelection ? "Select product options" : "Add to cart"
+          }
+          className="absolute right-2 top-11 z-20 flex items-center gap-1.5 rounded-full bg-brand-white/95 p-1.5 text-xs font-semibold text-brand-red opacity-100 shadow-md backdrop-blur-sm transition-all duration-300 hover:bg-brand-red hover:text-brand-white sm:bottom-2 sm:left-1/2 sm:right-auto sm:top-auto sm:-translate-x-1/2 sm:px-3 sm:py-1.5 sm:can-hover:translate-y-2 sm:can-hover:opacity-0 sm:can-hover:group-hover:translate-y-0 sm:can-hover:group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isCartBusy ? (
             <>
@@ -288,8 +299,14 @@ export default function ProductCard({
             </>
           ) : (
             <>
-              <ShoppingCart className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Add</span>
+              {requiresOptionSelection ? (
+                <ListFilter className="h-3.5 w-3.5" />
+              ) : (
+                <ShoppingCart className="h-3.5 w-3.5" />
+              )}
+              <span className="hidden sm:inline">
+                {requiresOptionSelection ? "Options" : "Add"}
+              </span>
             </>
           )}
         </button>

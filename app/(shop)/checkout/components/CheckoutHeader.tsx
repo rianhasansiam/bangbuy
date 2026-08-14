@@ -4,7 +4,7 @@ import { ChevronLeft, Lock, ShieldCheck, Truck } from "lucide-react";
 type CheckoutHeaderProps = {
   isAuthenticated: boolean;
   itemCount: number;
-  source: "cart" | "buy-now";
+  source: "cart" | "cart-selection" | "buy-now";
 };
 
 export default function CheckoutHeader({

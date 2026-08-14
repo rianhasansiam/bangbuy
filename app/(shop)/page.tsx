@@ -3,9 +3,11 @@ import type { Metadata } from "next";
 import CaroselBanner, {
   type CarouselSlide,
 } from "./components/CarouselBanner";
+import CategoryScroller from "./components/CategoryScroller";
 import Categories from "./components/Categories";
 import { getHomeCategories } from "@/lib/services/home-categories.service";
 import { getActiveCarouselBanners } from "@/lib/services/banner.service";
+import { getActiveCategoryTree } from "@/lib/services/category.service";
 import { buildMetadata } from "@/lib/seo/metadata";
 import { siteConfig } from "@/lib/seo/site";
 
@@ -25,9 +27,10 @@ export const metadata: Metadata = buildMetadata({
 });
 
 export default async function Home() {
-  const [categories, carouselBanners] = await Promise.all([
+  const [categories, carouselBanners, categoryTree] = await Promise.all([
     getHomeCategories(),
     getActiveCarouselBanners(),
+    getActiveCategoryTree(),
   ]);
 
   const slides: CarouselSlide[] = carouselBanners.map((banner) => ({
@@ -49,6 +52,9 @@ export default async function Home() {
     <main>
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4">
         <CaroselBanner slides={slides} />
+      </div>
+      <div className="mx-auto max-w-7xl px-3 pb-8 sm:px-4 lg:px-6">
+        <CategoryScroller categories={categoryTree} />
       </div>
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 pb-10">
         <Categories initialCategories={categories} />

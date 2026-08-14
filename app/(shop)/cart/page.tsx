@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Lock } from "lucide-react";
+import { Check, Lock, Minus } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSession } from "@/lib/auth/use-app-session";
 import { useDispatch, useSelector } from "react-redux";
@@ -31,7 +31,7 @@ import {
   type CheckoutPreview,
 } from "@/features/checkout/api";
 import {
-  buildCheckoutHref,
+  buildCartSelectionCheckoutHref,
   normalizeCheckoutPromoCode,
 } from "@/features/checkout/promo";
 import { computeCartSummary } from "@/features/cart/summary";
@@ -62,6 +62,13 @@ type AppliedPromo = {
 
 const FALLBACK_PRODUCT_IMAGE =
   "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400";
+const QUANTITY_SYNC_DEBOUNCE_MS = 350;
+
+type PendingQuantitySync = {
+  timeoutId: ReturnType<typeof setTimeout>;
+  version: number;
+  rollbackItem: CartItem;
+};
 
 function readLocalCart(): CartItem[] {
   return readCartFromStorage({ dedupeByProductId: true });
@@ -162,8 +169,15 @@ export default function CartPage() {
   const [pricingLoading, setPricingLoading] = useState(false);
   const [pricingError, setPricingError] = useState<string | null>(null);
   const [previewToken, setPreviewToken] = useState(0);
+  const [pendingQuantityUpdates, setPendingQuantityUpdates] = useState(0);
+  const [deselectedItemIds, setDeselectedItemIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [isCheckoutPending, startCheckoutTransition] = useTransition();
   const itemsRef = useRef(items);
+  const quantitySyncsRef = useRef(new Map<string, PendingQuantitySync>());
+  const quantityVersionsRef = useRef(new Map<string, number>());
+  const quantityRequestChainsRef = useRef(new Map<string, Promise<void>>());
 
   const canUseServer = canUseServerCart(session?.user?.role, status);
 
@@ -187,7 +201,21 @@ export default function CartPage() {
     itemsRef.current = items;
   }, [items]);
 
-  const totals = useMemo(() => {
+  useEffect(() => {
+    const pendingSyncs = quantitySyncsRef.current;
+    const quantityVersions = quantityVersionsRef.current;
+    const quantityRequestChains = quantityRequestChainsRef.current;
+    return () => {
+      for (const pending of pendingSyncs.values()) {
+        clearTimeout(pending.timeoutId);
+      }
+      pendingSyncs.clear();
+      quantityVersions.clear();
+      quantityRequestChains.clear();
+    };
+  }, []);
+
+  const cartTotals = useMemo(() => {
     const localItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
     const localSubtotal = items.reduce(
       (sum, item) => sum + item.unitPrice * item.quantity,
@@ -202,11 +230,42 @@ export default function CartPage() {
     };
   }, [items, mode, summary]);
 
+  const selectableItems = useMemo(
+    () => items.filter((item) => item.status === "ACTIVE" && item.stock > 0),
+    [items],
+  );
+  const selectedItems = useMemo(
+    () =>
+      selectableItems.filter((item) => !deselectedItemIds.has(item.id)),
+    [deselectedItemIds, selectableItems],
+  );
+  const selectedItemIds = useMemo(
+    () => new Set(selectedItems.map((item) => item.id)),
+    [selectedItems],
+  );
+  const selectedTotals = useMemo(
+    () => ({
+      itemCount: selectedItems.reduce(
+        (total, item) => total + item.quantity,
+        0,
+      ),
+      subtotal: selectedItems.reduce(
+        (total, item) => total + item.unitPrice * item.quantity,
+        0,
+      ),
+    }),
+    [selectedItems],
+  );
+  const allItemsSelected =
+    selectableItems.length > 0 && selectedItems.length === selectableItems.length;
+  const someItemsSelected = selectedItems.length > 0 && !allItemsSelected;
+
   const promoCodeForPreview = promoCandidate ?? promo?.code ?? null;
   const pricingReady =
     isHydrated &&
     status !== "loading" &&
-    items.length > 0 &&
+    selectedItems.length > 0 &&
+    pendingQuantityUpdates === 0 &&
     (!canUseServer || (mode === "server" && !isLoading));
 
   useEffect(() => {
@@ -220,13 +279,11 @@ export default function CartPage() {
 
       try {
         const next = await fetchCheckoutPreview({
-          items: canUseServer
-            ? undefined
-            : items.map((item) => ({
-                productId: item.productId,
-                quantity: item.quantity,
-                ...(item.variantId ? { variantId: item.variantId } : {}),
-              })),
+          items: selectedItems.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            ...(item.variantId ? { variantId: item.variantId } : {}),
+          })),
           deliveryZone: "INSIDE_DHAKA",
           promoCode: promoCodeForPreview,
         });
@@ -273,52 +330,194 @@ export default function CartPage() {
     };
   }, [
     canUseServer,
-    items,
     pricingReady,
     previewToken,
     promoCodeForPreview,
+    selectedItems,
   ]);
 
-  const handleQuantityChange = async (id: string, quantity: number) => {
-    const target = items.find((item) => item.id === id);
+  const finishQuantitySync = (id: string, version: number) => {
+    const current = quantitySyncsRef.current.get(id);
+    if (!current || current.version !== version) return false;
+
+    quantitySyncsRef.current.delete(id);
+    setPendingQuantityUpdates((count) => Math.max(0, count - 1));
+    return true;
+  };
+
+  const preservePendingQuantities = (serverItems: CartItem[]) => {
+    const optimisticItems = new Map(
+      itemsRef.current.map((item) => [item.id, item]),
+    );
+
+    return serverItems.map((item) => {
+      if (!quantitySyncsRef.current.has(item.id)) return item;
+
+      const optimisticItem = optimisticItems.get(item.id);
+      if (!optimisticItem) return item;
+
+      return {
+        ...item,
+        quantity: optimisticItem.quantity,
+        lineTotal: item.unitPrice * optimisticItem.quantity,
+      };
+    });
+  };
+
+  const persistQuantityToServer = async (
+    id: string,
+    quantity: number,
+    version: number,
+  ) => {
+    try {
+      await updateCartItemOnServer(id, quantity);
+      if (quantitySyncsRef.current.get(id)?.version !== version) return;
+
+      const snapshot = await fetchServerCartSnapshot();
+      if (!finishQuantitySync(id, version)) return;
+
+      const nextItems = preservePendingQuantities(snapshot.items);
+      itemsRef.current = nextItems;
+      writeLocalCart(nextItems);
+      dispatch(
+        setCartData({
+          items: nextItems,
+          summary: computeCartSummary(nextItems),
+        }),
+      );
+      setPreviewToken((token) => token + 1);
+    } catch (requestError) {
+      const current = quantitySyncsRef.current.get(id);
+      if (!current || current.version !== version) return;
+
+      let serverItems: CartItem[] | null = null;
+      try {
+        const snapshot = await fetchServerCartSnapshot();
+        serverItems = snapshot.items;
+      } catch {
+        // Fall back to the last UI state from before this update sequence.
+      }
+
+      if (!finishQuantitySync(id, version)) return;
+
+      const nextItems = serverItems
+        ? preservePendingQuantities(serverItems)
+        : itemsRef.current.map((item) =>
+            item.id === id ? current.rollbackItem : item,
+          );
+      itemsRef.current = nextItems;
+      writeLocalCart(nextItems);
+      dispatch(
+        setCartData({
+          items: nextItems,
+          summary: computeCartSummary(nextItems),
+        }),
+      );
+
+      const message =
+        requestError instanceof Error
+          ? requestError.message
+          : "Failed to update cart quantity.";
+      dispatch(setCartError(message));
+      toast.error(message);
+      setPreviewToken((token) => token + 1);
+    }
+  };
+
+  const scheduleQuantitySync = (
+    id: string,
+    quantity: number,
+    rollbackItem: CartItem,
+  ) => {
+    const existing = quantitySyncsRef.current.get(id);
+    if (existing) clearTimeout(existing.timeoutId);
+
+    const version = (quantityVersionsRef.current.get(id) ?? 0) + 1;
+    quantityVersionsRef.current.set(id, version);
+    const timeoutId = setTimeout(() => {
+      const previousRequest =
+        quantityRequestChainsRef.current.get(id) ?? Promise.resolve();
+      const queuedRequest = previousRequest
+        .catch(() => undefined)
+        .then(() => persistQuantityToServer(id, quantity, version));
+
+      quantityRequestChainsRef.current.set(id, queuedRequest);
+      void queuedRequest.then(
+        () => {
+          if (quantityRequestChainsRef.current.get(id) === queuedRequest) {
+            quantityRequestChainsRef.current.delete(id);
+          }
+        },
+        () => {
+          if (quantityRequestChainsRef.current.get(id) === queuedRequest) {
+            quantityRequestChainsRef.current.delete(id);
+          }
+        },
+      );
+    }, QUANTITY_SYNC_DEBOUNCE_MS);
+
+    quantitySyncsRef.current.set(id, {
+      timeoutId,
+      version,
+      rollbackItem: existing?.rollbackItem ?? rollbackItem,
+    });
+    if (!existing) setPendingQuantityUpdates((count) => count + 1);
+  };
+
+  const cancelQuantitySync = (id: string) => {
+    const pending = quantitySyncsRef.current.get(id);
+    if (!pending) return;
+
+    clearTimeout(pending.timeoutId);
+    quantitySyncsRef.current.delete(id);
+    quantityVersionsRef.current.set(id, pending.version + 1);
+    setPendingQuantityUpdates((count) => Math.max(0, count - 1));
+  };
+
+  const handleQuantityChange = (id: string, quantity: number) => {
+    const currentItems = itemsRef.current;
+    const target = currentItems.find((item) => item.id === id);
     if (!target) return;
 
     const verifiedTarget = enrichCartItemFromPreview(
       target,
       pricingReady && !pricingLoading ? checkoutPreview : null,
     );
+    const requestedQuantity = Number.isFinite(quantity)
+      ? Math.trunc(quantity)
+      : target.quantity;
     const safeQuantity = Math.max(
       1,
-      Math.min(verifiedTarget.stock || 1, quantity),
+      Math.min(verifiedTarget.stock || 1, requestedQuantity),
     );
+    if (safeQuantity === target.quantity) return;
+
     dispatch(setCartError(null));
 
-    if (canUseServer) {
-      try {
-        await updateCartItemOnServer(id, safeQuantity);
-        const snapshot = await fetchServerCartSnapshot();
-        dispatch(setCartData(snapshot));
-        writeLocalCart(snapshot.items);
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to update cart quantity.";
-        dispatch(setCartError(message));
-        toast.error(message);
-      }
-      return;
-    }
-
-    // Local path: build the updated list directly from Redux state (the
-    // source of truth) — do NOT re-read from localStorage, because
-    // readLocalCart({ dedupeByProductId: true }) sums duplicate quantities
-    // and would inflate the count on every change.
-    const updatedItems = items.map((item) =>
+    // Update Redux and local storage before any network request so the
+    // quantity, totals, and navbar badge respond immediately.
+    const updatedItems = currentItems.map((item) =>
       item.id === id
-        ? { ...item, quantity: safeQuantity, lineTotal: item.unitPrice * safeQuantity }
+        ? {
+            ...item,
+            quantity: safeQuantity,
+            lineTotal: item.unitPrice * safeQuantity,
+          }
         : item,
     );
+    itemsRef.current = updatedItems;
     writeLocalCart(updatedItems);
-    dispatch(setCartData({ items: updatedItems, summary: computeCartSummary(updatedItems) }));
+    dispatch(
+      setCartData({
+        items: updatedItems,
+        summary: computeCartSummary(updatedItems),
+      }),
+    );
+
+    if (canUseServer) {
+      setCheckoutPreview(null);
+      scheduleQuantitySync(id, safeQuantity, target);
+    }
   };
 
   const removeSavedFromLocal = (id: string) => {
@@ -330,6 +529,7 @@ export default function CartPage() {
   };
 
   const commitRemoveFromCart = async (id: string) => {
+    cancelQuantitySync(id);
     dispatch(setCartError(null));
 
     if (canUseServer) {
@@ -497,6 +697,11 @@ export default function CartPage() {
   };
 
   const handleApplyPromo = (code: string) => {
+    if (selectedItems.length === 0) {
+      setPromoError("Select at least one product before applying a promo code.");
+      return;
+    }
+
     const normalized = normalizeCheckoutPromoCode(code);
     if (!normalized) {
       setPromoError("Enter a promo code between 2 and 40 characters.");
@@ -515,8 +720,50 @@ export default function CartPage() {
     toast.info("Promo code removed");
   };
 
+  const handleToggleItemSelection = (id: string) => {
+    setDeselectedItemIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+    setCheckoutPreview(null);
+    setPricingLoading(false);
+    setPricingError(null);
+  };
+
+  const handleToggleSelectAll = () => {
+    setDeselectedItemIds((current) => {
+      const next = new Set(current);
+      for (const item of selectableItems) {
+        if (allItemsSelected) {
+          next.add(item.id);
+        } else {
+          next.delete(item.id);
+        }
+      }
+      return next;
+    });
+    setCheckoutPreview(null);
+    setPricingLoading(false);
+    setPricingError(null);
+  };
+
   const handleCheckout = () => {
-    const target = buildCheckoutHref(promo?.code);
+    if (selectedItems.length === 0) {
+      toast.info("Select at least one product to checkout.");
+      return;
+    }
+
+    if (pendingQuantityUpdates > 0) {
+      toast.info("Updating your cart quantity. Please wait a moment.");
+      return;
+    }
+
+    const target = buildCartSelectionCheckoutHref(selectedItems, promo?.code);
     // Checkout requires authentication so the order can be attached
     // to a real user record. Bounce unauthenticated visitors to the
     // sign-in page first, with a callbackUrl that lands them right
@@ -534,17 +781,20 @@ export default function CartPage() {
 
   const isEmpty = items.length === 0;
   const verifiedPreview =
-    pricingReady && !pricingLoading ? checkoutPreview : null;
+    pricingReady && !pricingLoading && selectedItems.length > 0
+      ? checkoutPreview
+      : null;
   const verifiedSummary = verifiedPreview?.summary ?? null;
   const itemCards = visibleCartItems.map((item) =>
     toCartViewModel(enrichCartItemFromPreview(item, verifiedPreview)),
   );
-  const mobileAmount = verifiedSummary?.total ?? totals.subtotal;
+  const mobileAmount = verifiedSummary?.total ?? selectedTotals.subtotal;
+  const isQuantitySyncing = pendingQuantityUpdates > 0;
 
   return (
     <main className="min-h-screen bg-brand-light-bg">
       <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-        <CartHeader itemCount={totals.itemCount} />
+        <CartHeader itemCount={cartTotals.itemCount} />
 
         <div className="mt-2 flex items-center justify-between px-1 text-xs text-gray-500">
           <span>Storage mode: {mode === "server" ? "Server + Local" : "Local only"}</span>
@@ -597,6 +847,35 @@ export default function CartPage() {
               )}
 
               <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-brand-border bg-brand-white px-3 py-2.5 shadow-sm sm:px-4">
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={someItemsSelected ? "mixed" : allItemsSelected}
+                    onClick={handleToggleSelectAll}
+                    disabled={selectableItems.length === 0}
+                    className="inline-flex min-w-0 items-center gap-2.5 rounded-xl px-1 py-1 text-sm font-semibold text-gray-800 transition-colors hover:text-brand-red disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span
+                      className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 transition-colors ${
+                        allItemsSelected || someItemsSelected
+                          ? "border-brand-red bg-brand-red text-white"
+                          : "border-gray-300 bg-white text-transparent"
+                      }`}
+                    >
+                      {someItemsSelected ? (
+                        <Minus className="h-3.5 w-3.5" strokeWidth={3} />
+                      ) : (
+                        <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                      )}
+                    </span>
+                    <span>{allItemsSelected ? "Deselect all" : "Select all"}</span>
+                  </button>
+                  <span className="shrink-0 text-xs font-medium text-gray-500">
+                    {selectedItems.length} of {selectableItems.length} selected
+                  </span>
+                </div>
+
                 <AnimatePresence initial={false} mode="popLayout">
                   {itemCards.map((item) => (
                     <motion.div
@@ -614,6 +893,9 @@ export default function CartPage() {
                         onQuantityChange={handleQuantityChange}
                         onRemove={handleRemove}
                         onSaveForLater={handleSaveForLater}
+                        selected={selectedItemIds.has(item.id)}
+                        selectionDisabled={!item.inStock}
+                        onSelectionChange={handleToggleItemSelection}
                       />
                     </motion.div>
                   ))}
@@ -640,8 +922,8 @@ export default function CartPage() {
             <div className="hidden lg:block">
               <OrderSummary
                 summary={verifiedSummary}
-                fallbackSubtotal={totals.subtotal}
-                itemCount={totals.itemCount}
+                fallbackSubtotal={selectedTotals.subtotal}
+                itemCount={selectedTotals.itemCount}
                 promo={promo}
                 promoError={promoError}
                 onApplyPromo={handleApplyPromo}
@@ -651,14 +933,16 @@ export default function CartPage() {
                 isApplyingPromo={pricingLoading && promoCodeForPreview !== null}
                 isCheckingOut={isCheckoutPending}
                 isPricingLoading={pricingReady && pricingLoading}
+                isCartSyncing={isQuantitySyncing}
+                isCheckoutDisabled={selectedItems.length === 0}
               />
             </div>
 
             <div className="lg:hidden">
               <OrderSummary
                 summary={verifiedSummary}
-                fallbackSubtotal={totals.subtotal}
-                itemCount={totals.itemCount}
+                fallbackSubtotal={selectedTotals.subtotal}
+                itemCount={selectedTotals.itemCount}
                 promo={promo}
                 promoError={promoError}
                 onApplyPromo={handleApplyPromo}
@@ -668,6 +952,8 @@ export default function CartPage() {
                 isApplyingPromo={pricingLoading && promoCodeForPreview !== null}
                 isCheckingOut={isCheckoutPending}
                 isPricingLoading={pricingReady && pricingLoading}
+                isCartSyncing={isQuantitySyncing}
+                isCheckoutDisabled={selectedItems.length === 0}
               />
             </div>
           </div>
@@ -681,8 +967,8 @@ export default function CartPage() {
           <div className="mx-auto flex max-w-2xl items-center gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-medium text-gray-500">
-                {verifiedSummary ? "Total" : "Subtotal"} ({totals.itemCount}{" "}
-                {totals.itemCount === 1 ? "item" : "items"})
+                {verifiedSummary ? "Total" : "Subtotal"} ({selectedTotals.itemCount}{" "}
+                {selectedTotals.itemCount === 1 ? "item" : "items"})
               </p>
               <p className="text-lg font-extrabold text-brand-red">
                 BDT {mobileAmount.toLocaleString()}
@@ -691,12 +977,20 @@ export default function CartPage() {
             <button
               type="button"
               onClick={handleCheckout}
-              disabled={isCheckoutPending}
-              aria-busy={isCheckoutPending}
-              className="inline-flex h-12 items-center gap-2 rounded-2xl bg-brand-red px-5 text-sm font-bold text-brand-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl"
+              disabled={
+                isCheckoutPending ||
+                isQuantitySyncing ||
+                selectedItems.length === 0
+              }
+              aria-busy={isCheckoutPending || isQuantitySyncing}
+              className="inline-flex h-12 items-center gap-2 rounded-2xl bg-brand-red px-5 text-sm font-bold text-brand-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
             >
-              {isCheckoutPending ? (
+              {isQuantitySyncing ? (
+                <ButtonLoader label="Updating cart..." />
+              ) : isCheckoutPending ? (
                 <ButtonLoader label="Opening checkout..." />
+              ) : selectedItems.length === 0 ? (
+                "Select items"
               ) : (
                 <>
                   <Lock className="h-4 w-4" />

@@ -53,25 +53,7 @@ export default function Categories({ initialCategories }: CategoriesProps) {
 
           <div className="mb-4 h-0.5 rounded-full bg-brand-border" />
 
-          {category.children.length > 0 && (
-            <nav
-              aria-label={`${category.name} subcategories`}
-              className="mb-4 flex flex-wrap gap-2"
-            >
-              {category.children.map((child) => (
-                <Link
-                  key={child.id}
-                  href={`/categories/${child.path}`}
-                  className="rounded-full border border-brand-border bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-brand-red/40 hover:text-brand-red"
-                >
-                  {child.name}
-                  <span className="ml-1 text-gray-600">
-                    ({child.totalProductCount})
-                  </span>
-                </Link>
-              ))}
-            </nav>
-          )}
+     
 
           <div className="flex flex-col gap-4 lg:flex-row">
             <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">

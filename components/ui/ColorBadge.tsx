@@ -6,10 +6,9 @@ import { cn } from "@/lib/utils";
  * Renders a product variant's color + size for customer-facing surfaces
  * (cart, checkout, order summary, profile).
  *
- * The admin now picks variant colors with a hex color picker, so `color`
- * may be a hex string (e.g. "#1e3a8a"). When it is, we paint a small swatch
- * instead of printing the raw hex. Legacy rows that stored a color *name*
- * ("Black") keep rendering as text. `size` is always shown as text.
+ * Admins may save a color name ("Black") or a hex value ("#1e3a8a"). Hex
+ * values render as a swatch instead of exposing the raw code; named colors
+ * render as text. `size` is always shown as text.
  */
 
 const HEX_VALUE = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;

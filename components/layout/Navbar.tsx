@@ -12,9 +12,7 @@ import {
   LogIn,
   UserPlus,
   LogOut,
-  Package,
   ChevronDown,
-  Search,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -81,17 +79,18 @@ export default function Navbar({
   const visibleMenuItems = MENU_ITEMS.filter(
     (item) => !item.adminOnly || isAdmin,
   );
+  const recommendedSearches = categories
+    .filter((category) => category.totalProductCount > 0)
+    .slice(0, 6)
+    .map((category) => category.name);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const mobileMenuPanelRef = useRef<HTMLElement | null>(null);
   const mobileMenuCloseRef = useRef<HTMLButtonElement | null>(null);
-  const mobileSearchRef = useRef<HTMLDivElement | null>(null);
-  const mobileSearchButtonRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
@@ -145,35 +144,6 @@ export default function Navbar({
     };
   }, [mobileMenuOpen]);
 
-  useEffect(() => {
-    if (!mobileSearchOpen) return;
-
-    const handlePointerDown = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (
-        !mobileSearchRef.current?.contains(target) &&
-        !mobileSearchButtonRef.current?.contains(target)
-      ) {
-        setMobileSearchOpen(false);
-      }
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setMobileSearchOpen(false);
-        mobileSearchButtonRef.current?.focus();
-      }
-    };
-
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [mobileSearchOpen]);
-
   const cancelClose = () => {
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
@@ -217,7 +187,6 @@ export default function Navbar({
             ref={mobileMenuButtonRef}
             type="button"
             onClick={() => {
-              setMobileSearchOpen(false);
               setMobileMenuOpen(true);
             }}
             aria-label="Open menu"
@@ -297,26 +266,13 @@ export default function Navbar({
         </nav>
 
         {/* DESKTOP SEARCH */}
-        <SearchBar className="mx-4 hidden max-w-lg flex-1 md:block" />
+        <SearchBar
+          className="mx-4 hidden max-w-lg flex-1 md:block"
+          recommendations={recommendedSearches}
+        />
 
         {/* RIGHT ICONS */}
         <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
-          <button
-            ref={mobileSearchButtonRef}
-            type="button"
-            aria-label={mobileSearchOpen ? "Close product search" : "Search products"}
-            aria-expanded={mobileSearchOpen}
-            aria-controls="mobile-navbar-search"
-            onClick={() => setMobileSearchOpen((open) => !open)}
-            className="rounded-full p-2 text-brand-black transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-light-bg hover:text-brand-red md:hidden"
-          >
-            {mobileSearchOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Search className="h-5 w-5" />
-            )}
-          </button>
-
           {!user && (
             <Link
               href="/login"
@@ -510,31 +466,13 @@ export default function Navbar({
         </div>
       </div>
 
-      {/* MOBILE NAVBAR SEARCH */}
-      <div
-        id="mobile-navbar-search"
-        ref={mobileSearchRef}
-        aria-hidden={!mobileSearchOpen}
-        className={cn(
-          "absolute left-1 right-1 top-full z-50 origin-top transition-all duration-300 ease-out md:hidden sm:left-4 sm:right-4",
-          mobileSearchOpen
-            ? "visible translate-y-0 opacity-100"
-            : "invisible pointer-events-none -translate-y-2 opacity-0",
-        )}
-      >
-        <div
-          className={cn(
-            "overflow-visible rounded-b-2xl border-x border-b border-brand-border bg-brand-white p-3 shadow-xl transition-[max-height,padding] duration-300 ease-out",
-            mobileSearchOpen ? "max-h-24" : "max-h-0 py-0",
-          )}
-        >
-          <SearchBar
-            placeholder="Search products..."
-            inputClassName="border-brand-border bg-brand-light-bg"
-            shouldFocus={mobileSearchOpen}
-            onNavigate={() => setMobileSearchOpen(false)}
-          />
-        </div>
+      {/* Persistent mobile search keeps catalog discovery visible without an extra tap. */}
+      <div className="mx-auto w-full max-w-7xl px-1 pt-2 md:hidden sm:px-0">
+        <SearchBar
+          placeholder="Search products, codes or categories..."
+          recommendations={recommendedSearches}
+          inputClassName="h-11 border-2 border-brand-red/35 bg-brand-white pl-10 text-[16px] shadow-sm focus-visible:border-brand-red"
+        />
       </div>
 
       {/* MOBILE MENU */}
@@ -598,6 +536,7 @@ export default function Navbar({
         <div className="border-b border-brand-border bg-brand-white/40 px-4 py-3">
           <SearchBar
             placeholder="Search..."
+            recommendations={recommendedSearches}
             inputClassName="rounded-xl border-brand-border bg-brand-white"
             onNavigate={() => setMobileMenuOpen(false)}
           />

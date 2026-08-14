@@ -33,6 +33,8 @@ import {
   setCartError,
 } from "@/store/slices/cart.slice";
 import { computeCartSummary } from "@/features/cart/summary";
+import { fetchServerCartSnapshot } from "@/features/cart/api";
+import { writeLocalCart } from "@/features/cart/storage";
 import type { AppDispatch, RootState } from "@/store";
 import { toast } from "@/lib/feedback";
 import { startAirwallexHostedCheckout } from "@/lib/airwallex/components/AirwallexPayButton";
@@ -62,6 +64,7 @@ const EMPTY_FORM: CustomerFormState = {
 
 type CheckoutSource =
   | { kind: "cart" }
+  | { kind: "cart-selection"; items: CheckoutItemInput[] }
   | { kind: "buy-now"; items: CheckoutItemInput[] };
 
 function parseBuyNowParam(raw: string | null): CheckoutItemInput[] | null {
@@ -101,14 +104,22 @@ function CheckoutPageInner() {
   const cartIsLoading = useSelector((state: RootState) => state.cart.isLoading);
   const cartError = useSelector((state: RootState) => state.cart.error);
 
-  // Source: explicit buy-now items from query string OR the user's cart.
+  // Source: explicit Buy Now items, an explicit cart selection, or the full
+  // persisted cart when no item payload is present.
   const buyNowItems = useMemo(
     () => parseBuyNowParam(searchParams.get("buy")),
     [searchParams],
   );
+  const isCartSelection = searchParams.get("source") === "cart";
   const source = useMemo<CheckoutSource>(
-    () => (buyNowItems ? { kind: "buy-now", items: buyNowItems } : { kind: "cart" }),
-    [buyNowItems],
+    () =>
+      buyNowItems
+        ? {
+            kind: isCartSelection ? "cart-selection" : "buy-now",
+            items: buyNowItems,
+          }
+        : { kind: "cart" },
+    [buyNowItems, isCartSelection],
   );
   const carriedPromo = useMemo(
     () => normalizeCheckoutPromoCode(searchParams.get("promo")),
@@ -212,15 +223,15 @@ function CheckoutPageInner() {
   );
 
   // Build the items payload sent to /api/checkout/preview.
-  // For "Buy now" we forward the explicit selection; otherwise we
-  // omit `items` so the server reads the user's persisted cart.
+  // Buy Now and selected-cart flows forward explicit items. Full-cart
+  // checkout omits `items` so the server reads the persisted cart.
   const buildItemsPayload = useCallback((): CheckoutItemInput[] | undefined => {
-    if (source.kind === "buy-now") return source.items;
+    if (source.kind !== "cart") return source.items;
     return undefined;
   }, [source]);
 
   const cartSourceReady =
-    source.kind === "buy-now" ||
+    source.kind !== "cart" ||
     (cartIsHydrated && cartMode === "server" && !cartIsLoading);
 
   // Single source of truth for "fetch the preview". Triggered by:
@@ -351,6 +362,36 @@ function CheckoutPageInner() {
     return Object.keys(errors).length === 0;
   };
 
+  const syncCartAfterOrder = async () => {
+    if (source.kind === "buy-now") return;
+
+    try {
+      const snapshot = await fetchServerCartSnapshot();
+      writeLocalCart(snapshot.items);
+      dispatch(setCartData(snapshot));
+    } catch {
+      const remainingItems =
+        source.kind === "cart"
+          ? []
+          : items.filter(
+              (cartItem) =>
+                !source.items.some((orderedItem) =>
+                  orderedItem.variantId
+                    ? orderedItem.variantId === cartItem.variantId
+                    : orderedItem.productId === cartItem.productId,
+                ),
+            );
+      writeLocalCart(remainingItems);
+      dispatch(
+        setCartData({
+          items: remainingItems,
+          summary: computeCartSummary(remainingItems),
+        }),
+      );
+    }
+    dispatch(setCartError(null));
+  };
+
   const handlePlaceOrder = async () => {
     if (isPlacingOrder || submitInFlightRef.current) return;
     setSubmitError(null);
@@ -386,7 +427,7 @@ function CheckoutPageInner() {
         customerNote: form.customerNote.trim() || undefined,
         paymentMethod,
         promoCode: appliedPromo,
-        clearCart: source.kind === "cart",
+        clearCart: source.kind !== "buy-now",
       };
 
       if (
@@ -411,12 +452,9 @@ function CheckoutPageInner() {
         );
       }
 
-      // Cart is now empty server-side. Sync local state so the next
-      // navigation doesn't show stale items.
-      if (source.kind === "cart") {
-        dispatch(setCartData({ items: [], summary: computeCartSummary([]) }));
-        dispatch(setCartError(null));
-      }
+      // A full-cart order empties the cart; a selected-cart order removes
+      // only the purchased lines. Keep Redux and local storage authoritative.
+      await syncCartAfterOrder();
 
       if (paymentMethod === "SSLCOMMERZ" && paymentUrl) {
         toast.info("Redirecting to secure payment...");
@@ -450,12 +488,7 @@ function CheckoutPageInner() {
         error.orderId &&
         paymentMethod === "SSLCOMMERZ"
       ) {
-        if (source.kind === "cart") {
-          dispatch(
-            setCartData({ items: [], summary: computeCartSummary([]) }),
-          );
-          dispatch(setCartError(null));
-        }
+        await syncCartAfterOrder();
         const outcome =
           error.paymentState === "PENDING" ||
           error.paymentState === "SUCCESS"

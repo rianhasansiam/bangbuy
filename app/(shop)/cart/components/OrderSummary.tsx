@@ -31,6 +31,8 @@ type OrderSummaryProps = {
   isApplyingPromo?: boolean;
   isCheckingOut?: boolean;
   isPricingLoading?: boolean;
+  isCartSyncing?: boolean;
+  isCheckoutDisabled?: boolean;
 };
 
 export default function OrderSummary({
@@ -46,6 +48,8 @@ export default function OrderSummary({
   isApplyingPromo = false,
   isCheckingOut = false,
   isPricingLoading = false,
+  isCartSyncing = false,
+  isCheckoutDisabled = false,
 }: OrderSummaryProps) {
   const verifiedSummary = isPricingLoading ? null : summary;
   const subtotal = verifiedSummary?.subtotal ?? fallbackSubtotal;
@@ -56,7 +60,7 @@ export default function OrderSummary({
   return (
     <aside
       className="sticky top-[88px] flex flex-col gap-4 rounded-3xl border border-brand-border bg-brand-white p-5 shadow-sm sm:p-6"
-      aria-busy={isPricingLoading || isCheckingOut}
+      aria-busy={isPricingLoading || isCheckingOut || isCartSyncing}
     >
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-gray-900">Order Summary</h2>
@@ -144,12 +148,16 @@ export default function OrderSummary({
       <button
         type="button"
         onClick={onCheckout}
-        disabled={isCheckingOut}
-        aria-busy={isCheckingOut}
+        disabled={isCheckingOut || isCartSyncing || isCheckoutDisabled}
+        aria-busy={isCheckingOut || isCartSyncing}
         className="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-brand-red px-5 text-base font-bold text-brand-white shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {isCheckingOut ? (
+        {isCartSyncing ? (
+          <ButtonLoader label="Updating cart..." />
+        ) : isCheckingOut ? (
           <ButtonLoader label="Opening checkout..." />
+        ) : isCheckoutDisabled ? (
+          "Select items to checkout"
         ) : (
           <>
             <Lock className="h-4 w-4" />

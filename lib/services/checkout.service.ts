@@ -104,7 +104,7 @@ type ResolvedItems = {
  * Pick the source of truth for the items being checked out.
  *
  * Priority:
- *   1. Body-provided items (the "Buy now" flow).
+ *   1. Body-provided items (Buy Now or selected-cart checkout).
  *   2. The user's persisted cart, when no items are supplied.
  */
 async function resolveItems(
@@ -824,9 +824,18 @@ async function placeOrderInternal(
         });
       }
 
-      // Empty the cart on success when the items came from there.
-      if (fromCart && input.clearCart && userId) {
-        await tx.cartItem.deleteMany({ where: { userId } });
+      // Full-cart checkout clears every line. Explicit cart selections carry
+      // `clearCart: true`, so only the purchased variants are removed and
+      // unselected cart lines remain available for later.
+      if (input.clearCart && userId) {
+        await tx.cartItem.deleteMany({
+          where: fromCart
+            ? { userId }
+            : {
+                userId,
+                variantId: { in: lines.map((line) => line.variantId) },
+              },
+        });
       }
 
       return { order, summary, promo: promoToJson(promo), paymentAttempt };

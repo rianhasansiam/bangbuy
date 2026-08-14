@@ -7,11 +7,13 @@ import {
   Tag,
   Sparkles,
   AlertTriangle,
+  Check,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
 import ColorBadge from "@/components/ui/ColorBadge";
+import { cn } from "@/lib/utils";
 
 import QuantityStepper from "./QuantityStepper";
 
@@ -40,6 +42,9 @@ type CartItemCardProps = {
   onQuantityChange: (id: string, quantity: number) => void;
   onRemove: (id: string) => void;
   onSaveForLater: (id: string) => void;
+  selected: boolean;
+  selectionDisabled?: boolean;
+  onSelectionChange: (id: string) => void;
 };
 
 export default function CartItemCard({
@@ -47,6 +52,9 @@ export default function CartItemCard({
   onQuantityChange,
   onRemove,
   onSaveForLater,
+  selected,
+  selectionDisabled = false,
+  onSelectionChange,
 }: CartItemCardProps) {
   const hasDiscount =
     typeof item.originalPrice === "number" && item.originalPrice > item.price;
@@ -57,17 +65,45 @@ export default function CartItemCard({
   const nearMax = item.quantity >= item.maxQuantity;
 
   return (
-    <article className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-3 shadow-sm transition-all duration-300 hover:border-brand-red/40 hover:shadow-md sm:p-4">
-      <div className="flex gap-3 sm:gap-4">
+    <article
+      className={cn(
+        "group relative overflow-hidden rounded-2xl border bg-white p-3 shadow-sm transition-all duration-300 hover:shadow-md sm:p-4",
+        selected
+          ? "border-brand-red/35 ring-1 ring-brand-red/10"
+          : "border-gray-100 hover:border-brand-red/40",
+      )}
+    >
+      <div className="flex gap-2 sm:gap-3">
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={selected}
+          aria-label={
+            selectionDisabled
+              ? `${item.name} is unavailable for checkout`
+              : `${selected ? "Deselect" : "Select"} ${item.name} for checkout`
+          }
+          disabled={selectionDisabled}
+          onClick={() => onSelectionChange(item.id)}
+          className={cn(
+            "grid h-6 w-6 shrink-0 place-items-center self-center rounded-full border-2 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-40",
+            selected
+              ? "border-brand-red bg-brand-red text-white shadow-sm"
+              : "border-gray-300 bg-white text-transparent hover:border-brand-red",
+          )}
+        >
+          <Check className="h-3.5 w-3.5" strokeWidth={3} />
+        </button>
+
         <Link
           href={`/products/${item.slug}`}
-          className="relative aspect-square w-24 shrink-0 overflow-hidden rounded-xl bg-gray-50 sm:w-32"
+          className="relative aspect-square w-32 h-32 justify-center items-center mt-8  shrink-0 overflow-hidden rounded-xl bg-gray-50 sm:w-32"
         >
           <Image
             src={item.image}
             alt={item.name}
             fill
-            sizes="(max-width: 640px) 96px, 128px"
+            sizes="(max-width: 639px) 96px, 128px"
             className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
           {hasDiscount && (

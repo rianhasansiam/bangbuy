@@ -612,7 +612,7 @@ export default async function ProductDetailsPage({ params }: Props) {
     : null;
 
   return (
-    <main className="min-h-screen bg-brand-light-bg">
+    <main className="min-h-screen bg-brand-light-bg pb-20 lg:pb-0">
       {productSchema && breadcrumbSchema && (
         <JsonLd
           data={
@@ -707,6 +707,10 @@ export default async function ProductDetailsPage({ params }: Props) {
                 productSlug={product.slug}
                 productName={product.name}
                 image={primaryDisplayImage}
+                brand={brandName}
+                category={categoryLabel}
+                rating={rating}
+                reviewCount={reviewCount}
                 salePrice={product.salePrice.toNumber()}
                 discountPrice={
                   product.discountPrice != null

@@ -34,7 +34,7 @@ import {
   notifyActionSuccess,
 } from "@/lib/admin-feedback";
 import {
-  isSixDigitProductColor,
+  isValidProductColor,
   normalizeProductColor,
   PRODUCT_COLOR_VALIDATION_MESSAGE,
 } from "@/lib/catalog/product-color";
@@ -316,7 +316,7 @@ export default function AdminProductsPage() {
       if (colorWasUnchanged) {
         color = originalColor;
       } else if (enteredColor !== null) {
-        if (!isSixDigitProductColor(enteredColor)) {
+        if (!isValidProductColor(enteredColor)) {
           throw new Error(
             `Variant ${index + 1} color: ${PRODUCT_COLOR_VALIDATION_MESSAGE}`,
           );

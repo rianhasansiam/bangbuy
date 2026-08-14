@@ -23,8 +23,10 @@ import {
 } from "@/features/admin-products/api";
 import type { ProductDescriptionBlock } from "@/lib/types/product-description-blocks";
 import {
-  isSixDigitProductColor,
+  isValidProductColor,
   normalizeProductColor,
+  PRODUCT_COLOR_MAX_LENGTH,
+  PRODUCT_COLOR_VALIDATION_MESSAGE,
 } from "@/lib/catalog/product-color";
 import { cn } from "@/lib/utils";
 
@@ -32,13 +34,6 @@ import Field from "./Field";
 
 const inputClass =
   "h-10 w-full rounded-xl border border-brand-border bg-white px-3 text-sm outline-none transition focus:border-brand-red disabled:cursor-not-allowed disabled:bg-gray-50";
-
-function normalizeManualColorInput(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  const uppercase = normalizeProductColor(trimmed);
-  return uppercase.startsWith("#") ? uppercase : `#${uppercase}`;
-}
 
 function Section({
   title,
@@ -409,14 +404,14 @@ export default function ProductFormDrawer({
                   const colorWasUnchanged =
                     hasOriginalColor && variant.color === (originalColor ?? "");
                   const enteredColor = variant.color.trim();
-                  const colorIsStrict =
+                  const colorIsValid =
                     enteredColor.length === 0 ||
-                    isSixDigitProductColor(enteredColor);
-                  const hasInvalidColor = !colorWasUnchanged && !colorIsStrict;
+                    isValidProductColor(enteredColor);
+                  const hasInvalidColor = !colorWasUnchanged && !colorIsValid;
                   const hasUnchangedLegacyColor =
                     colorWasUnchanged &&
                     enteredColor.length > 0 &&
-                    !isSixDigitProductColor(enteredColor);
+                    !isValidProductColor(enteredColor);
                   const colorHelpId = `variant-${index + 1}-color-help`;
 
                   return (
@@ -450,11 +445,11 @@ export default function ProductFormDrawer({
                       <Field label="Size shortcut"><input value={variant.size} onChange={(event) => updateVariant(index, { size: event.target.value })} className={inputClass} placeholder="Optional" /></Field>
                       <div className="space-y-1.5 sm:col-span-2">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-                          Color shortcut
+                          Color shortcut (name or HEX)
                         </span>
                         <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem]">
                           <AdvancedColorPicker
-                            label={`Variant ${index + 1} color`}
+                            label={`Variant ${index + 1} HEX color picker`}
                             alpha={false}
                             showHexInput={false}
                             value={variant.color}
@@ -469,15 +464,22 @@ export default function ProductFormDrawer({
                             value={variant.color}
                             onChange={(event) =>
                               updateVariant(index, {
-                                color: normalizeManualColorInput(event.target.value),
+                                color: event.target.value,
                               })
                             }
+                            onBlur={() => {
+                              if (isValidProductColor(variant.color)) {
+                                updateVariant(index, {
+                                  color: normalizeProductColor(variant.color),
+                                });
+                              }
+                            }}
                             disabled={isSubmitting}
                             spellCheck={false}
-                            autoCapitalize="characters"
+                            autoCapitalize="words"
                             inputMode="text"
-                            maxLength={9}
-                            aria-label={`Variant ${index + 1} hex color`}
+                            maxLength={PRODUCT_COLOR_MAX_LENGTH}
+                            aria-label={`Variant ${index + 1} color name or hex value`}
                             aria-invalid={hasInvalidColor}
                             aria-describedby={
                               hasInvalidColor || hasUnchangedLegacyColor
@@ -486,11 +488,11 @@ export default function ProductFormDrawer({
                             }
                             className={cn(
                               inputClass,
-                              "font-mono text-xs font-semibold",
+                              "text-xs font-semibold",
                               hasInvalidColor &&
                                 "border-red-300 focus:border-red-500",
                             )}
-                            placeholder="#112233"
+                            placeholder="Black or #112233"
                           />
                         </div>
                         {hasInvalidColor && (
@@ -499,12 +501,12 @@ export default function ProductFormDrawer({
                             role="alert"
                             className="text-[11px] font-semibold text-red-600"
                           >
-                            Use exactly 6 hexadecimal digits, for example #112233.
+                            {PRODUCT_COLOR_VALIDATION_MESSAGE}
                           </p>
                         )}
                         {hasUnchangedLegacyColor && (
                           <p id={colorHelpId} className="text-[11px] text-amber-700">
-                            Legacy color preserved. Leave it unchanged or replace it with #RRGGBB.
+                            Existing color format preserved. Leave it unchanged or replace it with a name or #RRGGBB.
                           </p>
                         )}
                       </div>

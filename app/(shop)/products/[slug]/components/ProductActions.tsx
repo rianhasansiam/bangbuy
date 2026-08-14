@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useMemo, useState, useTransition } from "react";
-import { Minus, Plus, ShoppingCart, Zap } from "lucide-react";
+import { Heart, Minus, Plus, ShoppingCart, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 import { ButtonLoader } from "@/components/ui/loading";
 import {
@@ -18,13 +18,29 @@ import {
   writeLocalCart,
 } from "@/features/cart/storage";
 import { computeCartSummary } from "@/features/cart/summary";
+import {
+  canUseServerWishlist,
+  createWishlistItemOnServer,
+  removeWishlistItemOnServer,
+  type WishlistItem,
+} from "@/features/wishlist/api";
+import {
+  readLocalWishlist,
+  upsertLocalWishlistItem,
+  writeLocalWishlist,
+} from "@/features/wishlist/storage";
 import { useSession } from "@/lib/auth/use-app-session";
 import { toast } from "@/lib/feedback";
-import { type AppDispatch } from "@/store";
+import { type AppDispatch, type RootState } from "@/store";
 import {
   setCartData,
   setCartError as setCartErrorAction,
 } from "@/store/slices/cart.slice";
+import {
+  removeWishlistItem,
+  setWishlistError,
+  upsertWishlistItem,
+} from "@/store/slices/wishlist.slice";
 
 import { initialVariantSelectionId } from "./variant-selection";
 
@@ -110,6 +126,10 @@ type ProductActionsProps = {
   productSlug: string;
   productName: string;
   image?: string | null;
+  brand?: string | null;
+  category: string;
+  rating: number;
+  reviewCount: number;
   variants: ProductVariantOption[];
   /** Regular selling price (product-level). */
   salePrice: number;
@@ -122,6 +142,10 @@ const ProductActions = ({
   productSlug,
   productName,
   image,
+  brand,
+  category,
+  rating,
+  reviewCount,
   variants,
   salePrice,
   discountPrice,
@@ -140,7 +164,11 @@ const ProductActions = ({
   );
   const [quantity, setQuantity] = useState(1);
   const [isCartBusy, setIsCartBusy] = useState(false);
+  const [isWishlistBusy, setIsWishlistBusy] = useState(false);
   const [isBuyNowPending, startBuyNowTransition] = useTransition();
+  const isWishlisted = useSelector((state: RootState) =>
+    state.wishlist.items.some((item) => item.id === productId),
+  );
 
   const selectedVariant =
     activeVariants.find((variant) => variant.id === selectedVariantId) ?? null;
@@ -257,6 +285,85 @@ const ProductActions = ({
     });
   };
 
+  const handleToggleWishlist = async () => {
+    if (isWishlistBusy) return;
+
+    const canUseServer = canUseServerWishlist(session?.user?.role, status);
+    const localBefore = readLocalWishlist();
+    const optimisticItem: WishlistItem = {
+      id: productId,
+      slug: productSlug,
+      name: productName,
+      brand: brand?.trim() || "BangBuy",
+      image: image ?? FALLBACK_PRODUCT_IMAGE,
+      price: unitPrice,
+      originalPrice: discount > 0 ? currentListPrice : undefined,
+      rating,
+      reviewCount,
+      category: category.trim() || "General",
+      inStock: activeVariants.some((variant) => variant.stock > 0),
+      addedAt: new Date().toISOString(),
+      variantCount: activeVariants.length,
+    };
+
+    dispatch(setWishlistError(null));
+
+    if (isWishlisted) {
+      const nextLocal = localBefore.filter((item) => item.id !== productId);
+      writeLocalWishlist(nextLocal);
+      dispatch(removeWishlistItem(productId));
+      toast.success("Removed from wishlist");
+
+      if (!canUseServer) return;
+
+      setIsWishlistBusy(true);
+      try {
+        await removeWishlistItemOnServer(productId);
+      } catch (error) {
+        writeLocalWishlist(localBefore);
+        dispatch(upsertWishlistItem(optimisticItem));
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to remove item from wishlist.";
+        dispatch(setWishlistError(message));
+        toast.error(message);
+      } finally {
+        setIsWishlistBusy(false);
+      }
+      return;
+    }
+
+    const nextLocal = upsertLocalWishlistItem(localBefore, optimisticItem);
+    writeLocalWishlist(nextLocal);
+    dispatch(upsertWishlistItem(optimisticItem));
+    toast.success("Added to wishlist");
+
+    if (!canUseServer) return;
+
+    setIsWishlistBusy(true);
+    try {
+      const savedItem = await createWishlistItemOnServer(productId);
+      const latestLocal = upsertLocalWishlistItem(
+        readLocalWishlist(),
+        savedItem,
+      );
+      writeLocalWishlist(latestLocal);
+      dispatch(upsertWishlistItem(savedItem));
+    } catch (error) {
+      writeLocalWishlist(localBefore);
+      dispatch(removeWishlistItem(productId));
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to add item to wishlist.";
+      dispatch(setWishlistError(message));
+      toast.error(message);
+    } finally {
+      setIsWishlistBusy(false);
+    }
+  };
+
   return (
     <div className="space-y-5 border-t border-gray-100 pt-4">
       <div className="flex flex-wrap items-baseline gap-3">
@@ -287,7 +394,7 @@ const ProductActions = ({
             Select one complete combination before adding this product to your
             cart.
           </p>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-2">
             {activeVariants.map((variant) => {
               const isSelected = variant.id === selectedVariant?.id;
               const isOutOfStock = variant.stock <= 0;
@@ -300,7 +407,7 @@ const ProductActions = ({
                   onClick={() => selectVariant(variant)}
                   disabled={isOutOfStock}
                   aria-pressed={isSelected}
-                  className={`rounded-xl border p-3 text-left transition ${
+                  className={`min-w-0 rounded-xl border p-2.5 text-left transition sm:p-3 ${
                     isSelected
                       ? "border-brand-red bg-brand-red/5 ring-1 ring-brand-red"
                       : isOutOfStock
@@ -308,8 +415,8 @@ const ProductActions = ({
                         : "border-gray-200 bg-white hover:border-brand-red/70 hover:bg-brand-red/5"
                   }`}
                 >
-                  <span className="flex items-start justify-between gap-3">
-                    <span className="min-w-0 font-semibold text-gray-900">
+                  <span className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                    <span className="min-w-0 break-words text-sm font-semibold text-gray-900 sm:text-base">
                       {variantLabel(variant)}
                     </span>
                     <span
@@ -467,6 +574,76 @@ const ProductActions = ({
           </>
         )}
       </button>
+
+      <div className="fixed inset-x-0 bottom-0 z-60 border-t border-brand-border bg-brand-white/95 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.2)] backdrop-blur-lg lg:hidden sm:px-4 sm:pt-3">
+        <div className="mx-auto flex max-w-2xl items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              void handleToggleWishlist();
+            }}
+            disabled={isWishlistBusy}
+            aria-label={
+              isWishlisted ? "Remove from wishlist" : "Add to wishlist"
+            }
+            aria-pressed={isWishlisted}
+            aria-busy={isWishlistBusy}
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition sm:h-12 sm:w-12 ${
+              isWishlisted
+                ? "border-brand-red bg-brand-red/10 text-brand-red"
+                : "border-brand-border bg-white text-gray-700 hover:border-brand-red/40 hover:text-brand-red"
+            } disabled:cursor-not-allowed disabled:opacity-60`}
+          >
+            {isWishlistBusy ? (
+              <ButtonLoader />
+            ) : (
+              <Heart
+                className={`h-5 w-5 ${isWishlisted ? "fill-current" : ""}`}
+              />
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              void handleAddToCart();
+            }}
+            disabled={!isPurchasable || isCartBusy}
+            aria-busy={isCartBusy}
+            className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-brand-red bg-white px-2 text-xs font-bold text-brand-red transition hover:bg-brand-red/5 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400 sm:h-12 sm:px-4 sm:text-sm"
+          >
+            {isCartBusy ? (
+              <ButtonLoader label="Adding..." />
+            ) : (
+              <>
+                <ShoppingCart className="h-4 w-4 shrink-0" />
+                <span className="truncate">
+                  {requiresExplicitSelection && !selectedVariant
+                    ? "Select option"
+                    : "Add to cart"}
+                </span>
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleBuyNow}
+            disabled={!isPurchasable || isBuyNowPending}
+            aria-busy={isBuyNowPending}
+            className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand-red px-2 text-xs font-bold text-brand-white shadow-sm transition hover:bg-brand-red-hover disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 sm:h-12 sm:px-4 sm:text-sm"
+          >
+            {isBuyNowPending ? (
+              <ButtonLoader label="Opening..." />
+            ) : (
+              <>
+                <Zap className="h-4 w-4 shrink-0" />
+                <span className="truncate">Buy now</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

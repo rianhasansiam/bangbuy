@@ -45,12 +45,29 @@ describe("create product color validation", () => {
   });
 
   it.each([
-    ["named color", "Black"],
+    ["simple name", "Black", "Black"],
+    ["another simple name", "Pink", "Pink"],
+    ["multi-word name", "  Rose   Gold  ", "Rose Gold"],
+    ["compound name", "Black/Pink", "Black/Pink"],
+  ])("accepts and normalizes a %s", (_label, color, expected) => {
+    const result = createProductSchema.safeParse(
+      createProductWithVariants([{ color, size: "M", stock: 5 }]),
+    );
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.variants[0]?.color).toBe(expected);
+    }
+  });
+
+  it.each([
     ["three-digit HEX", "#FFF"],
     ["eight-digit HEX", "#112233FF"],
     ["missing hash", "112233"],
     ["non-HEX characters", "#12GG56"],
     ["wrong length", "#12345"],
+    ["markup characters", "<Pink>"],
+    ["overlong name", "A".repeat(41)],
   ])("rejects %s", (_label, color) => {
     const result = createProductSchema.safeParse(
       createProductWithVariants([{ color, size: "M", stock: 5 }]),
@@ -88,11 +105,22 @@ describe("resolveProductColorWrite", () => {
   });
 
   it.each([
-    ["named color", "Black"],
+    ["new named color", "Black", undefined, "Black"],
+    ["changed named color", "Pink", { value: "Black" }, "Pink"],
+    ["spaced named color", "  Rose   Gold  ", undefined, "Rose Gold"],
+  ])("accepts a %s", (_label, color, stored, expected) => {
+    expect(resolveProductColorWrite(color, stored)).toEqual({
+      success: true,
+      value: expected,
+    });
+  });
+
+  it.each([
     ["three-digit HEX", "#FFF"],
     ["eight-digit HEX", "#112233FF"],
     ["missing hash", "112233"],
     ["malformed HEX", "#12GG56"],
+    ["markup characters", "<Pink>"],
   ])("rejects a new invalid %s", (_label, color) => {
     expect(resolveProductColorWrite(color)).toEqual({
       success: false,
@@ -101,11 +129,11 @@ describe("resolveProductColorWrite", () => {
   });
 
   it.each([
-    ["named color", "White"],
     ["three-digit HEX", "#ABC"],
     ["eight-digit HEX", "#11223380"],
     ["missing hash", "AABBCC"],
     ["malformed HEX", "#ABCDEG"],
+    ["markup characters", "Pink<script>"],
   ])("rejects a changed invalid %s", (_label, color) => {
     expect(resolveProductColorWrite(color, { value: "Black" })).toEqual({
       success: false,
@@ -150,7 +178,18 @@ describe("update product color parsing", () => {
     }
   });
 
-  it.each(["Black", "#FFF", "#112233FF"])(
+  it("accepts a named color on a new update variant", () => {
+    const result = updateProductSchema.safeParse({
+      variants: [{ color: "Pink", stock: 0 }],
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.variants?.[0]?.color).toBe("Pink");
+    }
+  });
+
+  it.each(["#FFF", "#112233FF", "112233", "<Black>"])(
     "rejects an invalid color on a new update variant: %s",
     (color) => {
       const result = updateProductSchema.safeParse({
@@ -173,6 +212,20 @@ describe("product variant uniqueness refinements", () => {
       createProductWithVariants([
         { color: "#aabbcc", size: "M", sku: "SKU-1", stock: 5 },
         { color: "#AABBCC", size: "M", sku: "SKU-2", stock: 5 },
+      ]),
+    );
+
+    expect(result.success).toBe(false);
+    expect(validationMessages(result)).toContain(
+      "Each option combination must be unique.",
+    );
+  });
+
+  it("rejects duplicate named color combinations case-insensitively", () => {
+    const result = createProductSchema.safeParse(
+      createProductWithVariants([
+        { color: "Black", size: "M", sku: "SKU-1", stock: 5 },
+        { color: "black", size: "M", sku: "SKU-2", stock: 5 },
       ]),
     );
 
