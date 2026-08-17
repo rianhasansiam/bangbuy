@@ -91,7 +91,7 @@ export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
           <div className="absolute top-1/2 left-1/2 w-48 h-48 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
         </div>
 
-        <div className="relative z-10 flex h-[40vh] flex-row items-center justify-between gap-3 px-4 py-4 sm:gap-6 sm:px-8 sm:py-6 md:h-auto md:px-10 md:py-12">
+        <div className="relative z-10 flex h-[50vh] flex-row items-center justify-between gap-3 px-4 py-4 sm:gap-6 sm:px-8 sm:py-6 md:h-auto md:px-10 md:py-12">
           {/* Text Content */}
           <div
             key={activeDeal.id}
@@ -150,7 +150,7 @@ export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
       </div>
 
       {/* Deal Cards */}
-      {slides.length > 1 && (
+      {/* {slides.length > 1 && (
         <div className="px-3 sm:px-4 lg:px-6">
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
             {slides.map((card, index) => {
@@ -199,7 +199,7 @@ export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
             })}
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 }
