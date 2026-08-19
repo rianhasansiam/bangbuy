@@ -23,6 +23,7 @@ import {
 import {
   detectCountryCode,
   detectCurrency,
+  normalizeCountryHeaderValue,
   type HeadersLike,
 } from "@/lib/currency/detect-country";
 import { formatMoney } from "@/lib/currency/format-money";
@@ -137,6 +138,15 @@ describe("country-to-currency mapping", () => {
 });
 
 describe("country header detection", () => {
+  it.each(["BD", "DE", "CN", "US", "GB", "AU"])(
+    "reads Cloudflare country %s through case-insensitive Web Headers",
+    (country) => {
+      expect(
+        detectCountryCode(new Headers({ "CF-IPCountry": country })),
+      ).toBe(country);
+    },
+  );
+
   it("reads supported infrastructure headers and normalizes the country", () => {
     expect(detectCountryCode(headers({ "cf-ipcountry": "us" }))).toBe("US");
     expect(
@@ -148,6 +158,22 @@ describe("country header detection", () => {
       }),
     ).toBe("AUD");
   });
+
+  it("trims transport whitespace before validating a country header", () => {
+    expect(
+      detectCountryCode(headers({ "cf-ipcountry": "  de  " })),
+    ).toBe("DE");
+    expect(normalizeCountryHeaderValue("  au  ")).toBe("AU");
+  });
+
+  it.each(["Germany", "USA", "123", "ZZZ", ""])(
+    "rejects malformed Cloudflare country value %j",
+    (country) => {
+      expect(
+        detectCountryCode(headers({ "cf-ipcountry": country })),
+      ).toBeNull();
+    },
+  );
 
   it("uses deterministic header precedence", () => {
     expect(

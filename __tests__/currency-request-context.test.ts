@@ -42,6 +42,8 @@ function availableQuote(currency: CurrencyCode): CurrencyQuote {
 }
 
 beforeEach(() => {
+  vi.stubEnv("NODE_ENV", "test");
+  vi.stubEnv("DEV_COUNTRY", "");
   vi.stubEnv("GEO_COUNTRY_HEADER", "");
   mockedLoadQuote.mockImplementation(async (currency) =>
     availableQuote(currency),
@@ -53,6 +55,225 @@ afterEach(() => {
 });
 
 describe("request currency resolution", () => {
+  it("maps a development Germany override through the normal EUR flow", async () => {
+    vi.spyOn(console, "debug").mockImplementation(() => undefined);
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("DEV_COUNTRY", "DE");
+
+    await expect(
+      resolveRequestCurrencyContext({
+        headers: headers({ "cf-ipcountry": "BD" }),
+      }),
+    ).resolves.toMatchObject({
+      currency: "EUR",
+      countryCode: "DE",
+      source: "geo",
+    });
+
+    expect(mockedLoadQuote).toHaveBeenCalledWith("EUR");
+  });
+
+  it("ignores a Germany development override in production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DEV_COUNTRY", "DE");
+
+    await expect(
+      resolveRequestCurrencyContext({
+        headers: headers({ "cf-ipcountry": "BD" }),
+      }),
+    ).resolves.toMatchObject({
+      currency: "BDT",
+      countryCode: "BD",
+      source: "geo",
+    });
+  });
+
+  it.each([
+    ["DE", "EUR"],
+    ["CN", "CNY"],
+    ["BD", "BDT"],
+  ] as const)(
+    "resolves Cloudflare country %s through the full %s request flow",
+    async (country, currency) => {
+      const context = await resolveRequestCurrencyContext({
+        headers: new Headers({ "CF-IPCountry": country }),
+      });
+
+      expect(context).toMatchObject({
+        currency,
+        countryCode: country,
+        source: "geo",
+      });
+      expect(mockedLoadQuote).toHaveBeenCalledWith(currency);
+    },
+  );
+
+  it("prefers Cloudflare before a configured Nginx country fallback", async () => {
+    vi.stubEnv("GEO_COUNTRY_HEADER", "x-origin-country");
+
+    await expect(
+      resolveRequestCurrencyContext({
+        headers: headers({
+          "cf-ipcountry": "DE",
+          "x-origin-country": "CN",
+        }),
+      }),
+    ).resolves.toMatchObject({
+      currency: "EUR",
+      countryCode: "DE",
+      source: "geo",
+    });
+  });
+
+  it("uses the configured Nginx country when platform headers are absent", async () => {
+    vi.stubEnv("GEO_COUNTRY_HEADER", "x-origin-country");
+
+    await expect(
+      resolveRequestCurrencyContext({
+        headers: headers({ "x-origin-country": "CN" }),
+      }),
+    ).resolves.toMatchObject({
+      currency: "CNY",
+      countryCode: "CN",
+      source: "geo",
+    });
+  });
+
+  it("fails closed when Cloudflare is present but malformed", async () => {
+    vi.stubEnv("GEO_COUNTRY_HEADER", "x-origin-country");
+
+    await expect(
+      resolveRequestCurrencyContext({
+        headers: headers({
+          "cf-ipcountry": "Germany",
+          "x-origin-country": "CN",
+        }),
+      }),
+    ).resolves.toMatchObject({
+      currency: "BDT",
+      countryCode: null,
+      source: "fallback",
+    });
+  });
+
+  it("does not let unrelated platform headers outrank a configured Nginx header", async () => {
+    vi.stubEnv("GEO_COUNTRY_HEADER", "x-origin-country");
+
+    await expect(
+      resolveRequestCurrencyContext({
+        headers: headers({
+          "x-vercel-ip-country": "US",
+          "cloudfront-viewer-country": "AU",
+          "x-origin-country": "CN",
+        }),
+      }),
+    ).resolves.toMatchObject({
+      currency: "CNY",
+      countryCode: "CN",
+      source: "geo",
+    });
+  });
+
+  it("uses DEV_COUNTRY before a configured geo header in development", async () => {
+    const debugSpy = vi
+      .spyOn(console, "debug")
+      .mockImplementation(() => undefined);
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("DEV_COUNTRY", "US");
+    vi.stubEnv("GEO_COUNTRY_HEADER", "x-origin-country");
+
+    await expect(
+      resolveRequestCurrencyContext({
+        headers: headers({ "x-origin-country": "BD" }),
+      }),
+    ).resolves.toMatchObject({
+      currency: "USD",
+      exchangeRate: "0.0082",
+      countryCode: "US",
+      source: "geo",
+    });
+
+    expect(mockedLoadQuote).toHaveBeenCalledWith("USD");
+    expect(debugSpy).toHaveBeenCalledWith(
+      "[currency] Using DEV_COUNTRY override:",
+      "US",
+    );
+  });
+
+  it("normalizes a lowercase DEV_COUNTRY in development", async () => {
+    vi.spyOn(console, "debug").mockImplementation(() => undefined);
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("DEV_COUNTRY", "gb");
+
+    await expect(
+      resolveRequestCurrencyContext({
+        headers: headers({ "cf-ipcountry": "BD" }),
+      }),
+    ).resolves.toMatchObject({
+      currency: "GBP",
+      countryCode: "GB",
+      source: "geo",
+    });
+  });
+
+  it("trims a whitespace-padded DEV_COUNTRY in development", async () => {
+    vi.spyOn(console, "debug").mockImplementation(() => undefined);
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("DEV_COUNTRY", "  AU  ");
+
+    await expect(
+      resolveRequestCurrencyContext({
+        headers: headers({ "cf-ipcountry": "BD" }),
+      }),
+    ).resolves.toMatchObject({
+      currency: "AUD",
+      countryCode: "AU",
+      source: "geo",
+    });
+  });
+
+  it("ignores an invalid DEV_COUNTRY and continues normal detection", async () => {
+    const debugSpy = vi
+      .spyOn(console, "debug")
+      .mockImplementation(() => undefined);
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("DEV_COUNTRY", "USA");
+
+    await expect(
+      resolveRequestCurrencyContext({
+        headers: headers({ "cf-ipcountry": "BD" }),
+      }),
+    ).resolves.toMatchObject({
+      currency: "BDT",
+      countryCode: "BD",
+      source: "geo",
+    });
+
+    expect(mockedLoadQuote).toHaveBeenCalledWith("BDT");
+    expect(debugSpy).not.toHaveBeenCalled();
+  });
+
+  it("never uses DEV_COUNTRY in production", async () => {
+    const debugSpy = vi
+      .spyOn(console, "debug")
+      .mockImplementation(() => undefined);
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DEV_COUNTRY", "US");
+
+    await expect(
+      resolveRequestCurrencyContext({
+        headers: headers({ "cf-ipcountry": "BD" }),
+      }),
+    ).resolves.toMatchObject({
+      currency: "BDT",
+      countryCode: "BD",
+      source: "geo",
+    });
+
+    expect(mockedLoadQuote).toHaveBeenCalledWith("BDT");
+    expect(debugSpy).not.toHaveBeenCalled();
+  });
+
   it("lets a valid exact currency cookie override geo detection", async () => {
     await expect(
       resolveRequestCurrencyContext({

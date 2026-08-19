@@ -23,34 +23,55 @@ export const CURRENCY_COOKIE_NAME = "currency";
 
 const SAFE_HEADER_NAME = /^[A-Za-z0-9-]{1,64}$/;
 
-function configuredCountryCode(requestHeaders: HeadersLike): {
+export type CountryHeaderConfiguration = {
   configured: boolean;
-  countryCode: string | null;
-} {
+  headerName: string | null;
+};
+
+/** Read the deployment-owned header name without ever allowing arbitrary lookup. */
+export function getCountryHeaderConfiguration(): CountryHeaderConfiguration {
   const configuredName = process.env.GEO_COUNTRY_HEADER?.trim();
-  if (!configuredName) return { configured: false, countryCode: null };
+  if (!configuredName) return { configured: false, headerName: null };
 
-  // An invalid deployment setting fails closed instead of causing an
-  // arbitrary header lookup.
-  if (!SAFE_HEADER_NAME.test(configuredName)) {
-    return { configured: true, countryCode: null };
-  }
-
-  try {
-    return {
-      configured: true,
-      countryCode: normalizeCountryCode(requestHeaders.get(configuredName)),
-    };
-  } catch {
-    return { configured: true, countryCode: null };
-  }
+  return {
+    configured: true,
+    headerName: SAFE_HEADER_NAME.test(configuredName) ? configuredName : null,
+  };
 }
 
-function resolveCountryCode(requestHeaders: HeadersLike): string | null {
-  const configured = configuredCountryCode(requestHeaders);
-  return configured.configured
-    ? configured.countryCode
-    : detectCountryCode(requestHeaders);
+function developmentCountryOverride(): string | null {
+  if (process.env.NODE_ENV !== "development") return null;
+
+  const countryCode = normalizeCountryCode(process.env.DEV_COUNTRY?.trim());
+  if (!countryCode) return null;
+
+  console.debug("[currency] Using DEV_COUNTRY override:", countryCode);
+  return countryCode;
+}
+
+export function resolveRequestCountryCode(
+  requestHeaders: HeadersLike,
+): string | null {
+  const developmentOverride = developmentCountryOverride();
+  if (developmentOverride) return developmentOverride;
+
+  const configured = getCountryHeaderConfiguration();
+  // A malformed deployment setting remains a hard detection failure rather
+  // than becoming an arbitrary request-header lookup.
+  if (configured.configured && !configured.headerName) return null;
+
+  return detectCountryCode(
+    requestHeaders,
+    configured.headerName
+      ? {
+          // Cloudflare is the only platform header allowed ahead of a
+          // proxy-owned custom fallback. Direct Nginx deployments must strip
+          // it; Cloudflare-fronted origins must preserve and authenticate it.
+          platformHeaderNames: ["cf-ipcountry"],
+          customHeaderName: configured.headerName,
+        }
+      : undefined,
+  );
 }
 
 function readCookieValue(cookieHeader: string | null, name: string): string | null {
@@ -86,7 +107,7 @@ export async function resolveRequestCurrencyContext({
   headers: requestHeaders,
   currencyCookie,
 }: ResolveRequestCurrencyInput): Promise<CurrencyContext> {
-  const countryCode = resolveCountryCode(requestHeaders);
+  const countryCode = resolveRequestCountryCode(requestHeaders);
   const cookieCurrency = parseCurrencyCode(currencyCookie);
   const requestedCurrency: CurrencyCode =
     cookieCurrency ?? countryToCurrency(countryCode);

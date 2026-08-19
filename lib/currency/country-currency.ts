@@ -38,8 +38,9 @@ const DIRECT_COUNTRY_CURRENCY: Readonly<Record<string, CurrencyCode>> = {
 };
 
 /**
- * Normalize an ISO-like country value from a trusted infrastructure header.
- * Whitespace, comma-separated values, and non-alpha input are malformed.
+ * Normalize an already extracted ISO-like country value. Transport adapters
+ * may trim outer whitespace first; comma-separated and non-alpha input remain
+ * malformed.
  */
 export function normalizeCountryCode(countryCode: unknown): string | null {
   if (typeof countryCode !== "string" || !/^[A-Za-z]{2}$/.test(countryCode)) {
