@@ -2,7 +2,9 @@
 
 import { Package } from "lucide-react";
 
+import FormattedCurrencyAmount from "@/components/currency/FormattedCurrencyAmount";
 import type { CheckoutItemPriced } from "@/features/checkout/api";
+import type { CurrencyCode } from "@/lib/currency/config";
 import ColorBadge from "@/components/ui/ColorBadge";
 import { Skeleton } from "@/components/ui/loading";
 
@@ -11,11 +13,13 @@ const FALLBACK_IMAGE =
 
 type CheckoutItemsCardProps = {
   items: CheckoutItemPriced[];
+  currency: CurrencyCode;
   isLoading: boolean;
 };
 
 export default function CheckoutItemsCard({
   items,
+  currency,
   isLoading,
 }: CheckoutItemsCardProps) {
   return (
@@ -52,8 +56,7 @@ export default function CheckoutItemsCard({
       ) : (
         <ul className="divide-y divide-brand-border">
           {items.map((item) => {
-            const savings =
-              (item.originalPrice - item.unitPrice) * item.quantity;
+            const savings = item.lineSavings;
             return (
               <li
                 key={item.variantId || item.productId}
@@ -84,18 +87,28 @@ export default function CheckoutItemsCard({
                     </p>
                   )}
                   <p className="mt-0.5 text-xs text-gray-500">
-                    Qty {item.quantity} • BDT{" "}
-                    {item.unitPrice.toLocaleString()} each
+                    Qty {item.quantity} •{" "}
+                    <FormattedCurrencyAmount
+                      amount={item.unitPrice}
+                      currency={currency}
+                    />{" "}
+                    each
                   </p>
                   {savings > 0 && (
                     <p className="mt-0.5 text-[11px] font-semibold text-emerald-600">
-                      You save BDT {savings.toLocaleString()}
+                      You save{" "}
+                      <FormattedCurrencyAmount
+                        amount={savings}
+                        currency={currency}
+                      />
                     </p>
                   )}
                 </div>
-                <p className="text-sm font-bold text-gray-900">
-                  BDT {item.lineTotal.toLocaleString()}
-                </p>
+                <FormattedCurrencyAmount
+                  amount={item.lineTotal}
+                  currency={currency}
+                  className="text-sm font-bold text-gray-900"
+                />
               </li>
             );
           })}

@@ -12,11 +12,13 @@ import {
 } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
+import FormattedCurrencyAmount from "@/components/currency/FormattedCurrencyAmount";
 import { ButtonLoader, Skeleton } from "@/components/ui/loading";
 import type {
   CheckoutPaymentMethod,
   CheckoutSummary,
 } from "@/features/checkout/api";
+import type { CurrencyCode } from "@/lib/currency/config";
 
 type CartItemBrief = {
   id: string;
@@ -54,9 +56,7 @@ export default function OrderSummaryCard({
   submitError,
   paymentMethod,
 }: OrderSummaryCardProps) {
-  const totalSaved = summary
-    ? summary.totalSavings + summary.discount
-    : 0;
+  const totalSaved = summary?.totalSaved ?? 0;
 
   const buttonLabel = isPlacing
     ? paymentMethod === "SSLCOMMERZ" || paymentMethod === "AIRWALLEX"
@@ -97,7 +97,11 @@ export default function OrderSummaryCard({
               </p>
               {summary && (
                 <p className="truncate text-xs text-emerald-700">
-                  -{summary.currency} {summary.discount.toLocaleString()} off
+                  <FormattedCurrencyAmount
+                    amount={-summary.discount}
+                    currency={summary.currency}
+                  />{" "}
+                  off
                 </p>
               )}
             </div>
@@ -203,15 +207,25 @@ export default function OrderSummaryCard({
       {summary ? (
         <div className="rounded-2xl border border-brand-border bg-brand-light-bg p-4">
           <div className="flex items-baseline justify-between">
-            <span className="text-sm font-semibold text-gray-700">Total</span>
-            <span className="text-2xl font-extrabold text-brand-red sm:text-3xl">
-              {summary.currency} {summary.total.toLocaleString()}
+            <span className="text-sm font-semibold text-gray-700">
+              {summary.currency === summary.baseCurrency
+                ? "Total"
+                : "Display total"}
             </span>
+            <FormattedCurrencyAmount
+              amount={summary.total}
+              currency={summary.currency}
+              className="text-2xl font-extrabold text-brand-red sm:text-3xl"
+            />
           </div>
           {totalSaved > 0 && (
             <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
               <Sparkles className="h-3 w-3" />
-              You saved {summary.currency} {totalSaved.toLocaleString()}
+              You saved{" "}
+              <FormattedCurrencyAmount
+                amount={totalSaved}
+                currency={summary.currency}
+              />
             </p>
           )}
         </div>
@@ -254,6 +268,21 @@ export default function OrderSummaryCard({
           You&apos;ll continue to SSLCommerz to complete your secure payment.
         </p>
       )}
+
+      {summary &&
+        paymentMethod === "CASH_ON_DELIVERY" &&
+        summary.currency !== summary.baseCurrency && (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-medium leading-5 text-amber-800">
+            The converted total above is your saved display equivalent. Cash on
+            delivery is collected in BDT: {" "}
+            <FormattedCurrencyAmount
+              amount={summary.baseTotal}
+              currency={summary.baseCurrency}
+              className="font-bold"
+            />
+            .
+          </p>
+        )}
       {paymentMethod === "AIRWALLEX" && (
         <p className="-mt-1 text-center text-[11px] font-medium text-gray-600">
           You&apos;ll continue to Airwallex&apos;s hosted checkout. BangBuy never
@@ -274,13 +303,13 @@ function SummaryRow({
   value,
   tone = "default",
   freeLabel,
-  currency = "BDT",
+  currency,
 }: {
   label: string;
   value: number;
   tone?: "default" | "success";
   freeLabel?: string;
-  currency?: string;
+  currency: CurrencyCode;
 }) {
   return (
     <div className="flex items-center justify-between">
@@ -290,14 +319,13 @@ function SummaryRow({
           {freeLabel}
         </span>
       ) : (
-        <span
+        <FormattedCurrencyAmount
+          amount={value}
+          currency={currency}
           className={`font-semibold ${
             tone === "success" ? "text-emerald-600" : "text-gray-900"
           }`}
-        >
-          {value < 0 ? "-" : ""}{currency}{" "}
-          {Math.abs(value).toLocaleString()}
-        </span>
+        />
       )}
     </div>
   );

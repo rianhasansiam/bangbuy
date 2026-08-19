@@ -3,6 +3,29 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
+function migrationDatabaseUrl(): string | undefined {
+  const explicitDirectUrl = process.env["DIRECT_URL"]?.trim();
+  if (explicitDirectUrl) return explicitDirectUrl;
+
+  const runtimeUrl = process.env["DATABASE_URL"]?.trim();
+  if (!runtimeUrl) return undefined;
+
+  try {
+    const parsed = new URL(runtimeUrl);
+    if (
+      parsed.hostname.endsWith(".neon.tech") &&
+      parsed.hostname.includes("-pooler.")
+    ) {
+      parsed.hostname = parsed.hostname.replace("-pooler.", ".");
+      return parsed.toString();
+    }
+  } catch {
+    // Prisma will report the original malformed URL with its normal error.
+  }
+
+  return runtimeUrl;
+}
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
@@ -10,6 +33,8 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Migration advisory locks are session-scoped and must bypass PgBouncer.
+    // Runtime Prisma continues to use DATABASE_URL through the pg adapter.
+    url: migrationDatabaseUrl(),
   },
 });

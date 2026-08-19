@@ -12,6 +12,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 
+import { CurrencyAmount } from "@/components/currency/CurrencyAmount";
 import ColorBadge from "@/components/ui/ColorBadge";
 import { cn } from "@/lib/utils";
 
@@ -144,15 +145,17 @@ export default function CartItemCard({
 
             <div className="text-right shrink-0">
               <p className="text-base font-extrabold text-brand-red sm:text-lg">
-                BDT {lineTotal.toLocaleString()}
+                <CurrencyAmount amountBDT={lineTotal} />
               </p>
               {hasDiscount && (
                 <p className="text-xs text-gray-400 line-through">
-                  BDT {(item.originalPrice! * item.quantity).toLocaleString()}
+                  <CurrencyAmount
+                    amountBDT={item.originalPrice! * item.quantity}
+                  />
                 </p>
               )}
               <p className="mt-0.5 text-[11px] text-gray-500">
-                BDT {item.price.toLocaleString()} each
+                <CurrencyAmount amountBDT={item.price} /> each
               </p>
             </div>
           </div>
@@ -181,7 +184,7 @@ export default function CartItemCard({
           {hasDiscount && (
             <p className="mt-2 inline-flex w-fit items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
               <Tag className="h-3 w-3" />
-              You&apos;re saving BDT {lineSavings.toLocaleString()}
+              You&apos;re saving <CurrencyAmount amountBDT={lineSavings} />
             </p>
           )}
 

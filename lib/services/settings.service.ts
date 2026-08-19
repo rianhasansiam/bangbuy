@@ -207,7 +207,9 @@ export async function updateStoreSettings(input: UpdateStoreSettingsInput) {
   if (input.freeShippingThreshold !== undefined) {
     data.freeShippingThreshold = input.freeShippingThreshold;
   }
-  if (input.currency !== undefined) data.currency = input.currency;
+  // Currency is intentionally immutable: every persisted catalog and
+  // business-rule amount in this application is denominated in BDT.
+  if (input.currency !== undefined) data.currency = "BDT";
 
   return prisma.storeSettings.update({
     where: { id: current.id },

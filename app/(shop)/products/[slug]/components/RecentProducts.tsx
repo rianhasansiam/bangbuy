@@ -1,6 +1,7 @@
 import React from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import CurrencyAmount from '@/components/currency/CurrencyAmount'
 
 type RecentProductItem = {
   id: string
@@ -56,13 +57,15 @@ const RecentProducts: React.FC<RecentProductsProps> = ({
                 {product.name}
               </h4>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm font-bold text-brand-red">
-                  {product.price.toLocaleString()} bdt
-                </span>
+                <CurrencyAmount
+                  amountBDT={product.price}
+                  className="text-sm font-bold text-brand-red"
+                />
                 {product.discount > 0 && (
-                  <span className="text-xs text-gray-400 line-through">
-                    {product.originalPrice.toLocaleString()}
-                  </span>
+                  <CurrencyAmount
+                    amountBDT={product.originalPrice}
+                    className="text-xs text-gray-400 line-through"
+                  />
                 )}
               </div>
             </div>

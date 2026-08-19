@@ -7,6 +7,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
+import { CurrencyAmount } from "@/components/currency/CurrencyAmount";
 import { ButtonLoader } from "@/components/ui/loading";
 import type { CheckoutSummary } from "@/features/checkout/api";
 
@@ -129,13 +130,13 @@ export default function OrderSummary({
             {verifiedSummary ? "Total" : "Subtotal"}
           </span>
           <span className="text-2xl font-extrabold text-brand-red sm:text-3xl">
-            BDT {(verifiedSummary?.total ?? subtotal).toLocaleString()}
+            <CurrencyAmount amountBDT={verifiedSummary?.total ?? subtotal} />
           </span>
         </div>
         {verifiedSummary && totalSaved > 0 && (
           <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
             <Sparkles className="h-3 w-3" />
-            You&apos;re saving BDT {totalSaved.toLocaleString()} today
+            You&apos;re saving <CurrencyAmount amountBDT={totalSaved} /> today
           </p>
         )}
         {!verifiedSummary && (
@@ -208,7 +209,7 @@ function SummaryRow({
             tone === "success" ? "text-emerald-600" : "text-gray-900"
           }`}
         >
-          {value < 0 ? "-" : ""}BDT {Math.abs(value).toLocaleString()}
+          <CurrencyAmount amountBDT={value} />
         </span>
       )}
     </div>

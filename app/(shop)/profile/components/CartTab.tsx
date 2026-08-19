@@ -28,6 +28,7 @@ import {
   setCartError,
 } from "@/store/slices/cart.slice";
 import type { AppDispatch, RootState } from "@/store";
+import { CurrencyAmount } from "@/components/currency/CurrencyAmount";
 import ColorBadge from "@/components/ui/ColorBadge";
 import { toast } from "@/lib/feedback";
 import { useAnimatedRemoval } from "@/hooks/useAnimatedRemoval";
@@ -40,10 +41,6 @@ import {
 import { FALLBACK_PRODUCT_IMAGE } from "./constants";
 
 const PROFILE_PREVIEW_LIMIT = 6;
-
-function formatBdt(value: number): string {
-  return `BDT ${Math.round(value).toLocaleString()}`;
-}
 
 /**
  * Cart preview tab on the profile page.
@@ -158,7 +155,7 @@ export default function CartTab() {
               <p className="text-xs text-gray-500">
                 {summary.totalItems}{" "}
                 {summary.totalItems === 1 ? "item" : "items"} ready to check
-                out · subtotal {formatBdt(summary.subtotal)}
+                out · subtotal <CurrencyAmount amountBDT={summary.subtotal} />
               </p>
             </div>
           </div>
@@ -244,10 +241,10 @@ export default function CartTab() {
                     </p>
                   )}
                   <p className="mt-0.5 text-xs text-gray-500">
-                    {formatBdt(item.unitPrice)}
+                    <CurrencyAmount amountBDT={item.unitPrice} />
                     {item.originalPrice > item.unitPrice && (
                       <span className="ml-1.5 text-gray-400 line-through">
-                        {formatBdt(item.originalPrice)}
+                        <CurrencyAmount amountBDT={item.originalPrice} />
                       </span>
                     )}
                   </p>
@@ -290,7 +287,7 @@ export default function CartTab() {
                   </div>
                 </div>
                 <p className="col-start-2 shrink-0 text-left text-sm font-extrabold text-gray-900 sm:col-start-3 sm:row-start-1 sm:text-right">
-                  {formatBdt(item.lineTotal)}
+                  <CurrencyAmount amountBDT={item.lineTotal} />
                 </p>
                 </motion.li>
               ))}
@@ -314,7 +311,7 @@ export default function CartTab() {
                   Subtotal
                 </p>
                 <p className="text-xl font-extrabold text-brand-red sm:text-2xl">
-                  {formatBdt(summary.subtotal)}
+                  <CurrencyAmount amountBDT={summary.subtotal} />
                 </p>
               </div>
               <Link

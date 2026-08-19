@@ -12,6 +12,7 @@ import {
   Wallet,
 } from "lucide-react";
 
+import { CurrencyAmount } from "@/components/currency/CurrencyAmount";
 import type { ProfileStats, ProfileUser } from "@/features/profile/api";
 import { ORDER_STATUS_TONE } from "./constants";
 import type { ProfileTabId } from "./constants";
@@ -21,10 +22,6 @@ type OverviewTabProps = {
   stats: ProfileStats;
   onJumpToTab: (tabId: ProfileTabId) => void;
 };
-
-function formatBdt(value: number): string {
-  return `BDT ${Math.round(value).toLocaleString()}`;
-}
 
 function formatDate(value: string | null): string {
   if (!value) return "—";
@@ -64,7 +61,7 @@ export default function OverviewTab({
         <MetricCard
           icon={<Wallet className="h-4 w-4" />}
           label="Lifetime spend"
-          value={formatBdt(stats.totalSpend)}
+          value={<CurrencyAmount amountBDT={stats.totalSpend} />}
           tone="violet"
         />
         <MetricCard
@@ -248,7 +245,7 @@ function MetricCard({
 }: {
   icon: React.ReactNode;
   label: string;
-  value: string;
+  value: React.ReactNode;
   tone: keyof typeof TONE_STYLES;
   actionLabel?: string;
   onAction?: () => void;

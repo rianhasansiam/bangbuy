@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useSession } from "@/lib/auth/use-app-session";
 import { useDispatch, useSelector } from "react-redux";
 
+import { CurrencyAmount } from "@/components/currency/CurrencyAmount";
 import CartHeader from "./components/CartHeader";
 import CartItemCard from "./components/CartItemCard";
 import EmptyCart from "./components/EmptyCart";
@@ -971,7 +972,7 @@ export default function CartPage() {
                 {selectedTotals.itemCount === 1 ? "item" : "items"})
               </p>
               <p className="text-lg font-extrabold text-brand-red">
-                BDT {mobileAmount.toLocaleString()}
+                <CurrencyAmount amountBDT={mobileAmount} />
               </p>
             </div>
             <button

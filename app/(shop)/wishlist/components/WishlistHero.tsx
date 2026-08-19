@@ -1,5 +1,7 @@
 import { Heart, Sparkles, TrendingDown, BadgePercent } from "lucide-react";
 
+import { CurrencyAmount } from "@/components/currency/CurrencyAmount";
+
 type WishlistHeroProps = {
   totalItems: number;
   totalValue: number;
@@ -53,7 +55,7 @@ export default function WishlistHero({
           />
           <HeroStat
             label="Total value"
-            value={`BDT ${totalValue.toLocaleString()}`}
+            value={<CurrencyAmount amountBDT={totalValue} />}
             icon={<BadgePercent className="h-4 w-4" />}
           />
           <HeroStat
@@ -69,7 +71,7 @@ export default function WishlistHero({
                   You&apos;d save
                 </p>
                 <p className="text-lg font-bold sm:text-xl">
-                  BDT {totalSavings.toLocaleString()}{" "}
+                  <CurrencyAmount amountBDT={totalSavings} />{" "}
                   <span className="text-xs font-medium text-white/70">
                     if you bought everything today
                   </span>
@@ -90,7 +92,7 @@ function HeroStat({
   highlight = false,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   icon: React.ReactNode;
   highlight?: boolean;
 }) {

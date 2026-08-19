@@ -12,8 +12,14 @@ import { organizationJsonLd, websiteJsonLd } from "@/lib/seo/json-ld";
 import { siteConfig } from "@/lib/seo/site";
 import { parsePublicCategoryNode } from "@/features/categories/api";
 import { getActiveCategoryTree } from "@/lib/services/category.service";
+import { getRequestCurrencyContext } from "@/lib/currency/request-currency";
 
 import Providers from "./providers";
+
+// The request-scoped currency context depends on trusted headers/cookies.
+// Canonical catalog queries retain their own data caches, while the HTML/RSC
+// shell must never be shared between visitors in different countries.
+export const dynamic = "force-dynamic";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -81,17 +87,20 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const categories = await getActiveCategoryTree()
-    .then((tree) => tree.map(parsePublicCategoryNode))
-    .catch((error: unknown) => {
-      console.error("layout: failed to load category navigation", error);
-      return [];
-    });
+  const [categories, currencyContext] = await Promise.all([
+    getActiveCategoryTree()
+      .then((tree) => tree.map(parsePublicCategoryNode))
+      .catch((error: unknown) => {
+        console.error("layout: failed to load category navigation", error);
+        return [];
+      }),
+    getRequestCurrencyContext(),
+  ]);
 
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.className} ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       {/* Browser extensions add attributes to <body> before React hydrates. */}
       <body suppressHydrationWarning>
@@ -117,7 +126,7 @@ export default async function RootLayout({
         />
         */}
         <JsonLd data={[organizationJsonLd(), websiteJsonLd()]} />
-        <Providers>
+        <Providers initialCurrencyContext={currencyContext}>
           <SiteChrome
             banner={<TopBanner />}
             navbar={<Navbar categories={categories} />}

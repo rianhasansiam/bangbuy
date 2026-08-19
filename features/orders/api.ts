@@ -1,4 +1,8 @@
 import { readApiData } from "@/features/http/api-envelope";
+import {
+  BASE_CURRENCY,
+  type CurrencyCode,
+} from "@/lib/currency/config";
 import type { OrderStatus } from "@/lib/orders/status";
 
 /**
@@ -50,6 +54,8 @@ export type OrderItem = {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  baseUnitPrice: number;
+  baseTotalPrice: number;
   // Live product link for navigation; null if the product was deleted.
   product: {
     id: string;
@@ -77,7 +83,17 @@ export type OrderDetail = {
   taxAmount: number;
   totalAmount: number;
   advancePayment: number;
-  currency: string;
+  currency: CurrencyCode;
+  baseCurrency: typeof BASE_CURRENCY;
+  paymentCurrency: typeof BASE_CURRENCY;
+  baseSubtotal: number;
+  baseDeliveryCharge: number;
+  baseDiscountAmount: number;
+  baseTaxAmount: number;
+  baseTotalAmount: number;
+  baseAdvancePayment: number;
+  exchangeRate: string;
+  exchangeRateTimestamp: string | null;
   promoCode: string | null;
 
   status: OrderStatus;
@@ -122,7 +138,13 @@ export type MyOrderSummary = {
   orderNumber: string;
   totalAmount: number;
   advancePayment: number;
-  currency: string;
+  currency: CurrencyCode;
+  baseCurrency: typeof BASE_CURRENCY;
+  paymentCurrency: typeof BASE_CURRENCY;
+  baseTotalAmount: number;
+  baseAdvancePayment: number;
+  exchangeRate: string;
+  exchangeRateTimestamp: string | null;
   status: OrderStatus;
   paymentMethod: OrderPaymentMethod;
   paymentStatus: PaymentStatus;
@@ -134,6 +156,8 @@ export type MyOrderSummary = {
     quantity: number;
     unitPrice: number;
     totalPrice: number;
+    baseUnitPrice: number;
+    baseTotalPrice: number;
     productId: string | null;
     variantId: string | null;
     productName: string;

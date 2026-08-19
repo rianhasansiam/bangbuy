@@ -1,4 +1,6 @@
 import { readApiError } from "@/features/http/api-envelope";
+import { BASE_CURRENCY, parseCurrencyCode } from "@/lib/currency/config";
+import { formatMoney } from "@/lib/currency/format-money";
 
 export const TRANSACTION_STATUS_VALUES = [
   "PENDING",
@@ -187,14 +189,24 @@ export function formatTransactionAmount(
   amount: number,
   currency: string,
 ): string {
+  const normalizedCurrency = currency.trim().toUpperCase() || BASE_CURRENCY;
+  const supportedCurrency = parseCurrencyCode(normalizedCurrency);
+  if (supportedCurrency) return formatMoney(amount, supportedCurrency);
+
+  // Transactions record the payment provider's actual currency, which is
+  // independent from the storefront display-currency allowlist.
   try {
-    return new Intl.NumberFormat("en-BD", {
+    return new Intl.NumberFormat(undefined, {
       style: "currency",
-      currency: currency || "BDT",
+      currency: normalizedCurrency,
+      minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount);
   } catch {
-    return `${currency || "BDT"} ${amount.toLocaleString()}`;
+    return `${normalizedCurrency} ${new Intl.NumberFormat(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(amount)}`;
   }
 }
 

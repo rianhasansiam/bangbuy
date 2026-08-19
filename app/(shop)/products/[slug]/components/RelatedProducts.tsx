@@ -27,6 +27,7 @@ import {
   setCartError as setCartErrorAction,
 } from '@/store/slices/cart.slice'
 import { ButtonLoader } from '@/components/ui/loading'
+import CurrencyAmount from '@/components/currency/CurrencyAmount'
 
 type RecentProductItem = {
   id: string
@@ -165,13 +166,15 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
               
               {/* Price */}
               <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-sm font-bold text-gray-900">
-                  {product.price.toLocaleString()} BDT
-                </span>
+                <CurrencyAmount
+                  amountBDT={product.price}
+                  className="text-sm font-bold text-gray-900"
+                />
                 {product.discount > 0 && (
-                  <span className="text-[10px] text-gray-400 line-through">
-                    {product.originalPrice.toLocaleString()}
-                  </span>
+                  <CurrencyAmount
+                    amountBDT={product.originalPrice}
+                    className="text-[10px] text-gray-400 line-through"
+                  />
                 )}
               </div>
 

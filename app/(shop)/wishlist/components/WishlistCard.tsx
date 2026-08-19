@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+
+import { CurrencyAmount } from "@/components/currency/CurrencyAmount";
 import { cn } from "@/lib/utils";
 import type { WishlistItem } from "@/features/wishlist/api";
 
@@ -188,7 +190,8 @@ export default function WishlistCard({
         {hasPriceDrop && (
           <div className="absolute bottom-2.5 left-2.5 inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-md">
             <TrendingDown className="h-3 w-3" />
-            Dropped BDT {item.priceDropFromAdded?.toLocaleString()}
+            Dropped{" "}
+            <CurrencyAmount amountBDT={item.priceDropFromAdded ?? 0} />
             <span className="absolute inset-0 -z-10 animate-ping rounded-full bg-emerald-400 opacity-60" />
           </div>
         )}
@@ -277,11 +280,11 @@ function PriceBlock({
   return (
     <div className="flex items-baseline gap-2">
       <span className="text-base font-extrabold text-brand-red sm:text-lg">
-        BDT {item.price.toLocaleString()}
+        <CurrencyAmount amountBDT={item.price} />
       </span>
       {item.originalPrice && item.originalPrice > item.price && (
         <span className="text-xs text-gray-400 line-through">
-          BDT {item.originalPrice.toLocaleString()}
+          <CurrencyAmount amountBDT={item.originalPrice} />
         </span>
       )}
       {hasPriceDrop && (

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { CalendarDays, Mail, MapPin, Phone, ShieldCheck, User } from "lucide-react";
 
+import { CurrencyAmount } from "@/components/currency/CurrencyAmount";
 import type { ProfileStats, ProfileUser } from "@/features/profile/api";
 
 type ProfileHeaderProps = {
@@ -21,10 +22,6 @@ function formatDate(value: string | null): string {
   } catch {
     return value;
   }
-}
-
-function formatBdt(value: number): string {
-  return `BDT ${Math.round(value).toLocaleString()}`;
 }
 
 /**
@@ -68,7 +65,7 @@ export default function ProfileHeader({ user, stats }: ProfileHeaderProps) {
             <Stat label="Wishlist" value={stats.wishlistCount.toString()} />
             <Stat
               label="Lifetime spend"
-              value={formatBdt(stats.totalSpend)}
+              value={<CurrencyAmount amountBDT={stats.totalSpend} />}
               className="col-span-2 sm:col-span-1"
             />
           </div>
@@ -136,7 +133,7 @@ function Stat({
   className = "",
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   className?: string;
 }) {
   return (

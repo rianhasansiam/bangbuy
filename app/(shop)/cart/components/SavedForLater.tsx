@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { ShoppingCart, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+
+import { CurrencyAmount } from "@/components/currency/CurrencyAmount";
 import { cn } from "@/lib/utils";
 import {
   LIST_ITEM_TRANSITION,
@@ -113,11 +115,11 @@ export default function SavedForLater({
                 )}
                 <div className="mt-1 flex items-baseline gap-1.5">
                   <span className="text-sm font-bold text-brand-red">
-                    BDT {item.price.toLocaleString()}
+                    <CurrencyAmount amountBDT={item.price} />
                   </span>
                   {item.originalPrice && item.originalPrice > item.price && (
                     <span className="text-[10px] text-gray-400 line-through">
-                      BDT {item.originalPrice.toLocaleString()}
+                      <CurrencyAmount amountBDT={item.originalPrice} />
                     </span>
                   )}
                 </div>

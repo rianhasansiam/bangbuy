@@ -96,18 +96,16 @@ export default function StorePricingForm({
             </Field>
 
             <Field
-              label="Currency"
-              hint="ISO-style code shown in the cart, e.g. BDT."
+              label="Base currency"
+              hint="Locked to BDT; customer display currencies are converted separately."
               required
             >
               <input
                 type="text"
-                value={form.currency}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, currency: e.target.value }))
-                }
-                className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm uppercase outline-none transition focus:border-brand-red"
-                placeholder="BDT"
+                value="BDT"
+                readOnly
+                aria-readonly="true"
+                className="h-10 w-full cursor-not-allowed rounded-xl border border-brand-border bg-brand-light-bg px-3 text-sm font-semibold uppercase text-gray-600 outline-none"
               />
             </Field>
           </div>

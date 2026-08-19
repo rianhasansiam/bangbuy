@@ -88,7 +88,7 @@ export default function TermsAndConditionsPage() {
           items={[
             "Product colors and finishes may appear slightly different on different screens",
             "Specifications, availability, and prices are subject to change without notice",
-            "Prices are shown in Bangladeshi Taka (BDT) unless stated otherwise",
+            "Prices use BDT as the source of truth and may be shown as a server-calculated AUD, EUR, GBP, USD, or CNY equivalent based on your location",
             "In case of a pricing or stock error, we reserve the right to cancel or correct the order",
             "Promotional offers and coupon codes may have additional terms shown at checkout",
           ]}

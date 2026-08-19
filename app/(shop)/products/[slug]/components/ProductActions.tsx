@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 
 import { ButtonLoader } from "@/components/ui/loading";
+import CurrencyAmount from "@/components/currency/CurrencyAmount";
 import {
   canUseServerCart,
   createCartItemOnServer,
@@ -367,14 +368,16 @@ const ProductActions = ({
   return (
     <div className="space-y-5 border-t border-gray-100 pt-4">
       <div className="flex flex-wrap items-baseline gap-3">
-        <span className="text-3xl font-bold text-gray-900">
-          {unitPrice.toLocaleString()} BDT
-        </span>
+        <CurrencyAmount
+          amountBDT={unitPrice}
+          className="text-3xl font-bold text-gray-900"
+        />
         {discount > 0 && (
           <>
-            <span className="text-lg text-gray-600 line-through">
-              {currentListPrice.toLocaleString()} BDT
-            </span>
+            <CurrencyAmount
+              amountBDT={currentListPrice}
+              className="text-lg text-gray-600 line-through"
+            />
             <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-bold text-red-700">
               -{discount}%
             </span>

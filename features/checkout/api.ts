@@ -3,7 +3,10 @@ import {
   readApiData,
   readApiError,
 } from "@/features/http/api-envelope";
-import type { OrderDetail } from "@/features/orders/api";
+import {
+  BASE_CURRENCY,
+  type CurrencyCode,
+} from "@/lib/currency/config";
 
 export type CheckoutPaymentMethod =
   | "CASH_ON_DELIVERY"
@@ -34,12 +37,18 @@ export type CheckoutItemPriced = {
   unitPrice: number;
   originalPrice: number;
   lineTotal: number;
+  lineSavings: number;
+  baseUnitPrice: number;
+  baseOriginalPrice: number;
+  baseLineTotal: number;
+  baseLineSavings: number;
   stock: number;
 };
 
 export type CheckoutSummary = {
   subtotal: number;
   totalSavings: number;
+  totalSaved: number;
   discount: number;
   shipping: number;
   tax: number;
@@ -49,7 +58,19 @@ export type CheckoutSummary = {
   shippingFee: number;
   isOutsideDhaka: boolean;
   isFreeShippingApplied: boolean;
-  currency: string;
+  currency: CurrencyCode;
+  baseCurrency: typeof BASE_CURRENCY;
+  baseSubtotal: number;
+  baseTotalSavings: number;
+  baseTotalSaved: number;
+  baseDiscount: number;
+  baseShipping: number;
+  baseTax: number;
+  baseTotal: number;
+  baseFreeShippingThreshold: number;
+  baseShippingFee: number;
+  exchangeRate: string;
+  exchangeRateTimestamp: string | null;
 };
 
 export type CheckoutPromo =
@@ -58,6 +79,7 @@ export type CheckoutPromo =
       code: string;
       description: string | null;
       discount: number;
+      baseDiscount: number;
     }
   | {
       ok: false;
@@ -118,7 +140,12 @@ export type PlaceOrderRequest = {
 };
 
 export type PlacedOrderResult = {
-  order: OrderDetail;
+  // Checkout only relies on this committed identity. Historical monetary
+  // details are refetched through the owner-scoped snapshot serializer.
+  order: {
+    id: string;
+    orderNumber: string;
+  };
   summary: CheckoutSummary;
   promo: CheckoutPromo;
   /** Present only when the customer must continue at an external gateway. */

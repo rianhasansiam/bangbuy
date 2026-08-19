@@ -29,6 +29,8 @@ import {
 import { downloadOrderPdf } from "@/features/orders/pdf";
 import { clearOrderSnapshot } from "@/features/orders/storage";
 import { ORDER_STATUS_META } from "@/lib/orders/status";
+import type { CurrencyCode } from "@/lib/currency/config";
+import FormattedCurrencyAmount from "@/components/currency/FormattedCurrencyAmount";
 import ColorBadge from "@/components/ui/ColorBadge";
 import { ButtonLoader, OrderDetailsPageSkeleton } from "@/components/ui/loading";
 import { AirwallexPayButton } from "@/lib/airwallex/components/AirwallexPayButton";
@@ -271,7 +273,7 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
       order.paymentMethod,
       order.paymentStatus,
     ) || order.paymentStatus === "FAILED");
-  const currency = order.currency || "BDT";
+  const currency = order.currency;
 
   const addressLines = [
     order.customerAddress,
@@ -581,13 +583,19 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                           </p>
                         )}
                         <p className="mt-0.5 text-xs text-gray-500">
-                          Qty {item.quantity} · {currency}{" "}
-                          {item.unitPrice.toLocaleString()} each
+                          Qty {item.quantity} ·{" "}
+                          <FormattedCurrencyAmount
+                            amount={item.unitPrice}
+                            currency={currency}
+                          />{" "}
+                          each
                         </p>
                       </div>
-                      <p className="text-sm font-bold text-gray-900">
-                        {currency} {item.totalPrice.toLocaleString()}
-                      </p>
+                      <FormattedCurrencyAmount
+                        amount={item.totalPrice}
+                        currency={currency}
+                        className="text-sm font-bold text-gray-900"
+                      />
                     </li>
                   );
                 })}
@@ -654,16 +662,47 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                   <span className="text-sm font-semibold text-gray-700">
                     Grand total
                   </span>
-                  <span className="text-2xl font-extrabold text-brand-red sm:text-3xl">
-                    {currency} {order.totalAmount.toLocaleString()}
-                  </span>
+                  <FormattedCurrencyAmount
+                    amount={order.totalAmount}
+                    currency={currency}
+                    className="text-2xl font-extrabold text-brand-red sm:text-3xl"
+                  />
                 </div>
                 {totalSavings > 0 && (
                   <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-                    You saved {currency} {totalSavings.toLocaleString()}
+                    You saved{" "}
+                    <FormattedCurrencyAmount
+                      amount={totalSavings}
+                      currency={currency}
+                    />
                   </p>
                 )}
               </div>
+              {currency !== order.baseCurrency && (
+                <div className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-[11px] font-medium leading-5 text-sky-900">
+                  <p>
+                    Saved order snapshot: 1 {order.baseCurrency} ={" "}
+                    {order.exchangeRate} {currency}
+                    {order.exchangeRateTimestamp
+                      ? ` on ${formatDateTime(order.exchangeRateTimestamp)}`
+                      : ""}
+                    .
+                  </p>
+                  {order.paymentMethod === "CASH_ON_DELIVERY" && (
+                    <p className="mt-1 font-semibold text-amber-800">
+                      Cash on delivery amount due in BDT: {" "}
+                      <FormattedCurrencyAmount
+                        amount={Math.max(
+                          order.baseTotalAmount - order.baseAdvancePayment,
+                          0,
+                        )}
+                        currency={order.paymentCurrency}
+                      />
+                      .
+                    </p>
+                  )}
+                </div>
+              )}
               <button
                 type="button"
                 onClick={handleDownload}
@@ -764,13 +803,13 @@ function SummaryRow({
   value,
   tone = "default",
   freeLabel,
-  currency = "BDT",
+  currency,
 }: {
   label: string;
   value: number;
   tone?: "default" | "success";
   freeLabel?: string;
-  currency?: string;
+  currency: CurrencyCode;
 }) {
   return (
     <div className="flex items-center justify-between">
@@ -780,14 +819,13 @@ function SummaryRow({
           {freeLabel}
         </span>
       ) : (
-        <span
+        <FormattedCurrencyAmount
+          amount={value}
+          currency={currency}
           className={`font-semibold ${
             tone === "success" ? "text-emerald-600" : "text-gray-900"
           }`}
-        >
-          {value < 0 ? "-" : ""}{currency}{" "}
-          {Math.abs(value).toLocaleString()}
-        </span>
+        />
       )}
     </div>
   );

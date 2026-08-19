@@ -133,15 +133,13 @@ export default function AdminSettingsPage() {
         settingsForm.freeShippingThreshold || "0",
         "Free shipping threshold",
       );
-      const currency = settingsForm.currency.trim().toUpperCase() || "BDT";
-
       setIsSavingSettings(true);
       const updated = await updateStoreSettings({
         taxRate: taxPercent / 100,
         standardShippingFee,
         expressShippingFee,
         freeShippingThreshold,
-        currency,
+        currency: "BDT",
       });
       dispatch(setStoreSettings(updated));
       setSettingsForm(buildSettingsForm(updated));

@@ -4,6 +4,11 @@ import autoTable from "jspdf-autotable";
 import type { OrderDetail, OrderItem } from "@/features/orders/api";
 import { paymentMethodLabel } from "@/features/orders/payment";
 import {
+  BASE_CURRENCY,
+  type CurrencyCode,
+} from "@/lib/currency/config";
+import { formatMoney } from "@/lib/currency/format-money";
+import {
   badgeFor,
   drawBadge,
   drawBrandFooter,
@@ -11,8 +16,6 @@ import {
   drawCard,
   drawSectionLabel,
   ensureSpace,
-  formatCurrency,
-  formatBDT,
   formatStamp,
   getAutoTableEndY,
   HEADER_HEIGHT,
@@ -27,6 +30,20 @@ import {
   type Doc,
   type RGB,
 } from "@/features/branding/pdf";
+
+function formatCurrency(value: number, currency: CurrencyCode): string {
+  // jsPDF's built-in Helvetica font cannot render every localized currency
+  // symbol (notably the Bangladeshi taka glyph), so receipts ask the shared
+  // Intl formatter for an unambiguous ISO-code presentation.
+  return formatMoney(value, currency, {
+    locale: "en-US",
+    currencyDisplay: "code",
+  });
+}
+
+function formatBDT(value: number): string {
+  return formatCurrency(value, BASE_CURRENCY);
+}
 
 /**
  * Builds a downloadable, premium-styled order receipt PDF.
@@ -298,6 +315,17 @@ function drawTotals(doc: Doc, y: number, order: OrderDetail): number {
         order.currency,
       ),
     ]);
+  }
+  if (order.currency !== order.baseCurrency) {
+    if (order.paymentMethod === "CASH_ON_DELIVERY") {
+      rows.push([
+        "COD amount due (BDT)",
+        formatCurrency(
+          Math.max(order.baseTotalAmount - order.baseAdvancePayment, 0),
+          order.paymentCurrency,
+        ),
+      ]);
+    }
   }
 
   const rowH = 6.2;

@@ -30,6 +30,21 @@ import type {
   CheckoutPreviewInput,
 } from "@/lib/validations/checkout.validation";
 import { createAirwallexAttempt } from "@/lib/airwallex/repositories/airwallex-payment.repository";
+import {
+  BASE_CURRENCY,
+  parseCurrencyCode,
+  type CurrencyContext,
+} from "@/lib/currency/config";
+import {
+  createOrderCurrencySnapshot,
+  createOrderItemCurrencySnapshot,
+} from "@/lib/currency/order-currency-snapshot";
+import {
+  createPricingContext,
+  priceFromBDT,
+} from "@/lib/currency/pricing.service";
+import { getBaseCurrencyContext } from "@/lib/currency/request-currency";
+import { formatMoney } from "@/lib/currency/format-money";
 
 /**
  * Single home for checkout pricing + order creation.
@@ -329,6 +344,7 @@ type PromoApplication =
 async function applyPromoCode(
   rawCode: string | null | undefined,
   subtotal: Prisma.Decimal,
+  currencyContext: CurrencyContext = getBaseCurrencyContext(),
 ): Promise<PromoApplication> {
   if (!rawCode) return null;
   const trimmed = rawCode.trim();
@@ -349,10 +365,14 @@ async function applyPromoCode(
   }
 
   if (promo.minOrder != null && subtotal.lessThan(toDecimal(promo.minOrder))) {
+    const minimum = priceFromBDT({
+      baseAmount: promo.minOrder,
+      context: currencyContext,
+    });
     return {
       ok: false,
       code,
-      reason: `Spend at least BDT ${promo.minOrder.toLocaleString()} to use this code.`,
+      reason: `Spend at least ${formatMoney(minimum.amount, minimum.currency)} to use this code.`,
     };
   }
 
@@ -380,18 +400,32 @@ async function applyPromoCode(
 
 /** JSON-facing promo shape (Decimal discount converted to a number). */
 type PromoApplicationJson =
-  | { ok: true; code: string; description: string | null; discount: number }
+  | {
+      ok: true;
+      code: string;
+      description: string | null;
+      discount: number;
+      baseDiscount: number;
+    }
   | { ok: false; code: string; reason: string }
   | null;
 
-function promoToJson(promo: PromoApplication): PromoApplicationJson {
+function promoToJson(
+  promo: PromoApplication,
+  currencyContext: CurrencyContext,
+): PromoApplicationJson {
   if (promo == null) return null;
   if (!promo.ok) return promo;
+  const baseDiscount = round2(promo.discount);
   return {
     ok: true,
     code: promo.code,
     description: promo.description,
-    discount: round2(promo.discount),
+    discount: priceFromBDT({
+      baseAmount: baseDiscount,
+      context: currencyContext,
+    }).amount,
+    baseDiscount,
   };
 }
 
@@ -400,10 +434,9 @@ type StoreSettingsSnapshot = {
   standardShippingFee: number;
   freeShippingThreshold: number;
   expressShippingFee: number;
-  currency: string;
 };
 
-type CheckoutSummary = {
+type BaseCheckoutSummary = {
   subtotal: number;
   totalSavings: number;
   discount: number;
@@ -415,7 +448,24 @@ type CheckoutSummary = {
   shippingFee: number;
   isOutsideDhaka: boolean;
   isFreeShippingApplied: boolean;
-  currency: string;
+  currency: typeof BASE_CURRENCY;
+};
+
+export type CheckoutSummary = Omit<BaseCheckoutSummary, "currency"> & {
+  currency: CurrencyContext["currency"];
+  totalSaved: number;
+  baseCurrency: typeof BASE_CURRENCY;
+  baseSubtotal: number;
+  baseTotalSavings: number;
+  baseTotalSaved: number;
+  baseDiscount: number;
+  baseShipping: number;
+  baseTax: number;
+  baseTotal: number;
+  baseFreeShippingThreshold: number;
+  baseShippingFee: number;
+  exchangeRate: string;
+  exchangeRateTimestamp: string | null;
 };
 
 type DeliveryZone = "INSIDE_DHAKA" | "OUTSIDE_DHAKA";
@@ -425,7 +475,7 @@ function summarize(
   promo: PromoApplication,
   settings: StoreSettingsSnapshot,
   deliveryZone: DeliveryZone,
-): CheckoutSummary {
+): BaseCheckoutSummary {
   const subtotal = sumDecimals(lines.map((line) => line.lineTotal));
   const totalSavings = sumDecimals(
     lines.map((line) =>
@@ -469,7 +519,118 @@ function summarize(
     shippingFee,
     isOutsideDhaka: outsideDhaka,
     isFreeShippingApplied: isFreeShipping,
-    currency: settings.currency.trim().toUpperCase(),
+    currency: BASE_CURRENCY,
+  };
+}
+
+/**
+ * Project final canonical BDT components into one request-scoped display
+ * currency. No business rule consumes these values, and an invalid context
+ * downgrades both amount and label to BDT in the currency core.
+ */
+function presentSummary(
+  summary: BaseCheckoutSummary,
+  currencyContext: CurrencyContext,
+): CheckoutSummary {
+  const convert = (amount: number) =>
+    priceFromBDT({ baseAmount: amount, context: currencyContext });
+  const displayedSubtotal = convert(summary.subtotal);
+  const baseTotalSaved = round2(
+    sumDecimals([summary.totalSavings, summary.discount]),
+  );
+
+  return {
+    ...summary,
+    subtotal: displayedSubtotal.amount,
+    totalSavings: convert(summary.totalSavings).amount,
+    totalSaved: convert(baseTotalSaved).amount,
+    discount: convert(summary.discount).amount,
+    shipping: convert(summary.shipping).amount,
+    tax: convert(summary.tax).amount,
+    total: convert(summary.total).amount,
+    freeShippingThreshold: convert(summary.freeShippingThreshold).amount,
+    shippingFee: convert(summary.shippingFee).amount,
+    currency: displayedSubtotal.currency,
+    baseCurrency: BASE_CURRENCY,
+    baseSubtotal: summary.subtotal,
+    baseTotalSavings: summary.totalSavings,
+    baseTotalSaved,
+    baseDiscount: summary.discount,
+    baseShipping: summary.shipping,
+    baseTax: summary.tax,
+    baseTotal: summary.total,
+    baseFreeShippingThreshold: summary.freeShippingThreshold,
+    baseShippingFee: summary.shippingFee,
+    exchangeRate: displayedSubtotal.exchangeRate,
+    exchangeRateTimestamp: displayedSubtotal.exchangeRateTimestamp,
+  };
+}
+
+type PersistedSummaryOrder = {
+  subtotal: Prisma.Decimal;
+  deliveryCharge: Prisma.Decimal;
+  discountAmount: Prisma.Decimal;
+  taxAmount: Prisma.Decimal;
+  totalAmount: Prisma.Decimal;
+  displayCurrency: string;
+  displaySubtotal: Prisma.Decimal;
+  displayDeliveryCharge: Prisma.Decimal;
+  displayDiscountAmount: Prisma.Decimal;
+  displayTaxAmount: Prisma.Decimal;
+  displayTotalAmount: Prisma.Decimal;
+  exchangeRate: Prisma.Decimal;
+  exchangeRateAt: Date | null;
+};
+
+/** Rehydrate a checkout response exclusively from the persisted FX snapshot. */
+export function presentPersistedOrderSummary(
+  order: PersistedSummaryOrder,
+): CheckoutSummary {
+  const requestedCurrency = parseCurrencyCode(order.displayCurrency);
+  const context = createPricingContext({
+    currency: requestedCurrency,
+    exchangeRate: order.exchangeRate,
+    exchangeRateTimestamp: order.exchangeRateAt,
+    source: "fallback",
+  });
+  const useDisplaySnapshot =
+    context.currency !== BASE_CURRENCY && context.currency === requestedCurrency;
+  const amount = (displayValue: Prisma.Decimal, baseValue: Prisma.Decimal) =>
+    round2(useDisplaySnapshot ? displayValue : baseValue);
+  const baseDeliveryCharge = round2(order.deliveryCharge);
+
+  return {
+    subtotal: amount(order.displaySubtotal, order.subtotal),
+    totalSavings: 0,
+    totalSaved: amount(
+      order.displayDiscountAmount,
+      order.discountAmount,
+    ),
+    discount: amount(order.displayDiscountAmount, order.discountAmount),
+    shipping: amount(order.displayDeliveryCharge, order.deliveryCharge),
+    tax: amount(order.displayTaxAmount, order.taxAmount),
+    total: amount(order.displayTotalAmount, order.totalAmount),
+    taxRate: 0,
+    freeShippingThreshold: 0,
+    shippingFee: amount(
+      order.displayDeliveryCharge,
+      order.deliveryCharge,
+    ),
+    isOutsideDhaka: false,
+    isFreeShippingApplied: order.deliveryCharge.isZero(),
+    currency: context.currency,
+    baseCurrency: BASE_CURRENCY,
+    baseSubtotal: round2(order.subtotal),
+    baseTotalSavings: 0,
+    baseTotalSaved: round2(order.discountAmount),
+    baseDiscount: round2(order.discountAmount),
+    baseShipping: baseDeliveryCharge,
+    baseTax: round2(order.taxAmount),
+    baseTotal: round2(order.totalAmount),
+    baseFreeShippingThreshold: 0,
+    baseShippingFee: baseDeliveryCharge,
+    exchangeRate: context.exchangeRate,
+    exchangeRateTimestamp: context.exchangeRateTimestamp,
   };
 }
 
@@ -481,7 +642,6 @@ function settingsToSnapshot(
     standardShippingFee: settings.standardShippingFee,
     freeShippingThreshold: settings.freeShippingThreshold,
     expressShippingFee: settings.expressShippingFee,
-    currency: settings.currency,
   };
 }
 
@@ -497,14 +657,20 @@ function settingsToSnapshot(
 export async function previewCheckout(
   userId: string | null,
   input: CheckoutPreviewInput,
+  currencyContext: CurrencyContext = getBaseCurrencyContext(),
 ) {
   const { items: resolved } = await resolveItems(userId, input.items);
   const lines = await priceLines(resolved);
 
   const settings = settingsToSnapshot(await getStoreSettings());
   const subtotal = sumDecimals(lines.map((line) => line.lineTotal));
-  const promo = await applyPromoCode(input.promoCode, subtotal);
-  const summary = summarize(lines, promo, settings, input.deliveryZone);
+  const promo = await applyPromoCode(
+    input.promoCode,
+    subtotal,
+    currencyContext,
+  );
+  const baseSummary = summarize(lines, promo, settings, input.deliveryZone);
+  const summary = presentSummary(baseSummary, currencyContext);
 
   return {
     items: lines.map((line) => ({
@@ -521,13 +687,38 @@ export async function previewCheckout(
       name: line.name,
       image: line.image,
       quantity: line.quantity,
-      unitPrice: round2(line.unitPrice),
-      originalPrice: round2(line.originalPrice),
-      lineTotal: round2(line.lineTotal),
+      unitPrice: priceFromBDT({
+        baseAmount: line.unitPrice,
+        context: currencyContext,
+      }).amount,
+      originalPrice: priceFromBDT({
+        baseAmount: line.originalPrice,
+        context: currencyContext,
+      }).amount,
+      lineTotal: priceFromBDT({
+        baseAmount: line.lineTotal,
+        context: currencyContext,
+      }).amount,
+      lineSavings: priceFromBDT({
+        baseAmount: subtractClamped(
+          multiply(line.originalPrice, line.quantity),
+          line.lineTotal,
+        ),
+        context: currencyContext,
+      }).amount,
+      baseUnitPrice: round2(line.unitPrice),
+      baseOriginalPrice: round2(line.originalPrice),
+      baseLineTotal: round2(line.lineTotal),
+      baseLineSavings: round2(
+        subtractClamped(
+          multiply(line.originalPrice, line.quantity),
+          line.lineTotal,
+        ),
+      ),
       stock: line.stock,
     })),
     summary,
-    promo: promoToJson(promo),
+    promo: promoToJson(promo, currencyContext),
   };
 }
 
@@ -583,6 +774,7 @@ async function placeOrderInternal(
   userId: string | null,
   input: CheckoutInput,
   options: OrderPaymentOptions = {},
+  currencyContext: CurrencyContext = getBaseCurrencyContext(),
 ) {
   const isOnlinePayment =
     input.paymentMethod === "SSLCOMMERZ" ||
@@ -651,15 +843,19 @@ async function placeOrderInternal(
       await lockCheckoutCatalogRows(tx, resolved);
       const lines = await priceLines(resolved, tx);
       const subtotal = sumDecimals(lines.map((line) => line.lineTotal));
-      const promo = await applyPromoCode(input.promoCode, subtotal);
+      const promo = await applyPromoCode(
+        input.promoCode,
+        subtotal,
+        currencyContext,
+      );
 
       if (input.promoCode && promo && !promo.ok) {
         throw new CheckoutError(409, promo.reason);
       }
 
-      const summary = summarize(lines, promo, settings, input.deliveryZone);
+      const baseSummary = summarize(lines, promo, settings, input.deliveryZone);
       const advancePayment = toDecimal(round2(options.advancePayment ?? 0));
-      const totalAmount = toDecimal(summary.total);
+      const totalAmount = toDecimal(baseSummary.total);
       if (advancePayment.isNegative()) {
         throw new CheckoutError(400, "Advance payment cannot be negative.");
       }
@@ -672,6 +868,18 @@ async function placeOrderInternal(
       const isPaidInFull =
         totalAmount.greaterThan(0) &&
         advancePayment.greaterThanOrEqualTo(totalAmount);
+      const currencySnapshot = createOrderCurrencySnapshot(
+        {
+          subtotal: baseSummary.subtotal,
+          discount: baseSummary.discount,
+          shipping: baseSummary.shipping,
+          tax: baseSummary.tax,
+          total: baseSummary.total,
+          advancePayment,
+        },
+        currencyContext,
+      );
+      const summary = presentSummary(baseSummary, currencyContext);
 
       // Atomic stock decrement on the variant: the WHERE clause guards
       // against the last unit being sold twice.
@@ -706,13 +914,25 @@ async function placeOrderInternal(
         data: {
           orderNumber,
           userId,
-          subtotal: summary.subtotal,
-          deliveryCharge: summary.shipping,
-          discountAmount: summary.discount,
-          taxAmount: summary.tax,
-          totalAmount: summary.total,
+          subtotal: baseSummary.subtotal,
+          deliveryCharge: baseSummary.shipping,
+          discountAmount: baseSummary.discount,
+          taxAmount: baseSummary.tax,
+          totalAmount: baseSummary.total,
           advancePayment: round2(advancePayment),
-          currency: summary.currency,
+          currency: BASE_CURRENCY,
+          baseCurrency: currencySnapshot.baseCurrency,
+          displayCurrency: currencySnapshot.displayCurrency,
+          displaySubtotal: currencySnapshot.displaySubtotal,
+          displayDeliveryCharge: currencySnapshot.displayDeliveryCharge,
+          displayDiscountAmount: currencySnapshot.displayDiscountAmount,
+          displayTaxAmount: currencySnapshot.displayTaxAmount,
+          displayTotalAmount: currencySnapshot.displayTotalAmount,
+          displayAdvancePayment: currencySnapshot.displayAdvancePayment,
+          exchangeRate: currencySnapshot.exchangeRate,
+          exchangeRateAt: currencySnapshot.exchangeRateAt
+            ? new Date(currencySnapshot.exchangeRateAt)
+            : null,
           customerName: input.customerName,
           customerPhone: input.customerPhone,
           customerAddress: input.customerAddress,
@@ -740,21 +960,32 @@ async function placeOrderInternal(
               }
             : {}),
           items: {
-            create: lines.map((line) => ({
-              productId: line.productId,
-              variantId: line.variantId,
-              productName: line.name,
-              productImage: line.image,
-              sku: line.sku,
-              variantName: line.variantName,
-              color: line.color,
-              size: line.size,
-              variantAttributes: line.attributes ?? Prisma.DbNull,
-              quantity: line.quantity,
-              unitPrice: round2(line.unitPrice),
-              totalPrice: round2(line.lineTotal),
-              buyingPrice: round2(line.buyingPrice),
-            })),
+            create: lines.map((line) => {
+              const itemSnapshot = createOrderItemCurrencySnapshot(
+                {
+                  unitPrice: line.unitPrice,
+                  totalPrice: line.lineTotal,
+                },
+                currencyContext,
+              );
+              return {
+                productId: line.productId,
+                variantId: line.variantId,
+                productName: line.name,
+                productImage: line.image,
+                sku: line.sku,
+                variantName: line.variantName,
+                color: line.color,
+                size: line.size,
+                variantAttributes: line.attributes ?? Prisma.DbNull,
+                quantity: line.quantity,
+                unitPrice: round2(line.unitPrice),
+                totalPrice: round2(line.lineTotal),
+                displayUnitPrice: itemSnapshot.displayUnitPrice,
+                displayTotalPrice: itemSnapshot.displayTotalPrice,
+                buyingPrice: round2(line.buyingPrice),
+              };
+            }),
           },
         },
         include: orderInclude,
@@ -777,8 +1008,8 @@ async function placeOrderInternal(
               id: options.paymentAttempt.id,
               orderId: order.id,
               requestId: options.paymentAttempt.idempotencyKey,
-              amount: toDecimal(summary.total),
-              currency: summary.currency,
+              amount: toDecimal(baseSummary.total),
+              currency: BASE_CURRENCY,
             })
           : await tx.paymentTransaction.create({
               data: {
@@ -787,8 +1018,8 @@ async function placeOrderInternal(
                 provider: options.paymentAttempt.provider,
                 transactionId: options.paymentAttempt.transactionId,
                 idempotencyKey: options.paymentAttempt.idempotencyKey,
-                amount: summary.total,
-                currency: summary.currency,
+                amount: baseSummary.total,
+                currency: BASE_CURRENCY,
                 status: "PENDING",
               },
             })
@@ -838,7 +1069,12 @@ async function placeOrderInternal(
         });
       }
 
-      return { order, summary, promo: promoToJson(promo), paymentAttempt };
+      return {
+        order,
+        summary,
+        promo: promoToJson(promo, currencyContext),
+        paymentAttempt,
+      };
     });
   } catch (error) {
     if (error instanceof PrismaClientKnownRequestError && error.code === "P2002") {
@@ -862,14 +1098,18 @@ async function placeOrderInternal(
 }
 
 /** Place an account-backed customer checkout order. */
-export async function placeOrder(userId: string, input: CheckoutInput) {
+export async function placeOrder(
+  userId: string,
+  input: CheckoutInput,
+  currencyContext: CurrencyContext = getBaseCurrencyContext(),
+) {
   if (input.paymentMethod !== "CASH_ON_DELIVERY") {
     throw new CheckoutError(
       400,
       "Online payment must be initiated through the checkout payment service.",
     );
   }
-  const result = await placeOrderInternal(userId, input);
+  const result = await placeOrderInternal(userId, input, {}, currencyContext);
   return {
     order: result.order,
     summary: result.summary,
@@ -882,12 +1122,18 @@ export async function reserveOrderForSslCommerz(
   userId: string,
   input: CheckoutInput,
   paymentAttempt: SslCommerzPaymentAttempt,
+  currencyContext: CurrencyContext = getBaseCurrencyContext(),
 ) {
   if (input.paymentMethod !== "SSLCOMMERZ") {
     throw new CheckoutError(400, "SSLCommerz payment method is required.");
   }
 
-  const result = await placeOrderInternal(userId, input, { paymentAttempt });
+  const result = await placeOrderInternal(
+    userId,
+    input,
+    { paymentAttempt },
+    currencyContext,
+  );
   const persistedAttempt = result.paymentAttempt;
   if (!persistedAttempt || persistedAttempt.provider !== "SSLCOMMERZ") {
     throw new CheckoutError(500, "Payment attempt could not be persisted.");
@@ -912,32 +1158,17 @@ async function findAirwallexReservationReplay(
   if (!persisted) return null;
 
   const { order, ...paymentAttempt } = persisted;
-  const deliveryCharge = round2(order.deliveryCharge);
-  const discountAmount = round2(order.discountAmount);
+  const summary = presentPersistedOrderSummary(order);
   return {
     order,
-    summary: {
-      subtotal: round2(order.subtotal),
-      // The reservation snapshot does not retain per-product strike-through
-      // savings; zero is safer than recomputing against mutable catalog data.
-      totalSavings: 0,
-      discount: discountAmount,
-      shipping: deliveryCharge,
-      tax: round2(order.taxAmount),
-      total: round2(order.totalAmount),
-      taxRate: 0,
-      freeShippingThreshold: 0,
-      shippingFee: deliveryCharge,
-      isOutsideDhaka: false,
-      isFreeShippingApplied: deliveryCharge === 0,
-      currency: order.currency.trim().toUpperCase(),
-    },
+    summary,
     promo: order.promoCode
       ? {
           ok: true as const,
           code: order.promoCode,
           description: null,
-          discount: discountAmount,
+          discount: summary.discount,
+          baseDiscount: summary.baseDiscount,
         }
       : null,
     paymentAttempt,
@@ -950,6 +1181,7 @@ export async function reserveOrderForAirwallex(
   userId: string,
   input: CheckoutInput,
   paymentAttempt: AirwallexPaymentAttempt,
+  currencyContext: CurrencyContext = getBaseCurrencyContext(),
 ) {
   if (input.paymentMethod !== "AIRWALLEX") {
     throw new CheckoutError(400, "Airwallex payment method is required.");
@@ -963,7 +1195,12 @@ export async function reserveOrderForAirwallex(
 
   let result: Awaited<ReturnType<typeof placeOrderInternal>>;
   try {
-    result = await placeOrderInternal(userId, input, { paymentAttempt });
+    result = await placeOrderInternal(
+      userId,
+      input,
+      { paymentAttempt },
+      currencyContext,
+    );
   } catch (error) {
     if (
       error instanceof CheckoutError &&

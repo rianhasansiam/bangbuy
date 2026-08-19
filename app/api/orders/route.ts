@@ -13,6 +13,7 @@ import { revalidateCacheTags } from "@/lib/cache/revalidation";
 import { placeOrder } from "@/lib/services/checkout.service";
 import { handleServiceError } from "@/lib/services/service-error";
 import { checkoutSchema } from "@/lib/validations/checkout.validation";
+import { getCurrencyContextFromRequest } from "@/lib/currency/request-currency";
 
 /**
  * POST /api/orders
@@ -70,7 +71,12 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await placeOrder(guard.session.user.id, parsed.data);
+    const currencyContext = await getCurrencyContextFromRequest(request);
+    const result = await placeOrder(
+      guard.session.user.id,
+      parsed.data,
+      currencyContext,
+    );
     // Order creation changes stock and (optionally) empties the cart.
     await invalidateProductsById(
       result.order.items.flatMap((item) =>

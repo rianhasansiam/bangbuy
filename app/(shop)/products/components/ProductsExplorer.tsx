@@ -12,6 +12,7 @@ import {
 } from "react";
 
 import { ProductGridSkeleton } from "@/components/ui/loading";
+import CurrencyAmount from "@/components/currency/CurrencyAmount";
 import {
   fetchProductsFromApi,
   type ApiMeta,
@@ -394,10 +395,26 @@ function ActiveFilterChips({
         }
       : null,
     filters.minPrice != null
-      ? { key: "minPrice", label: `From BDT ${filters.minPrice.toLocaleString()}` }
+      ? {
+          key: "minPrice",
+          label: (
+            <>
+              From <CurrencyAmount amountBDT={filters.minPrice} />
+            </>
+          ),
+          ariaLabel: "Remove minimum price filter",
+        }
       : null,
     filters.maxPrice != null
-      ? { key: "maxPrice", label: `Up to BDT ${filters.maxPrice.toLocaleString()}` }
+      ? {
+          key: "maxPrice",
+          label: (
+            <>
+              Up to <CurrencyAmount amountBDT={filters.maxPrice} />
+            </>
+          ),
+          ariaLabel: "Remove maximum price filter",
+        }
       : null,
     filters.stock ? { key: "stock", label: filters.stock === "in-stock" ? "In stock" : "Out of stock" } : null,
     filters.minRating
@@ -414,7 +431,11 @@ function ActiveFilterChips({
           type="button"
           onClick={() => onRemove(chip.key)}
           className="inline-flex items-center gap-1 rounded-full border border-brand-red/20 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors hover:border-brand-red hover:text-brand-red"
-          aria-label={`Remove ${chip.label} filter`}
+          aria-label={
+            "ariaLabel" in chip && typeof chip.ariaLabel === "string"
+              ? chip.ariaLabel
+              : `Remove ${chip.label} filter`
+          }
         >
           {chip.label}
           <X className="h-3 w-3" aria-hidden="true" />

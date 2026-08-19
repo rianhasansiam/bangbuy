@@ -28,6 +28,8 @@ import type {
   UpdateOrderStatusInput,
   UpdatePaymentStatusInput,
 } from "@/lib/validations/order.validation";
+import { BASE_CURRENCY, parseCurrencyCode } from "@/lib/currency/config";
+import { createPricingContext } from "@/lib/currency/pricing.service";
 
 /**
  * The single home for Order DB logic.
@@ -169,6 +171,8 @@ function serializeOrderItem(item: OrderWithItems["items"][number]) {
     quantity: item.quantity,
     unitPrice: toNumber(item.unitPrice),
     totalPrice: toNumber(item.totalPrice),
+    displayUnitPrice: toNumber(item.displayUnitPrice),
+    displayTotalPrice: toNumber(item.displayTotalPrice),
     product: item.product
       ? { id: item.product.id, name: item.product.name, slug: item.product.slug }
       : null,
@@ -185,15 +189,117 @@ export function serializeOrder<T extends OrderWithItems>(order: T) {
     taxAmount: toNumber(rest.taxAmount),
     totalAmount: toNumber(rest.totalAmount),
     advancePayment: toNumber(rest.advancePayment),
+    displaySubtotal: toNumber(rest.displaySubtotal),
+    displayDeliveryCharge: toNumber(rest.displayDeliveryCharge),
+    displayDiscountAmount: toNumber(rest.displayDiscountAmount),
+    displayTaxAmount: toNumber(rest.displayTaxAmount),
+    displayTotalAmount: toNumber(rest.displayTotalAmount),
+    displayAdvancePayment: toNumber(rest.displayAdvancePayment),
+    exchangeRate: rest.exchangeRate.toString(),
+    exchangeRateTimestamp: rest.exchangeRateAt?.toISOString() ?? null,
     items: rest.items.map(serializeOrderItem),
     requiresPaymentReview: payments.length > 0,
   };
 }
 
-export function serializeOrderOrNull<T extends OrderWithItems>(
+function serializeCustomerOrderItem(
+  item: OrderWithItems["items"][number],
+  useDisplaySnapshot: boolean,
+) {
+  const canonical = serializeOrderItem(item);
+  return {
+    ...canonical,
+    unitPrice: useDisplaySnapshot
+      ? canonical.displayUnitPrice
+      : canonical.unitPrice,
+    totalPrice: useDisplaySnapshot
+      ? canonical.displayTotalPrice
+      : canonical.totalPrice,
+    baseUnitPrice: canonical.unitPrice,
+    baseTotalPrice: canonical.totalPrice,
+  };
+}
+
+/**
+ * Customer responses use the immutable display snapshot captured at checkout.
+ * Canonical BDT values are returned explicitly for COD and reconciliation;
+ * today's exchange-rate table is never consulted for historical orders.
+ */
+export function serializeCustomerOrder<T extends OrderWithItems>(order: T) {
+  const { payments, ...rest } = order;
+  const requestedCurrency = parseCurrencyCode(rest.displayCurrency);
+  const context = createPricingContext({
+    currency: requestedCurrency,
+    exchangeRate: rest.exchangeRate,
+    exchangeRateTimestamp: rest.exchangeRateAt,
+    source: "fallback",
+  });
+  const useDisplaySnapshot =
+    context.currency !== BASE_CURRENCY && context.currency === requestedCurrency;
+  const amount = (displayValue: Prisma.Decimal, baseValue: Prisma.Decimal) =>
+    toNumber(useDisplaySnapshot ? displayValue : baseValue);
+
+  const baseSubtotal = toNumber(rest.subtotal);
+  const baseDeliveryCharge = toNumber(rest.deliveryCharge);
+  const baseDiscountAmount = toNumber(rest.discountAmount);
+  const baseTaxAmount = toNumber(rest.taxAmount);
+  const baseTotalAmount = toNumber(rest.totalAmount);
+  const baseAdvancePayment = toNumber(rest.advancePayment);
+
+  return {
+    ...rest,
+    subtotal: amount(rest.displaySubtotal, rest.subtotal),
+    deliveryCharge: amount(
+      rest.displayDeliveryCharge,
+      rest.deliveryCharge,
+    ),
+    discountAmount: amount(
+      rest.displayDiscountAmount,
+      rest.discountAmount,
+    ),
+    taxAmount: amount(rest.displayTaxAmount, rest.taxAmount),
+    totalAmount: amount(rest.displayTotalAmount, rest.totalAmount),
+    advancePayment: amount(
+      rest.displayAdvancePayment,
+      rest.advancePayment,
+    ),
+    currency: context.currency,
+    baseCurrency: BASE_CURRENCY,
+    paymentCurrency: BASE_CURRENCY,
+    baseSubtotal,
+    baseDeliveryCharge,
+    baseDiscountAmount,
+    baseTaxAmount,
+    baseTotalAmount,
+    baseAdvancePayment,
+    displaySubtotal: amount(rest.displaySubtotal, rest.subtotal),
+    displayDeliveryCharge: amount(
+      rest.displayDeliveryCharge,
+      rest.deliveryCharge,
+    ),
+    displayDiscountAmount: amount(
+      rest.displayDiscountAmount,
+      rest.discountAmount,
+    ),
+    displayTaxAmount: amount(rest.displayTaxAmount, rest.taxAmount),
+    displayTotalAmount: amount(rest.displayTotalAmount, rest.totalAmount),
+    displayAdvancePayment: amount(
+      rest.displayAdvancePayment,
+      rest.advancePayment,
+    ),
+    exchangeRate: context.exchangeRate,
+    exchangeRateTimestamp: context.exchangeRateTimestamp,
+    items: rest.items.map((item) =>
+      serializeCustomerOrderItem(item, useDisplaySnapshot),
+    ),
+    requiresPaymentReview: payments.length > 0,
+  };
+}
+
+export function serializeCustomerOrderOrNull<T extends OrderWithItems>(
   order: T | null,
 ) {
-  return order == null ? null : serializeOrder(order);
+  return order == null ? null : serializeCustomerOrder(order);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -233,7 +339,7 @@ export async function listMyOrders(userId: string, query: OrderQueryInput) {
   ]);
 
   return {
-    items: items.map(serializeOrder),
+    items: items.map(serializeCustomerOrder),
     meta: {
       page: query.page,
       pageSize: query.pageSize,
@@ -254,7 +360,7 @@ export function getOrderForUser(orderId: string, userId: string) {
       where: { id: orderId, userId },
       include: orderInclude,
     })
-    .then(serializeOrderOrNull);
+    .then(serializeCustomerOrderOrNull);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -348,7 +454,7 @@ export async function cancelOrderAsCustomer(orderId: string, userId: string) {
       note: "Cancelled by customer.",
       updatedBy: userId,
     });
-    return serializeOrder(updated);
+    return serializeCustomerOrder(updated);
   });
 
   await fireStatusNotification(result);

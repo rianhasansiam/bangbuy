@@ -44,6 +44,7 @@ import {
 } from "@/features/wishlist/storage";
 import type { CartItem } from "@/features/cart/api";
 import type { WishlistItem } from "@/features/wishlist/api";
+import CurrencyAmount from "@/components/currency/CurrencyAmount";
 
 type ProductCardProps = {
   id: string;
@@ -338,13 +339,15 @@ export default function ProductCard({
         </Link>
 
         <div className="mt-1 flex items-center gap-1.5">
-          <span className="text-sm font-bold text-brand-red">
-            BDT {price.toLocaleString()}
-          </span>
+          <CurrencyAmount
+            amountBDT={price}
+            className="text-sm font-bold text-brand-red"
+          />
           {originalPrice && originalPrice > price && (
-            <span className="text-[11px] text-brand-text-muted line-through">
-              BDT {originalPrice.toLocaleString()}
-            </span>
+            <CurrencyAmount
+              amountBDT={originalPrice}
+              className="text-[11px] text-brand-text-muted line-through"
+            />
           )}
         </div>
       </div>

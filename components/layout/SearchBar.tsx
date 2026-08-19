@@ -14,6 +14,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/loading";
+import CurrencyAmount from "@/components/currency/CurrencyAmount";
 import {
   searchCatalogFromApi,
   type CatalogCategorySuggestion,
@@ -459,11 +460,11 @@ export default function SearchBar({
                               </p>
                               <div className="shrink-0 text-right">
                                 <p className="whitespace-nowrap text-xs font-bold text-brand-red sm:text-sm">
-                                  BDT {finalPrice.toLocaleString()}
+                                  <CurrencyAmount amountBDT={finalPrice} />
                                 </p>
                                 {hasDiscount && (
                                   <p className="whitespace-nowrap text-[10px] text-gray-400 line-through sm:text-[11px]">
-                                    BDT {product.price.toLocaleString()}
+                                    <CurrencyAmount amountBDT={product.price} />
                                   </p>
                                 )}
                               </div>

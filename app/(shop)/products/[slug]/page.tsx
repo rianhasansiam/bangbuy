@@ -48,6 +48,7 @@ import ProductTabs from "./components/ProductTabs";
 import ProductDescriptionRenderer from "@/components/product/product-description/ProductDescriptionRenderer";
 import PromoBanners from "./components/PromoBanners";
 import RecentProducts from "./components/RecentProducts";
+import CurrencyAmount from "@/components/currency/CurrencyAmount";
 
 export const revalidate = 900;
 export const dynamicParams = true;
@@ -263,14 +264,14 @@ function ProductCrawlerFacts({
         Category: <Link href={categoryHref}>{category}</Link>
       </p>
       <p>
-        Current price: {currentPrice.toFixed(2)} {siteConfig.currency}
+        Current price: <CurrencyAmount amountBDT={currentPrice} />
       </p>
       <p>
-        Regular price: {regularPrice.toFixed(2)} {siteConfig.currency}
+        Regular price: <CurrencyAmount amountBDT={regularPrice} />
       </p>
       {hasDiscount && (
         <p>
-          Discounted price: {currentPrice.toFixed(2)} {siteConfig.currency}
+          Discounted price: <CurrencyAmount amountBDT={currentPrice} />
         </p>
       )}
       <p>Availability: {availabilityLabel}</p>

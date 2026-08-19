@@ -1,6 +1,7 @@
 "use client";
 
 import ProductCard from "@/components/product/ProductCard";
+import CurrencyAmount from "@/components/currency/CurrencyAmount";
 import { Heart, ShoppingCart, Star, PackageX } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -259,14 +260,16 @@ function ListItem({ product }: { product: Product }) {
 
         <div className="mt-auto flex items-end justify-between gap-2">
           <div className="flex flex-wrap items-baseline gap-1.5">
-            <span className="text-base font-bold text-brand-red sm:text-lg">
-              BDT {finalPrice.toLocaleString()}
-            </span>
+            <CurrencyAmount
+              amountBDT={finalPrice}
+              className="text-base font-bold text-brand-red sm:text-lg"
+            />
             {hasDiscount && (
               <>
-                <span className="text-xs text-gray-400 line-through">
-                  BDT {product.price.toLocaleString()}
-                </span>
+                <CurrencyAmount
+                  amountBDT={product.price}
+                  className="text-xs text-gray-400 line-through"
+                />
                 <span className="text-[10px] font-bold text-brand-red sm:text-xs">
                   {discount}% off
                 </span>

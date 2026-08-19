@@ -37,6 +37,7 @@ import { fetchServerCartSnapshot } from "@/features/cart/api";
 import { writeLocalCart } from "@/features/cart/storage";
 import type { AppDispatch, RootState } from "@/store";
 import { toast } from "@/lib/feedback";
+import { BASE_CURRENCY } from "@/lib/currency/config";
 import { startAirwallexHostedCheckout } from "@/lib/airwallex/components/AirwallexPayButton";
 import {
   CheckoutPageSkeleton,
@@ -602,6 +603,7 @@ function CheckoutPageInner() {
 
               <CheckoutItemsCard
                 items={preview?.items ?? []}
+                currency={preview?.summary.currency ?? BASE_CURRENCY}
                 isLoading={previewLoading && !preview}
               />
             </div>

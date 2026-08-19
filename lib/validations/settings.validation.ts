@@ -41,12 +41,10 @@ export const updateStoreSettingsSchema = z
       .min(0)
       .max(10_000_000)
       .optional(),
-    currency: z
-      .string()
-      .trim()
-      .min(2)
-      .max(8)
-      .optional(),
+    // Catalog, promotion, shipping, tax, and accounting values are
+    // canonical BDT. Display currencies are request-scoped FX views and
+    // must never mutate the store's source currency.
+    currency: z.literal("BDT").optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "Provide at least one field to update.",

@@ -31,6 +31,7 @@ import {
   LIST_ITEM_TRANSITION,
   LIST_ITEM_VARIANTS,
 } from "@/lib/motion/list-removal";
+import FormattedCurrencyAmount from "@/components/currency/FormattedCurrencyAmount";
 import { TableSkeleton } from "@/components/ui/loading";
 
 import { FALLBACK_PRODUCT_IMAGE, ORDER_STATUS_TONE } from "./constants";
@@ -71,10 +72,6 @@ function formatDate(value: string): string {
   } catch {
     return value;
   }
-}
-
-function formatCurrency(value: number, currency: string): string {
-  return `${currency || "BDT"} ${Math.round(value).toLocaleString()}`;
 }
 
 /**
@@ -375,9 +372,26 @@ function OrderRow({
         </div>
 
         <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-end lg:justify-center">
-          <p className="text-left text-lg font-extrabold text-brand-red sm:text-right">
-            {formatCurrency(order.totalAmount, order.currency)}
-          </p>
+          <div className="text-left sm:text-right">
+            <FormattedCurrencyAmount
+              amount={order.totalAmount}
+              currency={order.currency}
+              className="text-lg font-extrabold text-brand-red"
+            />
+            {order.paymentMethod === "CASH_ON_DELIVERY" &&
+              order.currency !== order.paymentCurrency && (
+                <p className="mt-0.5 text-[11px] font-medium text-gray-500">
+                  COD due{" "}
+                  <FormattedCurrencyAmount
+                    amount={Math.max(
+                      order.baseTotalAmount - order.baseAdvancePayment,
+                      0,
+                    )}
+                    currency={order.paymentCurrency}
+                  />
+                </p>
+              )}
+          </div>
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
             <Link
               href={`/orders/${order.id}`}

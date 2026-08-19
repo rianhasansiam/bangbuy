@@ -1,5 +1,7 @@
 import { Truck, PartyPopper } from "lucide-react";
 
+import { CurrencyAmount } from "@/components/currency/CurrencyAmount";
+
 type FreeShippingBarProps = {
   subtotal: number;
   threshold: number;
@@ -44,7 +46,7 @@ export default function FreeShippingBar({
             <p className="text-sm font-semibold text-gray-800">
               Add{" "}
               <span className="text-brand-red">
-                BDT {remaining.toLocaleString()}
+                <CurrencyAmount amountBDT={remaining} />
               </span>{" "}
               more for free shipping
             </p>

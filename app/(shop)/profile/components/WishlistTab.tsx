@@ -17,6 +17,7 @@ import {
   setWishlistItems,
 } from "@/store/slices/wishlist.slice";
 import type { AppDispatch, RootState } from "@/store";
+import { CurrencyAmount } from "@/components/currency/CurrencyAmount";
 import { toast } from "@/lib/feedback";
 import { useAnimatedRemoval } from "@/hooks/useAnimatedRemoval";
 import { ProductGridSkeleton } from "@/components/ui/loading";
@@ -185,7 +186,7 @@ export default function WishlistTab() {
                   </div>
                   <div className="mt-auto flex items-center justify-between gap-2 pt-2">
                     <p className="min-w-0 truncate text-xs font-extrabold text-brand-red min-[380px]:text-sm">
-                      BDT {item.price.toLocaleString()}
+                      <CurrencyAmount amountBDT={item.price} />
                     </p>
                     <button
                       type="button"

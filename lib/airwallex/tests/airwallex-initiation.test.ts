@@ -1,5 +1,5 @@
 import { Decimal } from "@prisma/client/runtime/client";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PaymentTransactionStatus } from "@/app/generated/prisma/client";
 
@@ -377,6 +377,10 @@ beforeEach(() => {
   });
 });
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 describe("initiateAirwallexPayment", () => {
   it("returns owner-scoped not-found without contacting Airwallex", async () => {
     state.order.userId = "different-owner";
@@ -442,6 +446,47 @@ describe("initiateAirwallexPayment", () => {
       transactionId: "int_created123",
       status: "REQUIRES_PAYMENT_METHOD",
     });
+  });
+
+  it("converts a canonical BDT order once and sends only USD to Airwallex", async () => {
+    vi.stubEnv("BDT_TO_USD_RATE", "120");
+    state.order.currency = "BDT";
+    state.order.subtotal = new Decimal("1071.30");
+    state.order.deliveryCharge = new Decimal("0");
+    state.order.discountAmount = new Decimal("0");
+    state.order.taxAmount = new Decimal("0");
+    state.order.totalAmount = new Decimal("1071.30");
+    state.order.items = [
+      {
+        id: "item-1",
+        variantId: "variant-1",
+        quantity: 1,
+        unitPrice: new Decimal("1071.30"),
+        totalPrice: new Decimal("1071.30"),
+      },
+    ];
+
+    await initiateAirwallexPayment(USER_ID, ORDER_ID);
+
+    expect(mocks.createAttempt).toHaveBeenCalledWith(
+      transactionClient,
+      expect.objectContaining({
+        amount: new Decimal("8.93"),
+        currency: "USD",
+      }),
+    );
+    expect(mocks.createIntent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amount: 8.93,
+        currency: "USD",
+        metadata: {
+          bangbuy_order_id: ORDER_ID,
+          bangbuy_payment_attempt_id: "payment-created",
+          bangbuy_original_currency: "BDT",
+          bangbuy_original_amount: "1071.30",
+        },
+      }),
+    );
   });
 
   it.each([

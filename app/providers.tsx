@@ -4,7 +4,12 @@ import { useState } from "react";
 import { SessionProvider } from "next-auth/react";
 import { Provider as ReduxProvider } from "react-redux";
 
+import CurrencyProvider from "@/components/currency/CurrencyProvider";
 import { makeStore } from "@/store";
+import {
+  DEFAULT_CURRENCY_CONTEXT,
+  type CurrencyContext,
+} from "@/lib/currency/config";
 import Toaster from "@/components/ui/Toaster";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import StoreHydrator from "@/components/layout/StoreHydrator";
@@ -26,19 +31,23 @@ import StoreHydrator from "@/components/layout/StoreHydrator";
  */
 export default function Providers({
   children,
+  initialCurrencyContext = DEFAULT_CURRENCY_CONTEXT,
 }: {
   children: React.ReactNode;
+  initialCurrencyContext?: CurrencyContext;
 }) {
   const [store] = useState(makeStore);
 
   return (
-    <SessionProvider>
-      <ReduxProvider store={store}>
-        <StoreHydrator />
-        {children}
-        <Toaster />
-        <ConfirmDialog />
-      </ReduxProvider>
-    </SessionProvider>
+    <CurrencyProvider initialContext={initialCurrencyContext}>
+      <SessionProvider>
+        <ReduxProvider store={store}>
+          <StoreHydrator />
+          {children}
+          <Toaster />
+          <ConfirmDialog />
+        </ReduxProvider>
+      </SessionProvider>
+    </CurrencyProvider>
   );
 }

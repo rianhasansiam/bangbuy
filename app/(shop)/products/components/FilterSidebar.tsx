@@ -8,6 +8,11 @@ import type {
   CatalogFacets,
 } from "@/features/products/api";
 import { cn } from "@/lib/utils";
+import { useCurrency } from "@/components/currency/CurrencyProvider";
+import {
+  priceFromBDT,
+  priceToBDT,
+} from "@/lib/currency/pricing.service";
 
 export type CatalogFilterState = {
   categoryPath: string;
@@ -259,8 +264,19 @@ function PriceFilter({
   bounds: { min: number; max: number };
   onApply: (minPrice: number | null, maxPrice: number | null) => void;
 }) {
-  const [min, setMin] = useState(filters.minPrice?.toString() ?? "");
-  const [max, setMax] = useState(filters.maxPrice?.toString() ?? "");
+  const currencyContext = useCurrency();
+  const display = (amount: number) =>
+    priceFromBDT({ baseAmount: amount, context: currencyContext }).amount;
+  const [min, setMin] = useState(
+    filters.minPrice == null ? "" : display(filters.minPrice).toString(),
+  );
+  const [max, setMax] = useState(
+    filters.maxPrice == null ? "" : display(filters.maxPrice).toString(),
+  );
+  const displayBounds = {
+    min: display(bounds.min),
+    max: display(bounds.max),
+  };
 
   return (
     <form
@@ -273,40 +289,48 @@ function PriceFilter({
           parsedMin != null && Number.isFinite(parsedMin) ? parsedMin : null;
         const validMax =
           parsedMax != null && Number.isFinite(parsedMax) ? parsedMax : null;
+        const canonicalMin =
+          validMin == null
+            ? null
+            : priceToBDT({ amount: validMin, context: currencyContext });
+        const canonicalMax =
+          validMax == null
+            ? null
+            : priceToBDT({ amount: validMax, context: currencyContext });
         onApply(
-          validMin != null && validMax != null
-            ? Math.min(validMin, validMax)
-            : validMin,
-          validMin != null && validMax != null
-            ? Math.max(validMin, validMax)
-            : validMax,
+          canonicalMin != null && canonicalMax != null
+            ? Math.min(canonicalMin, canonicalMax)
+            : canonicalMin,
+          canonicalMin != null && canonicalMax != null
+            ? Math.max(canonicalMin, canonicalMax)
+            : canonicalMax,
         );
       }}
     >
       <div className="grid grid-cols-2 gap-2">
         <label className="text-[11px] font-medium text-gray-500">
-          Minimum
+          Minimum ({currencyContext.currency})
           <input
             inputMode="decimal"
             type="number"
             min={0}
-            max={bounds.max || undefined}
+            max={displayBounds.max || undefined}
             value={min}
             onChange={(event) => setMin(event.target.value)}
-            placeholder={String(bounds.min)}
+            placeholder={String(displayBounds.min)}
             className="mt-1 h-9 w-full rounded-lg border border-gray-200 px-2 text-sm text-gray-800 outline-none focus:border-brand-red"
           />
         </label>
         <label className="text-[11px] font-medium text-gray-500">
-          Maximum
+          Maximum ({currencyContext.currency})
           <input
             inputMode="decimal"
             type="number"
             min={0}
-            max={bounds.max || undefined}
+            max={displayBounds.max || undefined}
             value={max}
             onChange={(event) => setMax(event.target.value)}
-            placeholder={String(bounds.max)}
+            placeholder={String(displayBounds.max)}
             className="mt-1 h-9 w-full rounded-lg border border-gray-200 px-2 text-sm text-gray-800 outline-none focus:border-brand-red"
           />
         </label>

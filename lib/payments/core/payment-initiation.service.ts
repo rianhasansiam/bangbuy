@@ -11,7 +11,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 
 import { Prisma } from "@/app/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { toDecimal, toNumber } from "@/lib/money";
+import { toDecimal } from "@/lib/money";
 import {
   lockOrderForStatusChange,
   lockPaymentAttempt,
@@ -34,8 +34,11 @@ import type {
 import { absoluteUrl } from "@/lib/seo/site";
 import {
   CheckoutError,
+  presentPersistedOrderSummary,
   reserveOrderForSslCommerz,
 } from "@/lib/services/checkout.service";
+import type { CurrencyContext } from "@/lib/currency/config";
+import { getBaseCurrencyContext } from "@/lib/currency/request-currency";
 import { getOrderForUser } from "@/lib/services/order.service";
 import type { CheckoutInput } from "@/lib/validations/checkout.validation";
 
@@ -201,21 +204,7 @@ function replaySummary(
   attempt: Awaited<ReturnType<typeof findOwnedAttemptByIdempotency>>,
 ) {
   if (!attempt) throw new PaymentError(404, "Payment attempt not found.");
-  const order = attempt.order;
-  return {
-    subtotal: toNumber(order.subtotal),
-    totalSavings: 0,
-    discount: toNumber(order.discountAmount),
-    shipping: toNumber(order.deliveryCharge),
-    tax: toNumber(order.taxAmount),
-    total: toNumber(order.totalAmount),
-    taxRate: 0,
-    freeShippingThreshold: 0,
-    shippingFee: toNumber(order.deliveryCharge),
-    isOutsideDhaka: false,
-    isFreeShippingApplied: toDecimal(order.deliveryCharge).isZero(),
-    currency: attempt.currency,
-  };
+  return presentPersistedOrderSummary(attempt.order);
 }
 
 async function replayExistingAttempt(
@@ -368,6 +357,7 @@ async function failInitializedReservation(
 export async function initiateSslCommerzCheckout(
   userId: string,
   input: CheckoutInput,
+  currencyContext: CurrencyContext = getBaseCurrencyContext(),
 ) {
   assertSslCommerzConfiguration();
   if (input.paymentMethod !== "SSLCOMMERZ" || !input.idempotencyKey) {
@@ -411,7 +401,12 @@ export async function initiateSslCommerzCheckout(
 
   let reserved: Awaited<ReturnType<typeof reserveOrderForSslCommerz>>;
   try {
-    reserved = await reserveOrderForSslCommerz(userId, input, attemptSeed);
+    reserved = await reserveOrderForSslCommerz(
+      userId,
+      input,
+      attemptSeed,
+      currencyContext,
+    );
   } catch (error) {
     if (
       error instanceof CheckoutError &&

@@ -9,6 +9,7 @@ import { previewCheckout } from "@/lib/services/checkout.service";
 import { handleServiceError } from "@/lib/services/service-error";
 import { checkoutPreviewSchema } from "@/lib/validations/checkout.validation";
 import { airwallexConfig } from "@/lib/airwallex/config/airwallex.config";
+import { getCurrencyContextFromRequest } from "@/lib/currency/request-currency";
 
 /**
  * POST /api/checkout/preview
@@ -40,7 +41,12 @@ export async function POST(request: NextRequest) {
 
   try {
     const session = toAppSession((await auth()) as Session | null);
-    const preview = await previewCheckout(session?.user.id ?? null, parsed.data);
+    const currencyContext = await getCurrencyContextFromRequest(request);
+    const preview = await previewCheckout(
+      session?.user.id ?? null,
+      parsed.data,
+      currencyContext,
+    );
     return ok({
       ...preview,
       availablePaymentMethods: [

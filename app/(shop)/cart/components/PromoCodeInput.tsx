@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AlertCircle, Check, Tag, X } from "lucide-react";
 
+import { CurrencyAmount } from "@/components/currency/CurrencyAmount";
 import { Input } from "@/components/ui/input";
 
 type AppliedPromo = {
@@ -56,8 +57,8 @@ export default function PromoCodeInput({
                 "Revalidating discount..."
               ) : (
                 <>
-                  {applied.description ? `${applied.description} · ` : ""}-BDT{" "}
-                  {applied.discount.toLocaleString()}
+                  {applied.description ? `${applied.description} · ` : ""}
+                  <CurrencyAmount amountBDT={-applied.discount} />
                 </>
               )}
             </p>
