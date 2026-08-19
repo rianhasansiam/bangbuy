@@ -122,7 +122,7 @@ The request resolver checks trusted sources in this order:
 development only: DEV_COUNTRY
 Cloudflare:        CF-IPCountry
 configured proxy: GEO_COUNTRY_HEADER
-fallback:          no detected country (BDT)
+fallback:          no detected country (BDT base)
 ```
 
 When no custom header is configured, the existing Vercel and CloudFront

@@ -92,6 +92,7 @@ describe("request currency resolution", () => {
     ["DE", "EUR"],
     ["CN", "CNY"],
     ["BD", "BDT"],
+    ["IN", "USD"],
   ] as const)(
     "resolves Cloudflare country %s through the full %s request flow",
     async (country, currency) => {
@@ -107,6 +108,19 @@ describe("request currency resolution", () => {
       expect(mockedLoadQuote).toHaveBeenCalledWith(currency);
     },
   );
+
+  it("uses the BDT base when no visitor country can be detected", async () => {
+    await expect(
+      resolveRequestCurrencyContext({ headers: headers({}) }),
+    ).resolves.toMatchObject({
+      currency: "BDT",
+      exchangeRate: "1",
+      countryCode: null,
+      source: "fallback",
+    });
+
+    expect(mockedLoadQuote).toHaveBeenCalledWith("BDT");
+  });
 
   it("prefers Cloudflare before a configured Nginx country fallback", async () => {
     vi.stubEnv("GEO_COUNTRY_HEADER", "x-origin-country");
@@ -154,6 +168,7 @@ describe("request currency resolution", () => {
       countryCode: null,
       source: "fallback",
     });
+    expect(mockedLoadQuote).toHaveBeenLastCalledWith("BDT");
   });
 
   it("does not let unrelated platform headers outrank a configured Nginx header", async () => {

@@ -51,7 +51,7 @@ China → CNY
 
 Bangladesh → BDT
 
-EVERY OTHER COUNTRY → BDT
+EVERY OTHER COUNTRY → USD
 ```
 
 This rule is critical.
@@ -61,19 +61,19 @@ Do NOT attempt to convert a visitor into another currency simply because their c
 For example:
 
 ```text
-India → BDT
-Canada → BDT
-Japan → BDT
-Singapore → BDT
-Malaysia → BDT
-Saudi Arabia → BDT
-UAE → BDT
-Pakistan → BDT
-Nepal → BDT
-South Korea → BDT
+India → USD
+Canada → USD
+Japan → USD
+Singapore → USD
+Malaysia → USD
+Saudi Arabia → USD
+UAE → USD
+Pakistan → USD
+Nepal → USD
+South Korea → USD
 ```
 
-Unless the visitor belongs to one of the explicitly supported geographic groups, show prices in **BDT**.
+Unless the visitor belongs to one of the explicitly supported geographic groups, show prices in **USD**. Bangladesh maps to **BDT**, and a missing or malformed country falls back safely to the **BDT** base currency.
 
 ---
 
@@ -308,7 +308,11 @@ Then:
 export function countryToCurrency(
   countryCode?: string | null
 ): CurrencyCode {
-  const country = countryCode?.toUpperCase();
+  const country = normalizeCountryCode(countryCode);
+
+  if (!country) return "BDT";
+
+  if (country === "BD") return "BDT";
 
   if (country === "AU") return "AUD";
 
@@ -322,14 +326,14 @@ export function countryToCurrency(
     return "EUR";
   }
 
-  return "BDT";
+  return "USD";
 }
 ```
 
-The fallback MUST always be:
+The fallback for a valid but unsupported country MUST be:
 
 ```ts
-return "BDT";
+return "USD";
 ```
 
 ---
@@ -1470,15 +1474,15 @@ France → EUR
 
 Italy → EUR
 
-India → BDT
+India → USD
 
-Canada → BDT
+Canada → USD
 
-Japan → BDT
+Japan → USD
 
-Singapore → BDT
+Singapore → USD
 
-UAE → BDT
+UAE → USD
 
 unknown country → BDT
 
@@ -1720,7 +1724,7 @@ Follow these rules:
 
 * BDT remains canonical.
 * Only AUD/EUR/GBP/USD/CNY are foreign currencies.
-* Every unsupported country falls back to BDT.
+* Every unsupported country falls back to USD.
 * Do not automatically support a country's local currency unless listed.
 * Use ISO currency codes internally.
 * Use ISO country codes for geolocation.

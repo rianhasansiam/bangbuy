@@ -117,9 +117,9 @@ describe("country-to-currency mapping", () => {
   });
 
   it.each(["IN", "CA", "JP", "SG", "AE", "SA", "PK", "NP", "CH", "KR", "ZZ"])(
-    "falls back to BDT for unsupported country %s",
+    "falls back to USD for unsupported country %s",
     (country) => {
-      expect(countryToCurrency(country)).toBe("BDT");
+      expect(countryToCurrency(country)).toBe("USD");
     },
   );
 
