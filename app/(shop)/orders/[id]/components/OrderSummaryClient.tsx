@@ -812,17 +812,19 @@ function SummaryRow({
   currency: CurrencyCode;
 }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-gray-600">{label}</span>
+    <div className="flex items-start justify-between gap-2 sm:items-center">
+      <span className="min-w-0 flex-1 text-gray-600 [overflow-wrap:anywhere]">
+        {label}
+      </span>
       {freeLabel ? (
-        <span className="font-bold uppercase tracking-wider text-emerald-600">
+        <span className="shrink-0 font-bold uppercase tracking-wider text-emerald-600">
           {freeLabel}
         </span>
       ) : (
         <FormattedCurrencyAmount
           amount={value}
           currency={currency}
-          className={`font-semibold ${
+          className={`shrink-0 text-right font-semibold ${
             tone === "success" ? "text-emerald-600" : "text-gray-900"
           }`}
         />

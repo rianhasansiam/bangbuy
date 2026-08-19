@@ -141,21 +141,27 @@ export default async function CategoryPage({ params }: Props) {
 
       <div className="mx-auto max-w-7xl px-3 py-6 sm:px-4 sm:py-8 lg:px-6">
         <nav aria-label="Breadcrumb" className="mb-5 text-sm text-gray-500">
-          <ol className="flex flex-wrap items-center gap-1.5">
+          <ol className="flex min-w-0 flex-wrap items-center gap-1.5">
             {crumbs.map((crumb, index) => {
               const current = index === crumbs.length - 1;
               return (
-                <li key={crumb.path} className="flex items-center gap-1.5">
-                  {index > 0 && <span aria-hidden>/</span>}
+                <li
+                  key={crumb.path}
+                  className="flex min-w-0 max-w-full items-center gap-1.5"
+                >
+                  {index > 0 && <span aria-hidden className="shrink-0">/</span>}
                   {current ? (
                     <span
                       aria-current="page"
-                      className="font-medium text-gray-800"
+                      className="min-w-0 font-medium text-gray-800 [overflow-wrap:anywhere]"
                     >
                       {crumb.name}
                     </span>
                   ) : (
-                    <Link href={crumb.path} className="hover:text-brand-red">
+                    <Link
+                      href={crumb.path}
+                      className="min-w-0 [overflow-wrap:anywhere] hover:text-brand-red"
+                    >
                       {crumb.name}
                     </Link>
                   )}
@@ -208,16 +214,16 @@ export default async function CategoryPage({ params }: Props) {
 
         {category.children.length > 0 && (
           <section aria-labelledby="subcategory-heading" className="mb-9">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex items-start justify-between gap-3">
               <h2
                 id="subcategory-heading"
-                className="text-xl font-extrabold text-gray-950"
+                className="min-w-0 flex-1 text-xl font-extrabold text-gray-950 [overflow-wrap:anywhere]"
               >
                 Explore {category.name}
               </h2>
               <Link
                 href={`/products?categoryPath=${encodeURIComponent(category.path)}`}
-                className="text-sm font-semibold text-brand-red hover:text-brand-red-hover"
+                className="shrink-0 text-right text-sm font-semibold text-brand-red hover:text-brand-red-hover"
               >
                 Filter all products
               </Link>
@@ -243,7 +249,7 @@ export default async function CategoryPage({ params }: Props) {
                     )}
                   </span>
 
-                  <div className="mt-2 min-w-0 w-full sm:mt-0 sm:flex-1">
+                  <div className="mt-2 w-full min-w-0 sm:mt-0 sm:flex-1">
                     <h3 className="line-clamp-2 min-h-8 text-xs font-bold leading-4 text-gray-900 group-hover:text-brand-red sm:line-clamp-1 sm:min-h-0 sm:text-base">
                       {child.name}
                     </h3>
@@ -276,10 +282,10 @@ export default async function CategoryPage({ params }: Props) {
         ) : (
           <section aria-labelledby="category-products-heading">
             <div className="mb-4 flex items-end justify-between gap-3">
-              <div>
+              <div className="min-w-0 flex-1">
                 <h2
                   id="category-products-heading"
-                  className="text-xl font-extrabold text-gray-950"
+                  className="text-xl font-extrabold text-gray-950 [overflow-wrap:anywhere]"
                 >
                   Products in {category.name}
                 </h2>
@@ -294,22 +300,23 @@ export default async function CategoryPage({ params }: Props) {
                 View with filters
               </Link>
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
               {category.products.map((product: PublicCategoryProduct) => (
-                <ProductCard
-                  key={product.id}
-                  id={product.id}
-                  slug={product.slug}
-                  name={product.name}
-                  price={product.discountPrice ?? product.price}
-                  originalPrice={
-                    product.discountPrice !== null ? product.price : undefined
-                  }
-                  image={product.image ?? FALLBACK_PRODUCT_IMAGE}
-                  variantCount={product.variantCount}
-                  rating={product.rating}
-                  reviewCount={product.reviewCount}
-                />
+                <div key={product.id} className="min-w-0">
+                  <ProductCard
+                    id={product.id}
+                    slug={product.slug}
+                    name={product.name}
+                    price={product.discountPrice ?? product.price}
+                    originalPrice={
+                      product.discountPrice !== null ? product.price : undefined
+                    }
+                    image={product.image ?? FALLBACK_PRODUCT_IMAGE}
+                    variantCount={product.variantCount}
+                    rating={product.rating}
+                    reviewCount={product.reviewCount}
+                  />
+                </div>
               ))}
             </div>
           </section>

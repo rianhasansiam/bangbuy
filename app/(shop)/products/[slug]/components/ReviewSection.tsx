@@ -106,15 +106,17 @@ export default function ReviewSection({ productId }: { productId: string }) {
   }, [filterRating, reviews, sortBy]);
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <span className="w-1.5 h-6 bg-brand-red rounded-full" />
-          Customer Reviews
+    <div className="min-w-0 space-y-8">
+      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="flex min-w-0 items-center gap-2 text-xl font-bold text-gray-900 sm:text-2xl">
+          <span className="h-6 w-1.5 shrink-0 rounded-full bg-brand-red" />
+          <span className="min-w-0 [overflow-wrap:anywhere]">
+            Customer Reviews
+          </span>
         </h2>
         <button
           onClick={() => setShowForm((open) => !open)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-brand-red text-brand-white text-sm font-medium rounded-xl hover:bg-brand-red-hover transition-all shadow-lg"
+          className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-2 text-sm font-medium text-brand-white shadow-lg transition-all hover:bg-brand-red-hover sm:w-auto"
         >
           {showForm ? (
             <X className="w-4 h-4" />
@@ -194,10 +196,10 @@ export default function ReviewSection({ productId }: { productId: string }) {
       </div>
 
       {/* Filters & Sort */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-gray-400" />
-          <span className="text-sm text-gray-500">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-4">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <Filter className="h-4 w-4 shrink-0 text-gray-400" />
+          <span className="min-w-0 text-sm text-gray-500 [overflow-wrap:anywhere]">
             {filterRating
               ? `Showing ${filterRating}-star reviews`
               : `All ${visibleReviews.length} reviews`}
@@ -243,7 +245,7 @@ export default function ReviewSection({ productId }: { productId: string }) {
           {visibleReviews.map((review) => (
             <div
               key={review.id}
-              className="bg-white rounded-xl border border-brand-border p-5 hover:shadow-md transition-shadow"
+              className="min-w-0 rounded-xl border border-brand-border bg-white p-4 transition-shadow hover:shadow-md sm:p-5"
             >
               <div className="flex items-start gap-4">
                 <div
@@ -261,7 +263,7 @@ export default function ReviewSection({ productId }: { productId: string }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-gray-900">
+                    <span className="min-w-0 font-semibold text-gray-900 [overflow-wrap:anywhere]">
                       {review.authorName}
                     </span>
                     {review.verified && (
@@ -294,12 +296,12 @@ export default function ReviewSection({ productId }: { productId: string }) {
               {(review.title || review.comment) && (
                 <div className="mt-3">
                   {review.title && (
-                    <h4 className="font-medium text-gray-900">
+                    <h4 className="font-medium text-gray-900 [overflow-wrap:anywhere]">
                       {review.title}
                     </h4>
                   )}
                   {review.comment && (
-                    <p className="text-sm text-gray-600 mt-1 leading-relaxed">
+                    <p className="mt-1 text-sm leading-relaxed text-gray-600 [overflow-wrap:anywhere]">
                       {review.comment}
                     </p>
                   )}
@@ -369,7 +371,7 @@ function WriteReviewForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-2xl border border-brand-border bg-white p-5"
+      className="min-w-0 rounded-2xl border border-brand-border bg-white p-4 sm:p-5"
     >
       <h3 className="text-base font-bold text-gray-900">
         Share your experience
@@ -420,7 +422,7 @@ function WriteReviewForm({
       </div>
 
       {error && (
-        <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+        <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 [overflow-wrap:anywhere]">
           {error}
         </div>
       )}

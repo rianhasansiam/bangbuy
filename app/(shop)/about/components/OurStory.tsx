@@ -33,7 +33,7 @@ export default function OurStory() {
 
           {/* Decorative blobs */}
           <div className="absolute -left-4 -top-4 -z-10 h-24 w-24 rounded-full bg-brand-red/10 blur-2xl" />
-          <div className="absolute -bottom-6 -right-6 -z-10 h-32 w-32 rounded-full bg-brand-red/10 blur-2xl" />
+          <div className="absolute -bottom-6 -right-2 -z-10 h-32 w-32 rounded-full bg-brand-red/10 blur-2xl sm:-right-3 lg:-right-6" />
         </div>
 
         {/* Text side */}

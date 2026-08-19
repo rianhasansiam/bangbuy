@@ -25,12 +25,12 @@ export default function ImageTextBlockView({
         block.heading?.trim() ? `it-${block.id}` : undefined
       }
       className={cn(
-        "flex flex-col gap-6 md:flex-row md:items-center",
+        "flex min-w-0 flex-col gap-6 md:flex-row md:items-center",
         imageOnRight && "md:flex-row-reverse",
       )}
     >
       {/* Image */}
-      <div className="relative w-full overflow-hidden rounded-2xl md:w-1/2">
+      <div className="relative w-full min-w-0 max-w-full overflow-hidden rounded-2xl md:w-1/2">
         <Image
           src={block.imageUrl}
           alt={block.imageAlt}
@@ -42,17 +42,19 @@ export default function ImageTextBlockView({
       </div>
 
       {/* Text content */}
-      <div className="flex flex-1 flex-col gap-4">
+      <div className="flex min-w-0 flex-1 flex-col gap-4">
         {block.heading?.trim() && (
           <h2
             id={`it-${block.id}`}
-            className="text-xl font-bold text-gray-900 sm:text-2xl"
+            className="text-xl font-bold text-gray-900 [overflow-wrap:anywhere] sm:text-2xl"
           >
             {block.heading}
           </h2>
         )}
         {block.description?.trim() && (
-          <p className="leading-relaxed text-gray-600">{block.description}</p>
+          <p className="leading-relaxed text-gray-600 [overflow-wrap:anywhere]">
+            {block.description}
+          </p>
         )}
         {block.ctaLabel?.trim() && block.ctaUrl?.trim() && (
           <Link
@@ -63,7 +65,7 @@ export default function ImageTextBlockView({
                   rel: "noopener noreferrer",
                 }
               : {})}
-            className="inline-flex w-fit items-center gap-2 rounded-xl bg-brand-red px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-red-hover"
+            className="inline-flex min-h-11 w-fit max-w-full items-center justify-center gap-2 whitespace-normal rounded-xl bg-brand-red px-5 py-2.5 text-center text-sm font-semibold text-white transition [overflow-wrap:anywhere] hover:bg-brand-red-hover"
           >
             {block.ctaLabel}
           </Link>

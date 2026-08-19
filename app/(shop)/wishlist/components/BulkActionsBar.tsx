@@ -24,28 +24,27 @@ export default function BulkActionsBar({
       aria-label="Bulk actions"
       aria-hidden={!visible}
       className={cn(
-        "pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4 transition-all duration-300 ease-out",
+        "pointer-events-none fixed inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 flex justify-center px-3 transition-all duration-300 ease-out min-[360px]:px-4",
         visible
           ? "translate-y-0 opacity-100"
           : "pointer-events-none translate-y-12 opacity-0",
       )}
     >
-      <div className="pointer-events-auto flex w-full max-w-2xl items-center gap-3 rounded-2xl border border-white/10 bg-brand-black/95 px-4 py-3 text-brand-white shadow-2xl backdrop-blur-xl">
-        <div className="flex items-center gap-2">
-          <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-red text-sm font-bold">
+      <div className="pointer-events-auto flex w-full max-w-2xl items-center gap-2 rounded-2xl border border-white/10 bg-brand-black/95 px-3 py-3 text-brand-white shadow-2xl backdrop-blur-xl min-[360px]:gap-3 min-[360px]:px-4">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-red text-sm font-bold">
             {selectedCount}
           </span>
-          <p className="text-sm font-medium">
-            <span className="hidden sm:inline">item</span>
-            {selectedCount === 1 ? "" : "s"} selected
+          <p className="hidden text-sm font-medium min-[360px]:block">
+            {selectedCount === 1 ? "item" : "items"} selected
           </p>
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 min-[360px]:gap-2">
           <button
             type="button"
             onClick={onMoveAllToCart}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-brand-red px-3 py-2 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-brand-red px-2.5 py-2 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover min-[360px]:px-3"
           >
             <ShoppingCart className="h-4 w-4" />
             <span className="hidden sm:inline">Move to cart</span>
@@ -54,7 +53,7 @@ export default function BulkActionsBar({
           <button
             type="button"
             onClick={onRemoveAll}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-sm font-semibold text-rose-200 transition-colors hover:bg-rose-500/30 hover:text-white"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-xl bg-white/10 px-2.5 py-2 text-sm font-semibold text-rose-200 transition-colors hover:bg-rose-500/30 hover:text-white min-[360px]:px-3"
           >
             <Trash2 className="h-4 w-4" />
             <span className="hidden sm:inline">Remove</span>
@@ -63,7 +62,7 @@ export default function BulkActionsBar({
             type="button"
             onClick={onClear}
             aria-label="Clear selection"
-            className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 transition-colors hover:bg-white/20"
+            className="grid h-11 w-11 place-items-center rounded-xl bg-white/10 transition-colors hover:bg-white/20"
           >
             <X className="h-4 w-4" />
           </button>

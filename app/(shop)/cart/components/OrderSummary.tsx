@@ -60,12 +60,12 @@ export default function OrderSummary({
 
   return (
     <aside
-      className="sticky top-[88px] flex flex-col gap-4 rounded-3xl border border-brand-border bg-brand-white p-5 shadow-sm sm:p-6"
+      className="sticky top-[88px] flex min-w-0 flex-col gap-4 rounded-3xl border border-brand-border bg-brand-white p-5 shadow-sm sm:p-6"
       aria-busy={isPricingLoading || isCheckingOut || isCartSyncing}
     >
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-bold text-gray-900">Order Summary</h2>
-        <span className="rounded-full bg-brand-light-bg px-2.5 py-0.5 text-xs font-semibold text-brand-black">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 sm:gap-3">
+        <h2 className="min-w-0 text-lg font-bold text-gray-900">Order Summary</h2>
+        <span className="max-w-full rounded-full bg-brand-light-bg px-2.5 py-0.5 text-xs font-semibold text-brand-black">
           {verifiedSummary
             ? "Server-priced"
             : isPricingLoading
@@ -125,11 +125,11 @@ export default function OrderSummary({
       </div>
 
       <div className="rounded-2xl border border-brand-border bg-brand-light-bg p-4">
-        <div className="flex items-baseline justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-2 sm:gap-3">
           <span className="text-sm font-semibold text-gray-700">
             {verifiedSummary ? "Total" : "Subtotal"}
           </span>
-          <span className="text-2xl font-extrabold text-brand-red sm:text-3xl">
+          <span className="min-w-0 text-2xl font-extrabold text-brand-red sm:text-3xl">
             <CurrencyAmount amountBDT={verifiedSummary?.total ?? subtotal} />
           </span>
         </div>
@@ -168,9 +168,11 @@ export default function OrderSummary({
         )}
       </button>
 
-      <div className="flex items-center justify-center gap-1.5 text-[11px] text-gray-500">
-        <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-        Pricing verified by server · Buyer protection included
+      <div className="flex min-w-0 flex-wrap items-center justify-center gap-1.5 text-center text-[11px] text-gray-500">
+        <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+        <span className="min-w-0 break-words">
+          Pricing verified by server · Buyer protection included
+        </span>
       </div>
     </aside>
   );
@@ -197,15 +199,17 @@ function SummaryRow({
   freeLabel?: string;
 }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-gray-600">{label}</span>
+    <div className="flex items-start justify-between gap-2 sm:items-center">
+      <span className="min-w-0 flex-1 text-gray-600 [overflow-wrap:anywhere]">
+        {label}
+      </span>
       {freeLabel ? (
-        <span className="font-bold uppercase tracking-wider text-emerald-600">
+        <span className="shrink-0 font-bold uppercase tracking-wider text-emerald-600">
           {freeLabel}
         </span>
       ) : (
         <span
-          className={`font-semibold ${
+          className={`shrink-0 text-right font-semibold ${
             tone === "success" ? "text-emerald-600" : "text-gray-900"
           }`}
         >

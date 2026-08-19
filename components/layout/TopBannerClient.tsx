@@ -93,7 +93,7 @@ const TopBannerClient = ({ slides }: { slides: TopBannerSlide[] }) => {
   if (!isVisible || !currentSale) return null;
 
   return (
-    <div className="relative w-screen max-w-[100vw] overflow-hidden bg-brand-black">
+    <div className="relative w-full max-w-full overflow-hidden bg-brand-black">
       <div className="mx-auto flex min-h-10 w-full max-w-7xl items-center gap-1.5 px-2 py-1.5 sm:gap-3 sm:px-4">
         <Link
           href={currentSale.link || "/products"}
@@ -106,13 +106,13 @@ const TopBannerClient = ({ slides }: { slides: TopBannerSlide[] }) => {
                 : "translate-y-0 opacity-100"
             }`}
           >
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex min-w-0 items-center gap-1">
               <BannerIcon
                 name={currentSale.icon}
                 fallback={Tag}
                 className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4 md:h-5 md:w-5"
               />
-              <span className="truncate font-bold text-[11px] tracking-wide sm:text-sm md:text-base">
+              <span className="min-w-0 truncate font-bold text-[11px] tracking-wide sm:text-sm md:text-base">
                 {currentSale.badge}
               </span>
             </div>
@@ -153,7 +153,7 @@ const TopBannerClient = ({ slides }: { slides: TopBannerSlide[] }) => {
           type="button"
           aria-label="Close Banner"
           onClick={() => setIsVisible(false)}
-          className="order-first flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/15 transition-colors hover:bg-white/25 sm:order-none sm:bg-transparent"
+          className="order-first flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-white/15 transition-colors hover:bg-white/25 sm:order-none sm:h-8 sm:w-8 sm:bg-transparent"
         >
           <X className="h-4 w-4 text-white" />
         </button>

@@ -42,10 +42,12 @@ const DealsCarousel: React.FC<DealsCarouselProps> = ({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-900">{title}</h2>
-        <div className="flex gap-2">
+    <div className="min-w-0 space-y-4">
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <h2 className="min-w-0 text-xl font-bold text-gray-900 [overflow-wrap:anywhere]">
+          {title}
+        </h2>
+        <div className="flex shrink-0 gap-2">
           <button 
             onClick={() => scroll('left')}
             className="p-2 rounded-full border border-gray-200 hover:bg-brand-light-bg hover:border-brand-red transition-colors"
@@ -65,7 +67,7 @@ const DealsCarousel: React.FC<DealsCarouselProps> = ({
 
       <div 
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 snap-x snap-mandatory"
+        className="scrollbar-hide flex max-w-full gap-4 overflow-x-auto overscroll-x-contain pb-2 snap-x snap-mandatory"
       >
         {deals.map((deal) => (
           <Link
@@ -84,9 +86,13 @@ const DealsCarousel: React.FC<DealsCarouselProps> = ({
               className="object-cover opacity-60 group-hover:scale-105 transition-transform"
               sizes="180px"
             />
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center p-2">
-              <p className="text-xs font-semibold opacity-90">{deal.subtitle}</p>
-              <h3 className="text-lg font-black">{deal.title}</h3>
+            <div className="absolute inset-0 flex min-w-0 flex-col items-center justify-center p-2 text-center text-white">
+              <p className="max-w-full line-clamp-2 text-xs font-semibold opacity-90 [overflow-wrap:anywhere]">
+                {deal.subtitle}
+              </p>
+              <h3 className="max-w-full line-clamp-2 text-lg font-black leading-tight [overflow-wrap:anywhere]">
+                {deal.title}
+              </h3>
             </div>
           </Link>
         ))}

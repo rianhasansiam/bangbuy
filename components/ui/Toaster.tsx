@@ -13,6 +13,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, XCircle, Info, AlertTriangle, X } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 import { toastEmitter, type ToastItem } from "@/lib/feedback";
@@ -58,14 +59,16 @@ function ToastCard({
   return (
     <div
       className={cn(
-        "flex w-full max-w-sm animate-in items-start gap-3 rounded-2xl border px-4 py-3 shadow-lg fade-in slide-in-from-bottom-4 duration-300 motion-reduce:animate-none",
+        "flex w-full min-w-0 max-w-sm animate-in items-start gap-3 rounded-2xl border px-3 py-3 shadow-lg fade-in slide-in-from-bottom-4 duration-300 motion-reduce:animate-none sm:px-4",
         STYLES[item.type],
       )}
       role="alert"
       aria-live="polite"
     >
       <Icon className={cn("mt-0.5 h-5 w-5 shrink-0", ICON_STYLES[item.type])} />
-      <p className="flex-1 text-sm font-medium leading-snug">{item.message}</p>
+      <p className="min-w-0 flex-1 text-sm font-medium leading-snug [overflow-wrap:anywhere]">
+        {item.message}
+      </p>
       <button
         type="button"
         onClick={() => onDismiss(item.id)}
@@ -80,6 +83,11 @@ function ToastCard({
 
 export default function Toaster() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const pathname = usePathname();
+  const hasMobileBottomActions =
+    pathname === "/cart" ||
+    pathname === "/wishlist" ||
+    (pathname?.startsWith("/products/") ?? false);
 
   useEffect(() => {
     const unsub = toastEmitter.subscribe((item) => {
@@ -101,10 +109,15 @@ export default function Toaster() {
     <div
       role="region"
       aria-label="Notifications"
-      className="pointer-events-none fixed bottom-6 right-4 z-9999 flex flex-col items-end gap-2 sm:right-6"
+      className={cn(
+        "pointer-events-none fixed inset-x-3 z-9999 flex min-w-0 flex-col items-stretch gap-2 sm:left-auto sm:right-6 sm:w-full sm:max-w-sm lg:bottom-6",
+        hasMobileBottomActions
+          ? "bottom-[calc(5.75rem+env(safe-area-inset-bottom))]"
+          : "bottom-[max(0.75rem,env(safe-area-inset-bottom))]",
+      )}
     >
       {toasts.map((t) => (
-        <div key={t.id} className="pointer-events-auto w-full max-w-sm">
+        <div key={t.id} className="pointer-events-auto w-full min-w-0 max-w-sm">
           <ToastCard item={t} onDismiss={dismiss} />
         </div>
       ))}

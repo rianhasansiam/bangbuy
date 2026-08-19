@@ -96,7 +96,7 @@ export default function Navbar({
     if (!mobileMenuOpen) return;
 
     const previousOverflow = document.body.style.overflow;
-    const desktopQuery = window.matchMedia("(min-width: 1024px)");
+    const desktopQuery = window.matchMedia("(min-width: 1280px)");
     document.body.style.overflow = "hidden";
 
     const focusFrame = requestAnimationFrame(() => {
@@ -180,9 +180,9 @@ export default function Navbar({
 
   return (
     <header className="sticky top-0 z-50 bg-brand-light-bg px-1 py-2 sm:px-4 lg:border-b lg:border-brand-border lg:px-0 lg:py-0">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-2 rounded-md border border-brand-border bg-brand-white py-2.5 shadow-sm sm:px-4 lg:rounded-none lg:border-none lg:bg-transparent lg:py-3 lg:shadow-none lg:px-6">
+      <div className="relative mx-auto flex w-full min-w-0 max-w-7xl items-center justify-between gap-2 rounded-md border border-brand-border bg-brand-white py-2.5 shadow-sm sm:px-4 lg:rounded-none lg:border-none lg:bg-transparent lg:px-6 lg:py-3 lg:shadow-none">
         {/* LEFT: Mobile Menu + Brand */}
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <button
             ref={mobileMenuButtonRef}
             type="button"
@@ -192,7 +192,7 @@ export default function Navbar({
             aria-label="Open menu"
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-navigation-drawer"
-            className="rounded-full p-2 text-brand-black transition-colors duration-200 hover:bg-brand-white/40 hover:text-brand-red lg:hidden"
+            className="shrink-0 rounded-full p-2 text-brand-black transition-colors duration-200 hover:bg-brand-white/40 hover:text-brand-red xl:hidden"
           >
             <Menu className="h-6 w-6" />
           </button>
@@ -200,7 +200,7 @@ export default function Navbar({
           <Link
             href="/"
             aria-label={`${siteConfig.name} - Good Quality. Good Service. - home`}
-            className="group flex shrink-0 items-center rounded-xl px-1 py-1.5 transition-transform duration-300 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2"
+            className="group flex min-w-0 shrink-0 items-center rounded-xl px-1 py-1.5 transition-transform duration-300 hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2"
           >
             {/* Logo retained for future use.
             <div className="w-[4.35rem] overflow-hidden rounded-lg bg-brand-black shadow-sm ring-1 ring-brand-black/10 transition-shadow duration-300 group-hover:shadow-md sm:w-[4.9rem]">
@@ -218,12 +218,12 @@ export default function Navbar({
 
             <div
               aria-hidden="true"
-              className="flex select-none flex-col items-center"
+              className="flex min-w-0 select-none flex-col items-center"
             >
               <span className="whitespace-nowrap text-xl font-black leading-none tracking-[-0.055em] text-brand-black sm:text-2xl">
                 Bang<span className="text-brand-red">Buy</span>
               </span>
-              <span className="mt-1 whitespace-nowrap text-[0.46rem] font-bold uppercase leading-none tracking-[0.15em] text-brand-text-muted transition-colors duration-300 group-hover:text-brand-black sm:text-[0.5rem] sm:tracking-[0.18em]">
+              <span className="mt-1 whitespace-nowrap text-[0.46rem] font-bold uppercase leading-none tracking-[0.15em] text-brand-text-muted transition-colors duration-300 group-hover:text-brand-black max-[374px]:hidden sm:text-[0.5rem] sm:tracking-[0.18em]">
                - Good Quality. Good Service. -
               </span>
             </div>
@@ -231,7 +231,7 @@ export default function Navbar({
         </div>
 
         {/* DESKTOP MENU */}
-        <nav className="hidden items-center gap-2 lg:flex">
+        <nav className="hidden items-center gap-2 xl:flex">
           <DesktopCategoryMenu
             categories={categories}
             active={pathname === "/categories" || pathname.startsWith("/categories/")}
@@ -277,7 +277,7 @@ export default function Navbar({
             <Link
               href="/login"
               aria-label="Sign in"
-              className="flex items-center gap-1 px-2 py-1.5 text-sm font-semibold text-brand-black transition-colors duration-200 hover:text-brand-red lg:hidden"
+              className="flex h-10 w-10 items-center justify-center gap-1 p-0 text-sm font-semibold text-brand-black transition-colors duration-200 hover:text-brand-red sm:h-auto sm:w-auto sm:px-2 sm:py-1.5 xl:hidden"
             >
               <span className="hidden sm:inline">Sign in</span>
               <User className="h-5 w-5" />
@@ -287,7 +287,7 @@ export default function Navbar({
           {user && (
             <Link
               href="/profile"
-              className="rounded-full p-2 transition-colors duration-200 hover:bg-brand-white/40 lg:hidden"
+              className="flex h-10 w-10 items-center justify-center rounded-full p-0 transition-colors duration-200 hover:bg-brand-white/40 xl:hidden"
               aria-label="My profile"
             >
               <div className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border-2 border-brand-border bg-brand-light-bg">
@@ -309,11 +309,11 @@ export default function Navbar({
           <Link
             href="/wishlist"
             aria-label={`Wishlist${wishlistCount > 0 ? `, ${wishlistCount} item${wishlistCount === 1 ? "" : "s"}` : ""}`}
-            className="group relative rounded-full p-2 transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-white/40"
+            className="group relative flex h-10 w-10 items-center justify-center rounded-full p-0 transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-white/40 xl:h-auto xl:w-auto xl:p-2"
           >
             <Heart className="h-5 w-5 text-brand-black transition-transform duration-200 group-hover:scale-110 group-hover:text-brand-red" />
             {wishlistCount > 0 && (
-              <span className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-red text-[10px] font-bold leading-none text-brand-white ring-2 ring-brand-white">
+              <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-red px-1 text-[10px] font-bold leading-none text-brand-white ring-2 ring-brand-white xl:right-0.5 xl:top-0.5">
                 {wishlistCount > 99 ? "99+" : wishlistCount}
               </span>
             )}
@@ -322,18 +322,18 @@ export default function Navbar({
           <Link
             href="/cart"
             aria-label={`Cart${cartCount > 0 ? `, ${cartCount} item${cartCount === 1 ? "" : "s"}` : ""}`}
-            className="group relative rounded-full p-2 transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-white/40"
+            className="group relative flex h-10 w-10 items-center justify-center rounded-full p-0 transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-white/40 xl:h-auto xl:w-auto xl:p-2"
           >
             <ShoppingCart className="h-5 w-5 text-brand-black transition-transform duration-200 group-hover:scale-110 group-hover:text-brand-red" />
             {cartCount > 0 && (
-              <span className="absolute right-0.5 top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-red text-[10px] font-bold leading-none text-brand-white ring-2 ring-brand-white">
+              <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-red px-1 text-[10px] font-bold leading-none text-brand-white ring-2 ring-brand-white xl:right-0.5 xl:top-0.5">
                 {cartCount > 99 ? "99+" : cartCount}
               </span>
             )}
           </Link>
 
           {/* DESKTOP: PROFILE / AUTH */}
-          <div className="relative hidden lg:block">
+          <div className="relative hidden xl:block">
             {user ? (
               <DropdownMenu
                 modal={false}
@@ -487,7 +487,7 @@ export default function Navbar({
           mobileMenuButtonRef.current?.focus({ preventScroll: true });
         }}
         className={cn(
-          "fixed inset-0 z-60 cursor-default border-0 bg-brand-black/40 p-0 transition-opacity duration-200 ease-out motion-reduce:transition-none lg:hidden",
+          "fixed inset-0 z-60 cursor-default border-0 bg-brand-black/40 p-0 transition-opacity duration-200 ease-out motion-reduce:transition-none xl:hidden",
           mobileMenuOpen
             ? "pointer-events-auto opacity-100"
             : "pointer-events-none opacity-0",
@@ -504,7 +504,7 @@ export default function Navbar({
         aria-hidden={!mobileMenuOpen}
         inert={!mobileMenuOpen}
         className={cn(
-          "fixed inset-y-0 right-0 z-70 flex h-dvh w-[85%] max-w-sm transform-gpu flex-col overflow-hidden border-l border-brand-border bg-brand-light-bg shadow-xl [backface-visibility:hidden] [contain:paint] transition-transform duration-[420ms] ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform motion-reduce:transition-none lg:hidden",
+          "fixed inset-y-0 right-0 z-70 flex h-dvh w-[85%] max-w-sm transform-gpu flex-col overflow-hidden border-l border-brand-border bg-brand-light-bg shadow-xl [backface-visibility:hidden] [contain:paint] transition-transform duration-[420ms] ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform motion-reduce:transition-none xl:hidden",
           mobileMenuOpen ? "translate-x-0" : "translate-x-full",
         )}
       >
@@ -542,7 +542,7 @@ export default function Navbar({
           />
         </div>
 
-        <nav className="flex flex-col gap-1 p-3">
+        <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <MobileCategoryMenu
             categories={categories}
             onNavigate={() => setMobileMenuOpen(false)}

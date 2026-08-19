@@ -49,8 +49,18 @@ function BlockWrapper({
   const container = block.containerStyle ?? "contained";
 
   return (
-    <div className={cn(SPACING_CLASSES[spacing] ?? SPACING_CLASSES.medium, "w-full")}>
-      <div className={cn(CONTAINER_CLASSES[container] ?? CONTAINER_CLASSES.contained, "px-4 sm:px-0")}>
+    <div
+      className={cn(
+        SPACING_CLASSES[spacing] ?? SPACING_CLASSES.medium,
+        "w-full min-w-0",
+      )}
+    >
+      <div
+        className={cn(
+          CONTAINER_CLASSES[container] ?? CONTAINER_CLASSES.contained,
+          "min-w-0 px-4 sm:px-0",
+        )}
+      >
         {children}
       </div>
     </div>
@@ -79,7 +89,7 @@ export default function ProductDescriptionRenderer({
   // If we have valid visible blocks, render them.
   if (visibleBlocks.length > 0) {
     return (
-      <div className="divide-y divide-brand-border overflow-hidden rounded-2xl border border-brand-border bg-white">
+      <div className="min-w-0 divide-y divide-brand-border overflow-hidden rounded-2xl border border-brand-border bg-white">
         {visibleBlocks.map((block) => {
           let blockNode: React.ReactNode;
           switch (block.type) {
@@ -111,8 +121,8 @@ export default function ProductDescriptionRenderer({
   const trimmed = legacyDescription?.trim();
   if (trimmed) {
     return (
-      <div className="overflow-hidden rounded-2xl border border-brand-border bg-white">
-        <p className="px-5 py-6 leading-relaxed whitespace-pre-line text-gray-600">
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-brand-border bg-white">
+        <p className="whitespace-pre-line px-4 py-6 leading-relaxed text-gray-600 [overflow-wrap:anywhere] sm:px-5">
           {trimmed}
         </p>
       </div>

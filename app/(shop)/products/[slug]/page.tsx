@@ -613,7 +613,7 @@ export default async function ProductDetailsPage({ params }: Props) {
     : null;
 
   return (
-    <main className="min-h-screen bg-brand-light-bg pb-20 lg:pb-0">
+    <main className="min-h-screen bg-brand-light-bg pb-[calc(3.75rem+env(safe-area-inset-bottom))] lg:pb-0">
       {productSchema && breadcrumbSchema && (
         <JsonLd
           data={
@@ -642,7 +642,7 @@ export default async function ProductDetailsPage({ params }: Props) {
           availabilityLabel={availabilityLabel}
         />
 
-        <nav
+        {/* <nav
           aria-label="Product shopping links"
           className="mt-4 flex flex-wrap gap-2 text-xs font-semibold"
         >
@@ -660,7 +660,7 @@ export default async function ProductDetailsPage({ params }: Props) {
           </Link>
           <Link
             href={`/categories/${categoryPath}`}
-            className="rounded-full border border-gray-200 bg-white px-3 py-1.5 text-gray-700 transition hover:border-brand-red hover:text-brand-red"
+            className="max-w-full rounded-full border border-gray-200 bg-white px-3 py-1.5 text-gray-700 transition [overflow-wrap:anywhere] hover:border-brand-red hover:text-brand-red"
           >
             {product.category.name}
           </Link>
@@ -670,10 +670,10 @@ export default async function ProductDetailsPage({ params }: Props) {
           >
             Contact Us
           </Link>
-        </nav>
+        </nav> */}
 
         <div className="mt-6 grid grid-cols-1 md:grid-cols-12 gap-6">
-          <div className="md:col-span-6 lg:col-span-4">
+          <div className="min-w-0 md:col-span-6 lg:col-span-4">
             <ProductGallery
               productId={product.id}
               images={productImages}
@@ -687,8 +687,8 @@ export default async function ProductDetailsPage({ params }: Props) {
             />
           </div>
 
-          <div className="md:col-span-6 lg:col-span-5">
-            <div className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100">
+          <div className="min-w-0 md:col-span-6 lg:col-span-5">
+            <div className="min-w-0 rounded-2xl border border-gray-100 bg-white p-4 sm:p-6">
               <ProductInfo
                 name={product.name}
                 productCode={product.productCode}
@@ -735,7 +735,7 @@ export default async function ProductDetailsPage({ params }: Props) {
             </div>
           </div>
 
-          <div className="md:col-span-12 lg:col-span-3">
+          <div className="min-w-0 md:col-span-12 lg:col-span-3">
             <RecentProducts products={recentProducts} title="Recent Product" />
           </div>
         </div>
@@ -783,14 +783,14 @@ export default async function ProductDetailsPage({ params }: Props) {
         </div>
 
         <div className="mt-10 grid grid-cols-1 lg:grid-cols-12 gap-6 pb-12">
-          <div className="lg:col-span-9">
+          <div className="min-w-0 lg:col-span-9">
             <DeferredRelatedProducts
               products={relatedProducts}
               title="More Relevant Products"
             />
           </div>
 
-          <div className="lg:col-span-3">
+          <div className="min-w-0 lg:col-span-3">
             <PromoBanners banners={promoBanners} />
           </div>
         </div>

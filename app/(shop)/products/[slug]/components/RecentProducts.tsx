@@ -27,15 +27,17 @@ const RecentProducts: React.FC<RecentProductsProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-4">
-      <h3 className="text-lg font-bold text-gray-900 mb-4">{title}</h3>
+    <div className="min-w-0 rounded-2xl border border-gray-100 bg-white p-4">
+      <h3 className="mb-4 text-lg font-bold text-gray-900 [overflow-wrap:anywhere]">
+        {title}
+      </h3>
       
       <div className="space-y-3">
         {products.slice(0, 6).map((product) => (
           <Link 
             key={product.id}
             href={`/products/${product.slug}`}
-            className="flex gap-3 p-2 rounded-xl hover:bg-brand-light-bg transition-colors group"
+            className="group flex min-w-0 gap-3 rounded-xl p-2 transition-colors hover:bg-brand-light-bg"
           >
             {/* Thumbnail */}
             <div
@@ -56,15 +58,15 @@ const RecentProducts: React.FC<RecentProductsProps> = ({
               <h4 className="text-sm font-medium text-gray-900 line-clamp-2 group-hover:text-brand-red transition-colors">
                 {product.name}
               </h4>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
                 <CurrencyAmount
                   amountBDT={product.price}
-                  className="text-sm font-bold text-brand-red"
+                  className="max-w-full whitespace-nowrap text-sm font-bold text-brand-red"
                 />
                 {product.discount > 0 && (
                   <CurrencyAmount
                     amountBDT={product.originalPrice}
-                    className="text-xs text-gray-400 line-through"
+                    className="max-w-full whitespace-nowrap text-xs text-gray-400 line-through"
                   />
                 )}
               </div>

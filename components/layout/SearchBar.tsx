@@ -282,7 +282,7 @@ export default function SearchBar({
     activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined;
 
   return (
-    <div ref={containerRef} className={cn("relative", className)}>
+    <div ref={containerRef} className={cn("relative w-full min-w-0", className)}>
       <div className="relative w-full">
         <Search
           aria-hidden="true"

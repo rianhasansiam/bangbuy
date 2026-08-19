@@ -33,14 +33,16 @@ const ProductInfo = ({
   reviewCount,
 }: ProductInfoProps) => {
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-bold leading-tight text-gray-900 md:text-2xl">
+    <div className="min-w-0 space-y-5">
+      <div className="min-w-0">
+        <h1 className="text-xl font-bold leading-tight text-gray-900 [overflow-wrap:anywhere] md:text-2xl">
           {name}
         </h1>
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
           {productCode && (
-            <span className="font-mono">Product code: {productCode}</span>
+            <span className="min-w-0 font-mono [overflow-wrap:anywhere]">
+              Product code: {productCode}
+            </span>
           )}
           {reviewCount > 0 && (
             <a
@@ -64,7 +66,7 @@ const ProductInfo = ({
         gtin ||
         series ||
         condition) && (
-        <dl className="grid gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3 text-sm sm:grid-cols-2">
+        <dl className="grid min-w-0 gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3 text-sm sm:grid-cols-2">
           {brand && (
             <div className="min-w-0">
               <dt className="flex items-center gap-2.5 text-xs text-gray-500">
@@ -112,21 +114,27 @@ const ProductInfo = ({
             </div>
           )}
           {modelNumber && (
-            <div>
+            <div className="min-w-0">
               <dt className="text-xs text-gray-500">Model number</dt>
-              <dd className="font-semibold text-gray-900">{modelNumber}</dd>
+              <dd className="font-semibold text-gray-900 [overflow-wrap:anywhere]">
+                {modelNumber}
+              </dd>
             </div>
           )}
           {series && (
-            <div>
+            <div className="min-w-0">
               <dt className="text-xs text-gray-500">Series</dt>
-              <dd className="font-semibold text-gray-900">{series}</dd>
+              <dd className="font-semibold text-gray-900 [overflow-wrap:anywhere]">
+                {series}
+              </dd>
             </div>
           )}
           {gtin && (
-            <div>
+            <div className="min-w-0">
               <dt className="text-xs text-gray-500">GTIN</dt>
-              <dd className="font-mono font-semibold text-gray-900">{gtin}</dd>
+              <dd className="font-mono font-semibold text-gray-900 [overflow-wrap:anywhere]">
+                {gtin}
+              </dd>
             </div>
           )}
           <div>

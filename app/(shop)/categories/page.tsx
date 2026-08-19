@@ -21,15 +21,17 @@ export const metadata: Metadata = buildMetadata({
 function DescendantLinks({ nodes }: { nodes: CategoryDto[] }) {
   if (nodes.length === 0) return null;
   return (
-    <ul className="mt-3 space-y-2 border-l border-brand-border pl-3">
+    <ul className="mt-3 space-y-2 border-l border-brand-border pl-2 sm:pl-3">
       {nodes.map((node) => (
         <li key={node.id}>
           <Link
             href={`/categories/${node.path}`}
-            className="group flex items-center justify-between gap-2 text-sm text-gray-700 hover:text-brand-red"
+            className="group flex min-w-0 items-start justify-between gap-2 text-sm text-gray-700 hover:text-brand-red"
           >
-            <span>{node.name}</span>
-            <span className="text-xs text-gray-400 group-hover:text-brand-red">
+            <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+              {node.name}
+            </span>
+            <span className="shrink-0 text-xs text-gray-400 group-hover:text-brand-red">
               {node.totalProductCount}
             </span>
           </Link>
@@ -90,7 +92,7 @@ export default async function CategoryDirectoryPage() {
             {roots.map((root) => (
               <article
                 key={root.id}
-                className="overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                className="min-w-0 overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
               >
                 {root.image ? (
                   <div className="relative aspect-[16/7] overflow-hidden bg-brand-light-bg">
@@ -110,10 +112,10 @@ export default async function CategoryDirectoryPage() {
                 <div className="p-5">
                   <Link
                     href={`/categories/${root.path}`}
-                    className="group flex items-start justify-between gap-3"
+                    className="group flex min-w-0 items-start justify-between gap-3"
                   >
-                    <div>
-                      <h2 className="text-lg font-extrabold text-gray-950 group-hover:text-brand-red">
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-lg font-extrabold text-gray-950 [overflow-wrap:anywhere] group-hover:text-brand-red">
                         {root.name}
                       </h2>
                       <p className="mt-1 text-xs text-gray-500">

@@ -12,6 +12,7 @@ export default function SpecificationTableBlockView({
 
   return (
     <section
+      className="min-w-0"
       aria-labelledby={
         block.heading?.trim() ? `st-${block.id}` : undefined
       }
@@ -19,12 +20,12 @@ export default function SpecificationTableBlockView({
       {block.heading?.trim() && (
         <h2
           id={`st-${block.id}`}
-          className="mb-4 text-xl font-bold text-gray-900"
+          className="mb-4 text-xl font-bold text-gray-900 [overflow-wrap:anywhere]"
         >
           {block.heading}
         </h2>
       )}
-      <div className="overflow-x-auto rounded-2xl border border-brand-border">
+      <div className="max-w-full overflow-x-auto rounded-2xl border border-brand-border">
         <table className="w-full border-collapse text-left text-sm">
           <caption className="sr-only">
             {block.heading?.trim() ?? "Specification table"}
@@ -34,11 +35,13 @@ export default function SpecificationTableBlockView({
               <tr key={row.id} className="even:bg-brand-light-bg">
                 <th
                   scope="row"
-                  className="w-2/5 px-5 py-3 align-top font-semibold text-gray-900"
+                  className="w-2/5 px-4 py-3 align-top font-semibold text-gray-900 [overflow-wrap:anywhere] sm:px-5"
                 >
                   {row.label}
                 </th>
-                <td className="px-5 py-3 text-gray-600">{row.value}</td>
+                <td className="px-4 py-3 text-gray-600 [overflow-wrap:anywhere] sm:px-5">
+                  {row.value}
+                </td>
               </tr>
             ))}
           </tbody>

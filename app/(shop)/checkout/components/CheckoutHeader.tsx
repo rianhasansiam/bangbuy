@@ -37,13 +37,13 @@ export default function CheckoutHeader({
             <ChevronLeft className="h-3.5 w-3.5" />
             {backLabel}
           </Link>
-          <h1 className="mt-2 flex items-center gap-3 text-3xl font-extrabold tracking-tight sm:text-4xl">
-            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/15 backdrop-blur-md ring-1 ring-white/30">
+          <h1 className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/15 backdrop-blur-md ring-1 ring-white/30">
               <Lock className="h-6 w-6" />
             </span>
             Checkout
             {itemCount > 0 && (
-              <span className="ml-1 rounded-full bg-white/20 px-3 py-1 text-sm font-bold backdrop-blur-md">
+              <span className="rounded-full bg-white/20 px-3 py-1 text-sm font-bold backdrop-blur-md sm:ml-1">
                 {itemCount} {itemCount === 1 ? "item" : "items"}
               </span>
             )}

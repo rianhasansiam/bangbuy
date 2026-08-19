@@ -46,11 +46,14 @@ export default function PromoCodeInput({
             <Check className="h-4 w-4" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-1.5 text-sm font-bold text-emerald-800">
-              <span className="rounded-md bg-white px-1.5 py-0.5 font-mono text-xs text-emerald-700">
+            <p className="flex min-w-0 items-center gap-1.5 text-sm font-bold text-emerald-800">
+              <span
+                title={applied.code}
+                className="min-w-0 flex-1 truncate rounded-md bg-white px-1.5 py-0.5 font-mono text-xs text-emerald-700"
+              >
                 {applied.code}
               </span>
-              applied
+              <span className="shrink-0">applied</span>
             </p>
             <p className="truncate text-xs text-emerald-700">
               {isApplying ? (
@@ -79,7 +82,7 @@ export default function PromoCodeInput({
   return (
     <div className="space-y-2">
       <form onSubmit={handleApply} className="flex items-stretch gap-2">
-        <div className="relative flex-1">
+        <div className="relative min-w-0 flex-1">
           <Tag className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-text-muted" />
           <Input
             type="text"

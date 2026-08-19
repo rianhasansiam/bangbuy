@@ -24,6 +24,8 @@ export default function SiteChrome({
 }) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith("/admin") ?? false;
+  const hasMobileBottomActions =
+    pathname === "/cart" || (pathname?.startsWith("/products/") ?? false);
 
   if (isAdmin) {
     return <>{children}</>;
@@ -34,7 +36,13 @@ export default function SiteChrome({
       {banner}
       {navbar}
       {children}
-      {footer}
+      {hasMobileBottomActions ? (
+        <div className="bg-brand-black pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+          {footer}
+        </div>
+      ) : (
+        footer
+      )}
     </>
   );
 }

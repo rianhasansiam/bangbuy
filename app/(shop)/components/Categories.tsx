@@ -25,13 +25,13 @@ export default function Categories({ initialCategories }: CategoriesProps) {
     <div className="space-y-10">
       {categories.map((category, index) => (
         <section key={category.id} className="relative">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="flex min-w-0 flex-1 items-center gap-2.5">
+              <div className="min-w-0">
                 <h2 className="text-lg font-bold text-foreground sm:text-xl">
                   <Link
                     href={`/categories/${category.path}`}
-                    className="transition-colors hover:text-brand-red"
+                    className="[overflow-wrap:anywhere] transition-colors hover:text-brand-red"
                   >
                     {category.name}
                   </Link>
@@ -44,7 +44,7 @@ export default function Categories({ initialCategories }: CategoriesProps) {
 
             <Link
               href={`/categories/${category.path}`}
-              className="group flex items-center gap-1 text-sm font-semibold text-brand-red transition-colors hover:text-brand-red-hover"
+              className="group flex shrink-0 items-center gap-1 text-sm font-semibold text-brand-red transition-colors hover:text-brand-red-hover"
             >
               View All
               <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -56,23 +56,24 @@ export default function Categories({ initialCategories }: CategoriesProps) {
      
 
           <div className="flex flex-col gap-4 lg:flex-row">
-            <div className="grid flex-1 grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
               {category.products.map((item) => (
-                <ProductCard
-                  key={item.id}
-                  id={item.id}
-                  slug={item.slug}
-                  name={item.name}
-                  price={item.discountPrice ?? item.price}
-                  originalPrice={
-                    item.discountPrice != null ? item.price : undefined
-                  }
-                  image={item.image}
-                  rating={item.rating}
-                  reviewCount={item.reviewCount}
-                  badge={item.badge ?? undefined}
-                  variantCount={item.variantCount}
-                />
+                <div key={item.id} className="min-w-0">
+                  <ProductCard
+                    id={item.id}
+                    slug={item.slug}
+                    name={item.name}
+                    price={item.discountPrice ?? item.price}
+                    originalPrice={
+                      item.discountPrice != null ? item.price : undefined
+                    }
+                    image={item.image}
+                    rating={item.rating}
+                    reviewCount={item.reviewCount}
+                    badge={item.badge ?? undefined}
+                    variantCount={item.variantCount}
+                  />
+                </div>
               ))}
             </div>
 
@@ -95,7 +96,7 @@ export default function Categories({ initialCategories }: CategoriesProps) {
           <div className="mt-5 text-center">
             <Link
               href={`/categories/${category.path}`}
-              className="inline-block rounded-full bg-brand-red px-6 py-2.5 text-sm font-semibold text-brand-white shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-lg"
+              className="inline-block max-w-full rounded-full bg-brand-red px-6 py-2.5 text-sm font-semibold text-brand-white shadow-md [overflow-wrap:anywhere] transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-lg"
             >
               View all {category.totalProductCount} products
             </Link>

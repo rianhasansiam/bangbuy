@@ -95,7 +95,7 @@ export default function ProductsGrid({
 
   return (
     <div
-      className={`grid grid-cols-2 gap-3 transition-[grid-template-columns] duration-300 ease-in-out sm:grid-cols-3 sm:gap-4 md:grid-cols-3 ${
+      className={`grid grid-cols-2 gap-2 transition-[grid-template-columns] duration-300 ease-in-out sm:grid-cols-3 sm:gap-4 md:grid-cols-3 ${
         wide ? "lg:grid-cols-4 xl:grid-cols-5" : "lg:grid-cols-3 xl:grid-cols-4"
       }`}
     >
@@ -104,8 +104,8 @@ export default function ProductsGrid({
           key={p.id}
           className={
             idx >= animateFrom
-              ? "animate-in fade-in slide-in-from-bottom-3 duration-500"
-              : undefined
+              ? "min-w-0 animate-in fade-in slide-in-from-bottom-3 duration-500"
+              : "min-w-0"
           }
           style={
             idx >= animateFrom

@@ -27,32 +27,39 @@ export default function FeatureGridBlockView({
 }) {
   if (block.items.length === 0) return null;
   return (
-    <section aria-labelledby={block.heading ? `fg-${block.id}` : undefined}>
+    <section
+      className="min-w-0"
+      aria-labelledby={block.heading ? `fg-${block.id}` : undefined}
+    >
       {block.heading?.trim() && (
         <h2
           id={`fg-${block.id}`}
-          className="mb-6 text-xl font-bold text-gray-900"
+          className="mb-6 text-xl font-bold text-gray-900 [overflow-wrap:anywhere]"
         >
           {block.heading}
         </h2>
       )}
       <ul
-        className={cn("grid gap-4", GRID_COLS[block.columns])}
+        className={cn("grid min-w-0 gap-4", GRID_COLS[block.columns])}
         aria-label={block.heading?.trim() ? undefined : "Feature highlights"}
       >
         {block.items.map((item) => (
           <li
             key={item.id}
-            className="flex flex-col gap-2 rounded-2xl border border-brand-border bg-white p-5"
+            className="flex min-w-0 flex-col gap-2 rounded-2xl border border-brand-border bg-white p-4 sm:p-5"
           >
             {item.icon && (
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-red/10 text-brand-red">
                 <LucideIcon name={item.icon} className="h-5 w-5" />
               </span>
             )}
-            <p className="font-semibold text-gray-900">{item.title}</p>
+            <p className="font-semibold text-gray-900 [overflow-wrap:anywhere]">
+              {item.title}
+            </p>
             {item.description?.trim() && (
-              <p className="text-sm text-gray-600">{item.description}</p>
+              <p className="text-sm text-gray-600 [overflow-wrap:anywhere]">
+                {item.description}
+              </p>
             )}
           </li>
         ))}

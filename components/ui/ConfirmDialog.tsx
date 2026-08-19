@@ -66,7 +66,7 @@ function Dialog({
 
   return (
     <div
-      className="fixed inset-0 z-10000 flex animate-in items-center justify-center p-4 fade-in duration-200 motion-reduce:animate-none"
+      className="fixed inset-0 z-10000 flex animate-in items-center justify-center p-3 fade-in duration-200 motion-reduce:animate-none sm:p-4"
       aria-modal="true"
       role="dialog"
       aria-labelledby="confirm-title"
@@ -80,7 +80,7 @@ function Dialog({
 
       {/* Panel */}
       <div
-        className="relative z-10 w-full max-w-md animate-in rounded-3xl border border-gray-100 bg-white p-6 shadow-2xl zoom-in-95 slide-in-from-bottom-4 duration-200 motion-reduce:animate-none"
+        className="relative z-10 max-h-[calc(100dvh-1.5rem)] w-full max-w-md animate-in overflow-y-auto rounded-3xl border border-gray-100 bg-white p-4 shadow-2xl zoom-in-95 slide-in-from-bottom-4 duration-200 motion-reduce:animate-none sm:max-h-[calc(100dvh-2rem)] sm:p-6"
       >
         {/* Icon */}
         <div
@@ -95,14 +95,14 @@ function Dialog({
         {/* Text */}
         <h2
           id="confirm-title"
-          className="text-center text-lg font-bold text-gray-900"
+          className="text-center text-lg font-bold text-gray-900 [overflow-wrap:anywhere]"
         >
           {dialog.title}
         </h2>
         {dialog.description && (
           <p
             id="confirm-desc"
-            className="mt-2 text-center text-sm leading-relaxed text-gray-500"
+            className="mt-2 text-center text-sm leading-relaxed text-gray-500 [overflow-wrap:anywhere]"
           >
             {dialog.description}
           </p>
@@ -113,7 +113,7 @@ function Dialog({
           <button
             type="button"
             onClick={() => onClose(false)}
-            className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+            className="min-h-11 rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
           >
             {dialog.cancelLabel ?? "Cancel"}
           </button>
@@ -121,7 +121,7 @@ function Dialog({
             type="button"
             onClick={() => onClose(true)}
             className={cn(
-              "rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors",
+              "min-h-11 rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors",
               CONFIRM_BTN[variant],
             )}
           >

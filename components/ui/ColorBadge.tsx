@@ -35,7 +35,7 @@ export default function ColorBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 text-[11px] font-medium text-brand-text-muted",
+        "inline-flex max-w-full min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] font-medium text-brand-text-muted [overflow-wrap:anywhere]",
         className,
       )}
     >
@@ -48,10 +48,16 @@ export default function ColorBadge({
             aria-label={`Color ${color}`}
           />
         ) : (
-          <span>{color}</span>
+          <span className="min-w-0 max-w-full">{color}</span>
         ))}
-      {hasColor && hasSize && <span className="text-gray-300">/</span>}
-      {hasSize && <span>{size}</span>}
+      {hasSize && (
+        <span className="inline-flex min-w-0 max-w-full items-start gap-1.5">
+          {hasColor && <span className="shrink-0 text-gray-300">/</span>}
+          <span className="min-w-0 max-w-full [overflow-wrap:anywhere]">
+            {size}
+          </span>
+        </span>
+      )}
     </span>
   );
 }

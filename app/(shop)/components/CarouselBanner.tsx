@@ -81,7 +81,7 @@ export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
     <div className="space-y-5">
       {/* Hero Banner */}
       <div
-        className="relative overflow-hidden rounded-2xl mx-3 sm:mx-4 lg:mx-6 mt-4 transition-all duration-700"
+        className="relative mx-0 mt-4 overflow-hidden rounded-2xl transition-all duration-700 sm:mx-4 lg:mx-6"
         style={{ background: heroBackground(activeDeal) }}
       >
         {/* Background Effects */}
@@ -91,17 +91,17 @@ export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
           <div className="absolute top-1/2 left-1/2 w-48 h-48 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
         </div>
 
-        <div className="relative z-10 flex h-[50vh] flex-row items-center justify-between gap-3 px-4 py-4 sm:gap-6 sm:px-8 sm:py-6 md:h-auto md:px-10 md:py-12">
+        <div className="relative z-10 flex min-h-[50vh] flex-row items-center justify-between gap-3 px-4 py-4 sm:gap-6 sm:px-8 sm:py-6 md:min-h-0 md:px-10 md:py-12">
           {/* Text Content */}
           <div
             key={activeDeal.id}
             className="min-w-0 flex-1 max-w-lg text-left text-white animate-in fade-in slide-in-from-left-5 duration-700"
           >
-            <span className="mb-2 inline-block rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-medium backdrop-blur-sm sm:px-3 sm:py-1 sm:text-xs md:mb-3">
+            <span className="mb-2 inline-block max-w-full truncate rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-medium backdrop-blur-sm sm:px-3 sm:py-1 sm:text-xs md:mb-3">
               🎉 {activeDeal.badge}
             </span>
 
-            <h1 className="mb-2 text-xl font-black leading-tight sm:text-3xl md:mb-3 md:text-4xl lg:text-5xl">
+            <h1 className="mb-2 text-xl font-black leading-tight [overflow-wrap:anywhere] sm:text-3xl md:mb-3 md:text-4xl lg:text-5xl">
               {activeDeal.title}
               <br />
               <span className="text-brand-gold">{activeDeal.subtitle}</span>
@@ -131,18 +131,18 @@ export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
           {/* Hero Image */}
           <div
             key={`${activeDeal.id}-image`}
-            className="relative size-24 shrink-0 animate-in fade-in zoom-in-95 duration-700 sm:size-36 md:size-64 lg:size-72"
+            className="relative size-20 shrink-0 animate-in fade-in zoom-in-95 duration-700 min-[360px]:size-24 sm:size-36 md:size-64 lg:size-72"
           >
             <Image
               src={activeDeal.image}
               alt={activeDeal.subtitle}
               fill
               className="rounded-full border-2 border-white/30 object-cover shadow-2xl md:border-4"
-              sizes="(max-width: 640px) 96px, (max-width: 768px) 144px, (max-width: 1024px) 256px, 288px"
+              sizes="(max-width: 359px) 80px, (max-width: 640px) 96px, (max-width: 768px) 144px, (max-width: 1024px) 256px, 288px"
               preload
             />
 
-            <div className="absolute -right-1 -top-1 animate-bounce rounded-full bg-brand-red px-2 py-1 text-[9px] font-black text-brand-white shadow-lg sm:text-[10px] md:-right-2 md:-top-2 md:px-3 md:py-1.5 md:text-sm">
+            <div className="absolute -right-1 -top-1 max-w-full animate-bounce truncate rounded-full bg-brand-red px-2 py-1 text-[9px] font-black text-brand-white shadow-lg sm:text-[10px] md:-right-2 md:-top-2 md:px-3 md:py-1.5 md:text-sm">
               {activeDeal.title}
             </div>
           </div>

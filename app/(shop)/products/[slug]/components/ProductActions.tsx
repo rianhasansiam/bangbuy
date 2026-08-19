@@ -366,11 +366,11 @@ const ProductActions = ({
   };
 
   return (
-    <div className="space-y-5 border-t border-gray-100 pt-4">
-      <div className="flex flex-wrap items-baseline gap-3">
+    <div className="min-w-0 space-y-5 border-t border-gray-100 pt-4">
+      <div className="flex min-w-0 flex-wrap items-baseline gap-3">
         <CurrencyAmount
           amountBDT={unitPrice}
-          className="text-3xl font-bold text-gray-900"
+          className="max-w-full text-3xl font-bold text-gray-900 [overflow-wrap:anywhere]"
         />
         {discount > 0 && (
           <>
@@ -387,7 +387,7 @@ const ProductActions = ({
 
       {activeVariants.length > 1 && (
         <fieldset
-          className="space-y-3"
+          className="min-w-0 space-y-3"
           aria-describedby="variant-selection-help"
         >
           <legend className="text-sm font-semibold text-gray-900">
@@ -397,7 +397,7 @@ const ProductActions = ({
             Select one complete combination before adding this product to your
             cart.
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid min-w-0 grid-cols-1 gap-2 min-[360px]:grid-cols-2">
             {activeVariants.map((variant) => {
               const isSelected = variant.id === selectedVariant?.id;
               const isOutOfStock = variant.stock <= 0;
@@ -419,7 +419,7 @@ const ProductActions = ({
                   }`}
                 >
                   <span className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                    <span className="min-w-0 break-words text-sm font-semibold text-gray-900 sm:text-base">
+                    <span className="min-w-0 text-sm font-semibold text-gray-900 [overflow-wrap:anywhere] sm:text-base">
                       {variantLabel(variant)}
                     </span>
                     <span
@@ -433,13 +433,15 @@ const ProductActions = ({
                     </span>
                   </span>
                   {options.length > 0 && (
-                    <span className="mt-2 flex flex-wrap gap-1.5">
+                    <span className="mt-2 flex min-w-0 flex-wrap gap-1.5">
                       {options.map((option) => (
                         <span
                           key={`${variant.id}:${option.key}`}
-                          className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700"
+                          className="inline-flex max-w-full min-w-0 flex-wrap items-center gap-1 rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700 [overflow-wrap:anywhere]"
                         >
-                          {option.key}:{" "}
+                          <span className="min-w-0 [overflow-wrap:anywhere]">
+                            {option.key}:
+                          </span>
                           {normalizedOptionKey(option.key) === "color" &&
                             colorIsHex(option.value) && (
                               <span
@@ -448,13 +450,15 @@ const ProductActions = ({
                                 aria-hidden="true"
                               />
                             )}
-                          <span className="font-medium">{option.value}</span>
+                          <span className="min-w-0 font-medium [overflow-wrap:anywhere]">
+                            {option.value}
+                          </span>
                         </span>
                       ))}
                     </span>
                   )}
                   {(variant.modelNumber || variant.sku) && (
-                    <span className="mt-2 block text-xs text-gray-500">
+                    <span className="mt-2 block text-xs text-gray-500 [overflow-wrap:anywhere]">
                       {[variant.modelNumber, variant.sku]
                         .filter(Boolean)
                         .join(" · ")}
@@ -474,18 +478,28 @@ const ProductActions = ({
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
               Included option
             </p>
-            <dl className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+            <dl className="mt-2 flex min-w-0 flex-wrap gap-x-5 gap-y-2 text-sm">
               {variantDisplayOptions(selectedVariant).map((option) => (
-                <div key={option.key} className="flex gap-1.5">
-                  <dt className="text-gray-500">{option.key}:</dt>
-                  <dd className="font-medium text-gray-900">{option.value}</dd>
+                <div
+                  key={option.key}
+                  className="flex min-w-0 max-w-full flex-wrap gap-1.5 [overflow-wrap:anywhere]"
+                >
+                  <dt className="min-w-0 text-gray-500 [overflow-wrap:anywhere]">
+                    {option.key}:
+                  </dt>
+                  <dd className="min-w-0 font-medium text-gray-900 [overflow-wrap:anywhere]">
+                    {option.value}
+                  </dd>
                 </div>
               ))}
             </dl>
           </div>
         )}
 
-      <p className="text-xs font-medium text-gray-500" aria-live="polite">
+      <p
+        className="text-xs font-medium text-gray-500 [overflow-wrap:anywhere]"
+        aria-live="polite"
+      >
         {activeVariants.length === 0 ? (
           <span className="text-rose-600">
             This product is currently unavailable.
@@ -506,18 +520,18 @@ const ProductActions = ({
         )}
       </p>
 
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center overflow-hidden rounded-lg border border-gray-200">
+      <div className="grid grid-cols-1 items-center gap-2 min-[360px]:grid-cols-[auto_minmax(0,1fr)]">
+        <div className="flex w-fit items-center overflow-hidden rounded-lg border border-gray-200">
           <button
             type="button"
             onClick={() => handleQuantityChange(-1)}
             disabled={!isPurchasable || quantity <= 1}
             aria-label="Decrease quantity"
-            className="p-2.5 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-11 w-11 items-center justify-center transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Minus className="h-4 w-4 text-gray-600" />
           </button>
-          <span className="w-12 text-center font-medium text-gray-900">
+          <span className="w-11 text-center font-medium text-gray-900">
             {quantity}
           </span>
           <button
@@ -525,7 +539,7 @@ const ProductActions = ({
             onClick={() => handleQuantityChange(1)}
             disabled={!isPurchasable || quantity >= stockCount}
             aria-label="Increase quantity"
-            className="p-2.5 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-11 w-11 items-center justify-center transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus className="h-4 w-4 text-gray-600" />
           </button>
@@ -538,7 +552,7 @@ const ProductActions = ({
           }}
           disabled={!isPurchasable || isCartBusy}
           aria-busy={isCartBusy}
-          className={`flex items-center gap-2 rounded-lg px-6 py-2.5 font-medium transition-all ${
+          className={`flex min-h-11 min-w-0 w-full items-center justify-center gap-2 rounded-lg px-3 py-2.5 font-medium transition-all sm:px-6 ${
             isPurchasable
               ? "bg-brand-red text-brand-white hover:bg-brand-red-hover"
               : "cursor-not-allowed bg-gray-300 text-gray-500"
@@ -548,10 +562,12 @@ const ProductActions = ({
             <ButtonLoader label="Adding..." />
           ) : (
             <>
-              <ShoppingCart className="h-4 w-4" />
-              {requiresExplicitSelection && !selectedVariant
-                ? "Select an option"
-                : "Add to cart"}
+              <ShoppingCart className="h-4 w-4 shrink-0" />
+              <span className="truncate">
+                {requiresExplicitSelection && !selectedVariant
+                  ? "Select an option"
+                  : "Add to cart"}
+              </span>
             </>
           )}
         </button>
@@ -579,73 +595,73 @@ const ProductActions = ({
       </button>
 
       <div className="fixed inset-x-0 bottom-0 z-60 border-t border-brand-border bg-brand-white/95 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.2)] backdrop-blur-lg lg:hidden sm:px-4 sm:pt-3">
-        <div className="mx-auto flex max-w-2xl items-center gap-2 sm:gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              void handleToggleWishlist();
-            }}
-            disabled={isWishlistBusy}
-            aria-label={
-              isWishlisted ? "Remove from wishlist" : "Add to wishlist"
-            }
-            aria-pressed={isWishlisted}
-            aria-busy={isWishlistBusy}
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition sm:h-12 sm:w-12 ${
-              isWishlisted
-                ? "border-brand-red bg-brand-red/10 text-brand-red"
-                : "border-brand-border bg-white text-gray-700 hover:border-brand-red/40 hover:text-brand-red"
-            } disabled:cursor-not-allowed disabled:opacity-60`}
-          >
-            {isWishlistBusy ? (
-              <ButtonLoader />
-            ) : (
-              <Heart
-                className={`h-5 w-5 ${isWishlisted ? "fill-current" : ""}`}
-              />
-            )}
-          </button>
+          <div className="mx-auto flex max-w-2xl items-center gap-2 sm:gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                void handleToggleWishlist();
+              }}
+              disabled={isWishlistBusy}
+              aria-label={
+                isWishlisted ? "Remove from wishlist" : "Add to wishlist"
+              }
+              aria-pressed={isWishlisted}
+              aria-busy={isWishlistBusy}
+              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition sm:h-12 sm:w-12 ${
+                isWishlisted
+                  ? "border-brand-red bg-brand-red/10 text-brand-red"
+                  : "border-brand-border bg-white text-gray-700 hover:border-brand-red/40 hover:text-brand-red"
+              } disabled:cursor-not-allowed disabled:opacity-60`}
+            >
+              {isWishlistBusy ? (
+                <ButtonLoader />
+              ) : (
+                <Heart
+                  className={`h-5 w-5 ${isWishlisted ? "fill-current" : ""}`}
+                />
+              )}
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              void handleAddToCart();
-            }}
-            disabled={!isPurchasable || isCartBusy}
-            aria-busy={isCartBusy}
-            className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-brand-red bg-white px-2 text-xs font-bold text-brand-red transition hover:bg-brand-red/5 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400 sm:h-12 sm:px-4 sm:text-sm"
-          >
-            {isCartBusy ? (
-              <ButtonLoader label="Adding..." />
-            ) : (
-              <>
-                <ShoppingCart className="h-4 w-4 shrink-0" />
-                <span className="truncate">
-                  {requiresExplicitSelection && !selectedVariant
-                    ? "Select option"
-                    : "Add to cart"}
-                </span>
-              </>
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                void handleAddToCart();
+              }}
+              disabled={!isPurchasable || isCartBusy}
+              aria-busy={isCartBusy}
+              className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-brand-red bg-white px-2 text-xs font-bold text-brand-red transition hover:bg-brand-red/5 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400 sm:h-12 sm:px-4 sm:text-sm"
+            >
+              {isCartBusy ? (
+                <ButtonLoader label="Adding..." />
+              ) : (
+                <>
+                  <ShoppingCart className="h-4 w-4 shrink-0" />
+                  <span className="truncate">
+                    {requiresExplicitSelection && !selectedVariant
+                      ? "Select option"
+                      : "Add to cart"}
+                  </span>
+                </>
+              )}
+            </button>
 
-          <button
-            type="button"
-            onClick={handleBuyNow}
-            disabled={!isPurchasable || isBuyNowPending}
-            aria-busy={isBuyNowPending}
-            className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand-red px-2 text-xs font-bold text-brand-white shadow-sm transition hover:bg-brand-red-hover disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 sm:h-12 sm:px-4 sm:text-sm"
-          >
-            {isBuyNowPending ? (
-              <ButtonLoader label="Opening..." />
-            ) : (
-              <>
-                <Zap className="h-4 w-4 shrink-0" />
-                <span className="truncate">Buy now</span>
-              </>
-            )}
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={handleBuyNow}
+              disabled={!isPurchasable || isBuyNowPending}
+              aria-busy={isBuyNowPending}
+              className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand-red px-2 text-xs font-bold text-brand-white shadow-sm transition hover:bg-brand-red-hover disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 sm:h-12 sm:px-4 sm:text-sm"
+            >
+              {isBuyNowPending ? (
+                <ButtonLoader label="Opening..." />
+              ) : (
+                <>
+                  <Zap className="h-4 w-4 shrink-0" />
+                  <span className="truncate">Buy now</span>
+                </>
+              )}
+            </button>
+          </div>
       </div>
     </div>
   );

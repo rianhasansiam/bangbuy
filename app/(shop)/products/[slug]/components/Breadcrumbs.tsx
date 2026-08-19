@@ -8,11 +8,11 @@ const Breadcrumbs = ({
   items: { label: string; href?: string }[];
 }) => {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-gray-100">
+    <div className="flex min-w-0 flex-col gap-4 border-b border-gray-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
       {/* Breadcrumb Navigation */}
       <nav
         aria-label="Breadcrumb"
-        className="flex items-center gap-2 text-sm overflow-x-auto"
+        className="flex w-full min-w-0 max-w-full items-center gap-2 overflow-x-auto overscroll-x-contain text-sm"
       >
         <Link
           href="/"
@@ -33,7 +33,7 @@ const Breadcrumbs = ({
                 {item.label}
               </Link>
             ) : (
-              <span className="text-brand-black font-medium truncate">
+              <span className="min-w-0 truncate font-medium text-brand-black">
                 {item.label}
               </span>
             )}

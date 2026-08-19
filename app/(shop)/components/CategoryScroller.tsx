@@ -38,8 +38,8 @@ export default function CategoryScroller({
       aria-labelledby="home-category-scroller-title"
       className="overflow-hidden rounded-2xl  bg-brand-white py-2  sm:py-3"
     >
-      <div className="mb-1 flex items-end justify-between gap-3 px-4 sm:px-6">
-        <div>
+      <div className="mb-1 flex items-end justify-between gap-3 px-3 sm:px-6">
+        <div className="min-w-0">
           <h2
             id="home-category-scroller-title"
             className="text-lg font-black text-gray-950 sm:text-xl"
@@ -89,10 +89,13 @@ export default function CategoryScroller({
                 )}
               </span>
 
-              <span className="mt-2 line-clamp-2 min-h-9 text-xs font-bold leading-4 text-gray-800 transition-colors group-hover:text-brand-red sm:text-sm sm:leading-[1.125rem]">
+              <span className="mt-2 line-clamp-2 min-h-9 w-full text-xs font-bold leading-4 text-gray-800 [overflow-wrap:anywhere] transition-colors group-hover:text-brand-red sm:text-sm sm:leading-[1.125rem]">
                 {category.name}
               </span>
-              <span className="mt-0.5 text-[10px] text-brand-text-muted sm:text-xs">
+              <span
+                title={`${category.totalProductCount} ${category.totalProductCount === 1 ? "product" : "products"}`}
+                className="mt-0.5 w-full truncate text-[10px] text-brand-text-muted sm:text-xs"
+              >
                 {category.totalProductCount}{" "}
                 {category.totalProductCount === 1 ? "product" : "products"}
               </span>

@@ -67,11 +67,8 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
   }, [])
 
   const handleAddToBag = useCallback(async (
-    e: React.MouseEvent,
     product: RecentProductItem,
   ) => {
-    e.preventDefault()
-    e.stopPropagation()
     if (cartBusyId) return
 
     const canUseServer = canUseServerCart(session?.user?.role, status)
@@ -126,83 +123,86 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
   const hasMore = visibleCount < products.length
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold text-brand-black">
+    <div className="min-w-0 space-y-6">
+      <h2 className="text-xl font-bold text-brand-black [overflow-wrap:anywhere]">
         {title}
       </h2>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5">
         {visibleProducts.map((product) => (
-          <Link
+          <article
             key={product.id}
-            href={`/products/${product.slug}`}
-            className="group bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-lg hover:border-brand-red transition-all"
+            className="group flex min-w-0 flex-col overflow-hidden rounded-xl border border-gray-100 bg-white transition-all hover:border-brand-red hover:shadow-lg"
           >
             {/* Image Container */}
-            <div
-              className="relative aspect-square bg-gray-50 p-2"
-              style={{ position: 'relative' }}
-            >
-              <Image
-                src={product.image}
-                alt={product.name}
-                fill
-                className="object-contain p-2 group-hover:scale-105 transition-transform"
-                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
-              />
-
-              {/* Discount Badge */}
-              {product.discount > 0 && (
-                <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-brand-red text-brand-white text-[10px] font-semibold rounded">
-                  -{product.discount}%
-                </span>
-              )}
-            </div>
-
-            {/* Product Info */}
-            <div className="p-3">
-              {/* Delivery Time */}
-              <p className="text-[10px] text-gray-400 mb-1">Delivery 2 Hours</p>
-              
-              {/* Price */}
-              <div className="flex items-baseline gap-2 mb-2">
-                <CurrencyAmount
-                  amountBDT={product.price}
-                  className="text-sm font-bold text-gray-900"
+            <Link href={`/products/${product.slug}`} className="block min-w-0">
+              <div
+                className="relative aspect-square bg-gray-50 p-2"
+                style={{ position: 'relative' }}
+              >
+                <Image
+                  src={product.image}
+                  alt={product.name}
+                  fill
+                  className="object-contain p-2 group-hover:scale-105 transition-transform"
+                  sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
                 />
+
+                {/* Discount Badge */}
                 {product.discount > 0 && (
-                  <CurrencyAmount
-                    amountBDT={product.originalPrice}
-                    className="text-[10px] text-gray-400 line-through"
-                  />
+                  <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-brand-red text-brand-white text-[10px] font-semibold rounded">
+                    -{product.discount}%
+                  </span>
                 )}
               </div>
+            </Link>
 
-              {/* Product Name */}
-              <h3 className="text-xs text-gray-700 line-clamp-1 mb-3">
-                {product.name}
-              </h3>
+            {/* Product Info */}
+            <div className="flex min-w-0 flex-1 flex-col p-3">
+              <Link href={`/products/${product.slug}`} className="block min-w-0">
+                {/* Delivery Time */}
+                <p className="text-[10px] text-gray-400 mb-1">Delivery 2 Hours</p>
+
+                {/* Price */}
+                <div className="mb-2 flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  <CurrencyAmount
+                    amountBDT={product.price}
+                    className="max-w-full whitespace-nowrap text-sm font-bold text-gray-900"
+                  />
+                  {product.discount > 0 && (
+                    <CurrencyAmount
+                      amountBDT={product.originalPrice}
+                      className="max-w-full whitespace-nowrap text-[10px] text-gray-400 line-through"
+                    />
+                  )}
+                </div>
+
+                {/* Product Name */}
+                <h3 className="mb-3 line-clamp-1 text-xs text-gray-700 [overflow-wrap:anywhere]">
+                  {product.name}
+                </h3>
+              </Link>
 
               {/* Add to Bag Button */}
               <button 
-                onClick={(e) => {
-                  void handleAddToBag(e, product)
+                onClick={() => {
+                  void handleAddToBag(product)
                 }}
                 disabled={cartBusyId !== null}
                 aria-busy={cartBusyId === product.id}
-                className="w-full py-1.5 bg-brand-red text-brand-white text-xs font-medium rounded-lg hover:bg-brand-red-hover transition-colors flex items-center justify-center gap-1"
+                className="flex min-h-11 w-full min-w-0 items-center justify-center gap-1 rounded-lg bg-brand-red px-2 py-1.5 text-xs font-medium text-brand-white transition-colors hover:bg-brand-red-hover"
               >
                 {cartBusyId === product.id ? (
                   <ButtonLoader label="Adding..." />
                 ) : (
                   <>
-                    <ShoppingBag className="w-3 h-3" />
-                    Add to bag
+                    <ShoppingBag className="h-3 w-3 shrink-0" />
+                    <span className="truncate">Add to bag</span>
                   </>
                 )}
               </button>
             </div>
-          </Link>
+          </article>
         ))}
       </div>
 

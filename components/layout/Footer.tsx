@@ -117,7 +117,7 @@ const Footer = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={`Follow ${siteConfig.name} on ${social.name}`}
-                  className={`inline-flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-lg ring-1 ring-white/15 transition-all duration-300 hover:-translate-y-1 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-black sm:h-11 sm:w-11 ${social.className}`}
+                  className={`inline-flex h-11 w-11 items-center justify-center rounded-xl text-white shadow-lg ring-1 ring-white/15 transition-all duration-300 hover:-translate-y-1 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-black ${social.className}`}
                 >
                   {social.icon}
                 </Link>

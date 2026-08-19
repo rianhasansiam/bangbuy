@@ -58,7 +58,7 @@ export default function WishlistCard({
     return (
       <article
         className={cn(
-          "group relative flex gap-4 rounded-2xl border bg-white p-3 shadow-sm transition-all duration-300 sm:p-4",
+          "group relative flex gap-2 rounded-2xl border bg-white p-3 shadow-sm transition-all duration-300 sm:gap-4 sm:p-4",
           selected
             ? "border-brand-red ring-2 ring-brand-red/20"
             : "border-brand-border hover:border-brand-red hover:shadow-md",
@@ -67,17 +67,18 @@ export default function WishlistCard({
         <SelectCheckbox
           selected={selected}
           onToggle={() => onToggleSelect(item.id)}
+          className="absolute left-5 top-5 z-10 sm:static"
         />
 
         <Link
           href={`/products/${item.slug ?? item.id}`}
-          className="relative aspect-square w-24 shrink-0 overflow-hidden rounded-xl bg-gray-50 sm:w-32"
+          className="relative aspect-square w-20 shrink-0 self-start overflow-hidden rounded-xl bg-gray-50 min-[360px]:w-24 sm:w-32"
         >
           <Image
             src={item.image}
             alt={item.name}
             fill
-            sizes="(max-width: 640px) 96px, 128px"
+            sizes="(max-width: 359px) 80px, (max-width: 639px) 96px, 128px"
             className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
           {!item.inStock && (
@@ -88,14 +89,14 @@ export default function WishlistCard({
         </Link>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex items-start justify-between gap-2">
+          <div className="flex min-w-0 flex-col gap-1.5 min-[400px]:flex-row min-[400px]:items-start min-[400px]:justify-between min-[400px]:gap-2">
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-text-muted">
+              <p className="truncate text-[11px] font-semibold uppercase tracking-wide text-brand-text-muted">
                 {item.brand} • {item.category}
               </p>
               <Link
                 href={`/products/${item.slug ?? item.id}`}
-                className="mt-0.5 line-clamp-2 text-sm font-semibold text-brand-black hover:text-brand-red sm:text-base"
+                className="mt-0.5 line-clamp-2 text-sm font-semibold text-brand-black [overflow-wrap:anywhere] hover:text-brand-red sm:text-base"
               >
                 {item.name}
               </Link>
@@ -103,7 +104,7 @@ export default function WishlistCard({
             <Badges item={item} discount={discount} />
           </div>
 
-          <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 sm:flex-nowrap">
             <RatingStars rating={item.rating} />
             <span>({item.reviewCount.toLocaleString()})</span>
             <span aria-hidden>•</span>
@@ -174,9 +175,9 @@ export default function WishlistCard({
         </div>
 
         {/* Badges (left) */}
-        <div className="pointer-events-none absolute left-2.5 top-12 flex flex-col gap-1.5">
+        <div className="pointer-events-none absolute left-2.5 top-16 flex max-w-[calc(100%-1.25rem)] flex-col gap-1.5">
           {item.badge && (
-            <span className="rounded-full bg-brand-red px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-white shadow-md">
+            <span className="block max-w-full truncate rounded-full bg-brand-red px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-white shadow-md">
               {item.badge}
             </span>
           )}
@@ -188,10 +189,12 @@ export default function WishlistCard({
         </div>
 
         {hasPriceDrop && (
-          <div className="absolute bottom-2.5 left-2.5 inline-flex items-center gap-1.5 rounded-full bg-emerald-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-md">
-            <TrendingDown className="h-3 w-3" />
-            Dropped{" "}
-            <CurrencyAmount amountBDT={item.priceDropFromAdded ?? 0} />
+          <div className="absolute bottom-2.5 left-2.5 inline-flex max-w-[calc(100%-1.25rem)] items-center gap-1.5 rounded-full bg-emerald-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-md">
+            <TrendingDown className="h-3 w-3 shrink-0" />
+            <span className="min-w-0 truncate">
+              <span className="hidden min-[360px]:inline">Dropped </span>
+              <CurrencyAmount amountBDT={item.priceDropFromAdded ?? 0} />
+            </span>
             <span className="absolute inset-0 -z-10 animate-ping rounded-full bg-emerald-400 opacity-60" />
           </div>
         )}
@@ -205,18 +208,20 @@ export default function WishlistCard({
 
       {/* Content */}
       <div className="flex flex-1 flex-col p-3 sm:p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-brand-text-muted">
+        <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-brand-text-muted">
           {item.brand} • {item.category}
         </p>
         <Link href={`/products/${item.slug ?? item.id}`}>
-          <h3 className="mt-1 line-clamp-2 min-h-10 text-sm font-semibold leading-tight text-brand-black transition-colors hover:text-brand-red">
+          <h3 className="mt-1 line-clamp-2 min-h-10 text-sm font-semibold leading-tight text-brand-black transition-colors [overflow-wrap:anywhere] hover:text-brand-red">
             {item.name}
           </h3>
         </Link>
 
-        <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-gray-500">
+        <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] text-gray-500">
           <RatingStars rating={item.rating} />
-          <span>({item.reviewCount.toLocaleString()})</span>
+          <span className="min-w-0 truncate">
+            ({item.reviewCount.toLocaleString()})
+          </span>
         </div>
 
         <div className="mt-auto pt-3">
@@ -230,14 +235,21 @@ export default function WishlistCard({
             disabled={!item.inStock}
             onClick={() => onMoveToCart(item.id)}
             className={cn(
-              "mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200",
+              "mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200",
               item.inStock
                 ? "bg-brand-red text-brand-white shadow-sm hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-md"
                 : "cursor-not-allowed bg-gray-100 text-gray-400",
             )}
           >
             <ShoppingCart className="h-4 w-4" />
-            {item.inStock ? "Move to cart" : "Notify me"}
+            {item.inStock ? (
+              <>
+                <span className="min-[360px]:hidden">Add</span>
+                <span className="hidden min-[360px]:inline">Move to cart</span>
+              </>
+            ) : (
+              "Notify me"
+            )}
           </button>
         </div>
       </div>
@@ -255,9 +267,9 @@ function Badges({
   discount: number;
 }) {
   return (
-    <div className="flex shrink-0 flex-col items-end gap-1">
+    <div className="flex min-w-0 max-w-full flex-col items-start gap-1 min-[400px]:shrink-0 min-[400px]:items-end">
       {item.badge && (
-        <span className="rounded-full bg-brand-red px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-white">
+        <span className="block max-w-full truncate rounded-full bg-brand-red px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-white">
           {item.badge}
         </span>
       )}
@@ -278,12 +290,12 @@ function PriceBlock({
   hasPriceDrop: boolean;
 }) {
   return (
-    <div className="flex items-baseline gap-2">
-      <span className="text-base font-extrabold text-brand-red sm:text-lg">
+    <div className="flex max-w-full flex-wrap items-baseline gap-x-2 gap-y-1">
+      <span className="max-w-full text-base font-extrabold text-brand-red [overflow-wrap:anywhere] sm:text-lg">
         <CurrencyAmount amountBDT={item.price} />
       </span>
       {item.originalPrice && item.originalPrice > item.price && (
-        <span className="text-xs text-gray-400 line-through">
+        <span className="max-w-full text-xs text-gray-400 line-through [overflow-wrap:anywhere]">
           <CurrencyAmount amountBDT={item.originalPrice} />
         </span>
       )}
@@ -318,9 +330,11 @@ function RatingStars({ rating }: { rating: number }) {
 function SelectCheckbox({
   selected,
   onToggle,
+  className,
 }: {
   selected: boolean;
   onToggle: () => void;
+  className?: string;
 }) {
   return (
     <button
@@ -329,10 +343,11 @@ function SelectCheckbox({
       aria-pressed={selected}
       aria-label={selected ? "Deselect item" : "Select item"}
       className={cn(
-        "grid h-7 w-7 place-items-center rounded-lg border-2 backdrop-blur-md transition-all duration-200",
+        "grid h-11 w-11 place-items-center rounded-xl border-2 backdrop-blur-md transition-all duration-200",
         selected
           ? "border-brand-red bg-brand-red text-brand-white shadow-md"
           : "border-white/80 bg-white/70 text-transparent hover:border-brand-red hover:text-brand-red",
+        className,
       )}
     >
       <Check className="h-4 w-4" />
@@ -357,7 +372,7 @@ function IconAction({
       onClick={onClick}
       aria-label={label}
       className={cn(
-        "grid h-8 w-8 place-items-center rounded-full bg-white/90 shadow-sm backdrop-blur-md transition-all duration-200 hover:scale-110 active:scale-95",
+        "grid h-11 w-11 place-items-center rounded-full bg-white/90 shadow-sm backdrop-blur-md transition-all duration-200 hover:scale-105 active:scale-95",
         tone === "danger"
           ? "text-rose-600 hover:bg-rose-50"
           : "text-gray-600 hover:bg-brand-light-bg hover:text-brand-red",
@@ -380,12 +395,12 @@ function ActionButtons({
   onShare: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex max-w-full flex-wrap items-center gap-2">
       <button
         type="button"
         onClick={onShare}
         aria-label="Share"
-        className="grid h-9 w-9 place-items-center rounded-xl border border-brand-border bg-brand-white text-gray-600 transition-colors hover:border-brand-red hover:bg-brand-light-bg hover:text-brand-red"
+        className="grid h-11 w-11 place-items-center rounded-xl border border-brand-border bg-brand-white text-gray-600 transition-colors hover:border-brand-red hover:bg-brand-light-bg hover:text-brand-red"
       >
         <Share2 className="h-4 w-4" />
       </button>
@@ -393,7 +408,7 @@ function ActionButtons({
         type="button"
         onClick={onRemove}
         aria-label="Remove from wishlist"
-        className="grid h-9 w-9 place-items-center rounded-xl border border-rose-200 bg-rose-50 text-rose-600 transition-colors hover:bg-rose-100"
+        className="grid h-11 w-11 place-items-center rounded-xl border border-rose-200 bg-rose-50 text-rose-600 transition-colors hover:bg-rose-100"
       >
         <Heart className="h-4 w-4 fill-current" />
       </button>
@@ -402,14 +417,21 @@ function ActionButtons({
         disabled={!inStock}
         onClick={onMoveToCart}
         className={cn(
-          "inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold transition-all duration-200",
+          "inline-flex h-11 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold transition-all duration-200",
           inStock
             ? "bg-brand-red text-brand-white shadow-sm hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-md"
             : "cursor-not-allowed bg-gray-100 text-gray-400",
         )}
       >
         <ShoppingCart className="h-4 w-4" />
-        {inStock ? "Add to cart" : "Notify"}
+        {inStock ? (
+          <>
+            <span className="min-[380px]:hidden">Cart</span>
+            <span className="hidden min-[380px]:inline">Add to cart</span>
+          </>
+        ) : (
+          "Notify"
+        )}
       </button>
     </div>
   );

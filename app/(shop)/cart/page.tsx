@@ -939,7 +939,7 @@ export default function CartPage() {
               />
             </div>
 
-            <div className="lg:hidden">
+            <div className="min-w-0 lg:hidden">
               <OrderSummary
                 summary={verifiedSummary}
                 fallbackSubtotal={selectedTotals.subtotal}
@@ -960,18 +960,20 @@ export default function CartPage() {
           </div>
         )}
 
-        {!isEmpty && <div className="h-24 lg:hidden" />}
+        {!isEmpty && (
+          <div className="h-[calc(6rem+env(safe-area-inset-bottom))] lg:hidden" />
+        )}
       </div>
 
       {!isEmpty && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-brand-border bg-brand-white/95 px-4 py-3 backdrop-blur-lg shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.15)] lg:hidden">
-          <div className="mx-auto flex max-w-2xl items-center gap-3">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-brand-border bg-brand-white/95 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-lg shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.15)] min-[360px]:px-4 lg:hidden">
+          <div className="mx-auto flex max-w-2xl items-center gap-2 min-[360px]:gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-medium text-gray-500">
                 {verifiedSummary ? "Total" : "Subtotal"} ({selectedTotals.itemCount}{" "}
                 {selectedTotals.itemCount === 1 ? "item" : "items"})
               </p>
-              <p className="text-lg font-extrabold text-brand-red">
+              <p className="text-base font-extrabold text-brand-red min-[360px]:text-lg">
                 <CurrencyAmount amountBDT={mobileAmount} />
               </p>
             </div>
@@ -984,12 +986,30 @@ export default function CartPage() {
                 selectedItems.length === 0
               }
               aria-busy={isCheckoutPending || isQuantitySyncing}
-              className="inline-flex h-12 items-center gap-2 rounded-2xl bg-brand-red px-5 text-sm font-bold text-brand-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+              className="inline-flex h-12 shrink-0 items-center gap-2 rounded-2xl bg-brand-red px-3 text-sm font-bold text-brand-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 min-[360px]:px-5"
             >
               {isQuantitySyncing ? (
-                <ButtonLoader label="Updating cart..." />
+                <ButtonLoader
+                  label={
+                    <>
+                      <span className="min-[360px]:hidden">Updating...</span>
+                      <span className="hidden min-[360px]:inline">
+                        Updating cart...
+                      </span>
+                    </>
+                  }
+                />
               ) : isCheckoutPending ? (
-                <ButtonLoader label="Opening checkout..." />
+                <ButtonLoader
+                  label={
+                    <>
+                      <span className="min-[360px]:hidden">Opening...</span>
+                      <span className="hidden min-[360px]:inline">
+                        Opening checkout...
+                      </span>
+                    </>
+                  }
+                />
               ) : selectedItems.length === 0 ? (
                 "Select items"
               ) : (

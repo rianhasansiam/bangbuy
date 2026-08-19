@@ -37,7 +37,7 @@ export function DesktopCategoryMenu({
   }, [open]);
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef}>
       <button
         type="button"
         aria-expanded={open}
@@ -60,7 +60,7 @@ export function DesktopCategoryMenu({
       {open && (
         <div
           id="desktop-category-menu"
-          className="absolute left-0 top-full z-60 mt-3 w-[min(72rem,calc(100vw-3rem))] rounded-2xl border border-brand-border bg-white p-5 shadow-2xl"
+          className="absolute left-1/2 top-full z-60 mt-3 w-[calc(100%-3rem)] max-w-6xl -translate-x-1/2 rounded-2xl border border-brand-border bg-white p-5 shadow-2xl"
         >
           <div className="mb-4 flex items-center justify-between border-b border-brand-border pb-3">
             <div>
@@ -76,14 +76,14 @@ export function DesktopCategoryMenu({
           ) : (
             <div className="grid max-h-[65vh] grid-cols-2 gap-x-8 gap-y-6 overflow-y-auto lg:grid-cols-3 xl:grid-cols-4">
               {categories.map((root) => (
-                <section key={root.id}>
+                <section key={root.id} className="min-w-0">
                   <Link
                     href={categoryHref(root)}
                     onClick={() => setOpen(false)}
                     className="group flex items-center justify-between gap-2 font-bold text-brand-black hover:text-brand-red"
                   >
-                    <span>{root.name}</span>
-                    <span className="rounded-full bg-brand-light-bg px-2 py-0.5 text-[10px] text-brand-text-muted group-hover:text-brand-red">
+                    <span className="min-w-0 break-words">{root.name}</span>
+                    <span className="shrink-0 rounded-full bg-brand-light-bg px-2 py-0.5 text-[10px] text-brand-text-muted group-hover:text-brand-red">
                       {root.totalProductCount}
                     </span>
                   </Link>
@@ -96,7 +96,7 @@ export function DesktopCategoryMenu({
                             onClick={() => setOpen(false)}
                             className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-brand-red"
                           >
-                            <ChevronRight className="h-3 w-3" />
+                            <ChevronRight className="h-3 w-3 shrink-0" />
                             <span className="truncate">{child.name}</span>
                           </Link>
                         </li>
@@ -160,16 +160,16 @@ export function MobileCategoryMenu({
               )}
             </div>
             {root.children.length > 0 && isExpanded && (
-              <div className="ml-7 border-l border-brand-border pl-3">
+              <div className="ml-7 min-w-0 border-l border-brand-border pl-3">
                 {root.children.map((child) => (
                   <Link
                     key={child.id}
                     href={categoryHref(child)}
                     onClick={onNavigate}
-                    className="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white hover:text-brand-red"
+                    className="flex min-w-0 items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-white hover:text-brand-red"
                   >
-                    <span>{child.name}</span>
-                    <span className="text-[10px] text-gray-400">{child.totalProductCount}</span>
+                    <span className="min-w-0 break-words">{child.name}</span>
+                    <span className="shrink-0 text-[10px] text-gray-400">{child.totalProductCount}</span>
                   </Link>
                 ))}
               </div>

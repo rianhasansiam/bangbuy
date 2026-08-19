@@ -98,13 +98,13 @@ export default function CartItemCard({
 
         <Link
           href={`/products/${item.slug}`}
-          className="relative aspect-square w-32 h-32 justify-center items-center mt-8  shrink-0 overflow-hidden rounded-xl bg-gray-50 sm:w-32"
+          className="relative mt-2 aspect-square w-20 shrink-0 self-start overflow-hidden rounded-xl bg-gray-50 min-[360px]:w-24 sm:mt-8 sm:w-32"
         >
           <Image
             src={item.image}
             alt={item.name}
             fill
-            sizes="(max-width: 639px) 96px, 128px"
+            sizes="(max-width: 359px) 80px, (max-width: 639px) 96px, 128px"
             className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
           {hasDiscount && (
@@ -120,14 +120,14 @@ export default function CartItemCard({
         </Link>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex items-start justify-between gap-2">
+          <div className="flex flex-col gap-1.5 min-[380px]:flex-row min-[380px]:items-start min-[380px]:justify-between min-[380px]:gap-2">
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-text-muted">
+              <p className="truncate text-[11px] font-semibold uppercase tracking-wider text-brand-text-muted">
                 {item.brand}
               </p>
               <Link
                 href={`/products/${item.slug}`}
-                className="mt-0.5 line-clamp-2 text-sm font-semibold text-gray-900 hover:text-brand-red sm:text-base"
+                className="mt-0.5 line-clamp-2 text-sm font-semibold text-gray-900 [overflow-wrap:anywhere] hover:text-brand-red sm:text-base"
               >
                 {item.name}
               </Link>
@@ -135,7 +135,7 @@ export default function CartItemCard({
                 <ColorBadge color={item.color} size={item.size} className="mt-1" />
               )}
               {(item.variantName || item.attributeSummary) && (
-                <p className="mt-1 line-clamp-2 text-xs text-gray-500">
+                <p className="mt-1 line-clamp-2 text-xs text-gray-500 [overflow-wrap:anywhere]">
                   {[item.variantName, item.attributeSummary]
                     .filter(Boolean)
                     .join(" · ")}
@@ -143,7 +143,7 @@ export default function CartItemCard({
               )}
             </div>
 
-            <div className="text-right shrink-0">
+            <div className="text-left min-[380px]:shrink-0 min-[380px]:text-right">
               <p className="text-base font-extrabold text-brand-red sm:text-lg">
                 <CurrencyAmount amountBDT={lineTotal} />
               </p>
@@ -190,7 +190,7 @@ export default function CartItemCard({
 
           {/* Bottom row: quantity + actions */}
           <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-3">
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3">
               <QuantityStepper
                 value={item.quantity}
                 min={1}

@@ -235,8 +235,8 @@ export default function ProductsExplorer({
   return (
     <div className="min-h-screen bg-brand-light-bg">
       <div className="mx-auto max-w-7xl px-3 py-4 sm:px-4 sm:py-6 lg:px-6">
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-950 sm:text-3xl">
+        <div className="mb-4 min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-950 [overflow-wrap:anywhere] sm:text-3xl">
             {query.search ? `Results for “${query.search}”` : "All products"}
           </h1>
           <p className="mt-1 text-sm text-gray-500">
@@ -321,7 +321,10 @@ export default function ProductsExplorer({
                     </div>
                   ) : loadMoreError ? (
                     <div className="text-center">
-                      <p role="alert" className="text-sm text-red-600">
+                      <p
+                        role="alert"
+                        className="text-sm text-red-600 [overflow-wrap:anywhere]"
+                      >
                         {loadMoreError}
                       </p>
                       <button
@@ -430,15 +433,15 @@ function ActiveFilterChips({
           key={chip.key}
           type="button"
           onClick={() => onRemove(chip.key)}
-          className="inline-flex items-center gap-1 rounded-full border border-brand-red/20 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors hover:border-brand-red hover:text-brand-red"
+          className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border border-brand-red/20 bg-white px-2.5 py-1 text-left text-xs font-medium text-gray-700 transition-colors hover:border-brand-red hover:text-brand-red"
           aria-label={
             "ariaLabel" in chip && typeof chip.ariaLabel === "string"
               ? chip.ariaLabel
               : `Remove ${chip.label} filter`
           }
         >
-          {chip.label}
-          <X className="h-3 w-3" aria-hidden="true" />
+          <span className="min-w-0 truncate">{chip.label}</span>
+          <X className="h-3 w-3 shrink-0" aria-hidden="true" />
         </button>
       ))}
     </div>

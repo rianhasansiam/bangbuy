@@ -79,13 +79,13 @@ export default function SocialConnect() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:gap-4">
           {socials.map((s) => (
             <Link
               key={s.name}
               href={s.href}
               aria-label={s.name}
-              className="group flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-brand-border transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
+              className="group flex min-w-0 items-center gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-brand-border transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
             >
               <div
                 className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${s.bg} shadow-md transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}
@@ -93,7 +93,7 @@ export default function SocialConnect() {
                 {s.icon}
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-bold text-foreground">{s.name}</p>
+                <p className="truncate text-sm font-bold text-foreground">{s.name}</p>
                 <p className="truncate text-xs text-muted-foreground">{s.handle}</p>
               </div>
             </Link>

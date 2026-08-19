@@ -24,7 +24,7 @@ const PromoBanners: React.FC<PromoBannersProps> = ({ banners }) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       {banners.map((banner) => (
         <Link
           key={banner.id}
@@ -33,7 +33,7 @@ const PromoBanners: React.FC<PromoBannersProps> = ({ banners }) => {
             backgroundColor: resolveColorValue(banner.bgClass) ?? "var(--brand-black)",
             position: 'relative',
           }}
-          className="block relative h-48 rounded-2xl overflow-hidden group"
+          className="group relative block h-48 min-w-0 overflow-hidden rounded-2xl"
         >
           <Image
             src={banner.image}
@@ -42,11 +42,15 @@ const PromoBanners: React.FC<PromoBannersProps> = ({ banners }) => {
             className="object-cover opacity-70 group-hover:scale-105 transition-transform"
             sizes="(max-width: 1024px) 100vw, 25vw"
           />
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-brand-white text-center p-4">
+          <div className="absolute inset-0 flex min-w-0 flex-col items-center justify-center p-4 text-center text-brand-white">
             <p className="text-xs font-medium opacity-80">SUPER SALE</p>
-            <h3 className="text-2xl font-black">{banner.title}</h3>
-            <p className="text-xl font-bold text-brand-gold">{banner.subtitle}</p>
-            <span className="mt-2 px-3 py-1 bg-white/20 rounded-full text-sm font-semibold">
+            <h3 className="max-w-full line-clamp-2 text-2xl font-black leading-tight [overflow-wrap:anywhere]">
+              {banner.title}
+            </h3>
+            <p className="max-w-full line-clamp-2 text-xl font-bold leading-tight text-brand-gold [overflow-wrap:anywhere]">
+              {banner.subtitle}
+            </p>
+            <span className="mt-2 max-w-full rounded-full bg-white/20 px-3 py-1 text-sm font-semibold [overflow-wrap:anywhere]">
               {banner.discount}
             </span>
           </div>

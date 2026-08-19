@@ -54,14 +54,14 @@ export default function ProductToolbar({
   onToggleSidebar,
 }: Props) {
   return (
-    <div className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-brand-border bg-white px-3 py-2.5 shadow-sm transition-shadow duration-300 hover:shadow-md sm:px-4">
-      <div className="flex items-center gap-2">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-brand-border bg-white px-3 py-2.5 shadow-sm transition-shadow duration-300 hover:shadow-md sm:flex-nowrap sm:px-4">
+      <div className="flex min-w-0 items-center gap-2">
         <Button
           type="button"
           onClick={onOpenMobileFilter}
           variant="secondary"
           size="sm"
-          className="bg-brand-light-bg text-brand-black transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-border active:translate-y-0 lg:hidden"
+          className="h-10 bg-brand-light-bg text-brand-black transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-border active:translate-y-0 sm:h-7 lg:hidden"
         >
           <SlidersHorizontal className="size-4" />
           Filters
@@ -94,20 +94,20 @@ export default function ProductToolbar({
           Showing <span className="font-semibold text-gray-900">{resultsCount}</span>{" "}
           of <span className="font-semibold text-gray-900">{totalCount}</span>
         </p>
-        <p className="text-xs text-gray-600 sm:hidden">
+        <p className="min-w-0 truncate text-xs text-gray-600 sm:hidden">
           <span className="font-semibold text-gray-900">{totalCount}</span>{" "}
           results
         </p>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="ml-auto flex min-w-0 items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              className="group bg-brand-light-bg text-brand-black transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-light-bg hover:text-brand-red active:translate-y-0 data-[state=open]:bg-brand-light-bg data-[state=open]:text-brand-red"
+              className="group h-10 max-w-full bg-brand-light-bg text-brand-black transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-light-bg hover:text-brand-red active:translate-y-0 data-[state=open]:bg-brand-light-bg data-[state=open]:text-brand-red sm:h-7"
             >
               <span className="hidden sm:inline">Sort:</span>
               <span className="font-semibold">{SORT_LABELS[sort]}</span>

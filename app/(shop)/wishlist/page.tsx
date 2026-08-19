@@ -538,7 +538,7 @@ export default function WishlistPage() {
           />
         )}
 
-        <section className="mt-6 pb-24">
+        <section className="mt-6 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-24">
           {isLoading && items.length === 0 ? (
             <ProductGridSkeleton count={8} />
           ) : items.length === 0 ? (
@@ -549,7 +549,7 @@ export default function WishlistPage() {
             <div
               className={
                 view === "grid"
-                  ? "grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-3 lg:grid-cols-4"
+                  ? "grid grid-cols-2 gap-2 min-[360px]:gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4"
                   : "flex flex-col gap-3"
               }
             >

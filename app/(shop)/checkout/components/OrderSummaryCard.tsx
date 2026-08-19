@@ -89,11 +89,14 @@ export default function OrderSummaryCard({
               <Check className="h-4 w-4" />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="flex items-center gap-1.5 text-sm font-bold text-emerald-800">
-                <span className="rounded-md bg-white px-1.5 py-0.5 font-mono text-xs text-emerald-700">
+              <p className="flex min-w-0 items-center gap-1.5 text-sm font-bold text-emerald-800">
+                <span
+                  title={appliedPromo}
+                  className="min-w-0 flex-1 truncate rounded-md bg-white px-1.5 py-0.5 font-mono text-xs text-emerald-700"
+                >
                   {appliedPromo}
                 </span>
-                applied
+                <span className="shrink-0">applied</span>
               </p>
               {summary && (
                 <p className="truncate text-xs text-emerald-700">
@@ -124,7 +127,7 @@ export default function OrderSummaryCard({
             }}
             className="flex items-stretch gap-2"
           >
-            <div className="relative flex-1">
+            <div className="relative min-w-0 flex-1">
               <Tag className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-text-muted" />
               <Input
                 type="text"
@@ -312,17 +315,19 @@ function SummaryRow({
   currency: CurrencyCode;
 }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-gray-600">{label}</span>
+    <div className="flex items-start justify-between gap-2 sm:items-center">
+      <span className="min-w-0 flex-1 text-gray-600 [overflow-wrap:anywhere]">
+        {label}
+      </span>
       {freeLabel ? (
-        <span className="font-bold uppercase tracking-wider text-emerald-600">
+        <span className="shrink-0 font-bold uppercase tracking-wider text-emerald-600">
           {freeLabel}
         </span>
       ) : (
         <FormattedCurrencyAmount
           amount={value}
           currency={currency}
-          className={`font-semibold ${
+          className={`shrink-0 text-right font-semibold ${
             tone === "success" ? "text-emerald-600" : "text-gray-900"
           }`}
         />

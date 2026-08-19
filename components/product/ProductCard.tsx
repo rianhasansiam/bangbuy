@@ -225,7 +225,7 @@ export default function ProductCard({
   };
 
   return (
-    <div className="group relative overflow-hidden rounded-xl border border-brand-border bg-brand-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-brand-border hover:shadow-lg">
+    <div className="group relative min-w-0 overflow-hidden rounded-xl border border-brand-border bg-brand-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-brand-border hover:shadow-lg">
       <div className="relative aspect-4/3 overflow-hidden bg-brand-light-bg">
         <Link
           href={productHref}
@@ -242,7 +242,7 @@ export default function ProductCard({
         </Link>
 
         {badge && (
-          <span className="absolute left-2 top-2 z-10 rounded-full bg-brand-red px-2 py-0.5 text-[10px] font-semibold text-brand-white">
+          <span className="absolute left-2 top-2 z-10 max-w-[calc(100%-3.75rem)] truncate rounded-full bg-brand-red px-2 py-0.5 text-[10px] font-semibold text-brand-white">
             {badge}
           </span>
         )}
@@ -264,13 +264,13 @@ export default function ProductCard({
           aria-busy={isBusy}
           aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
           aria-pressed={isWishlisted}
-          className="absolute right-2 top-2 z-20 rounded-full bg-brand-white/90 p-1.5 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:bg-brand-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+          className="absolute right-2 top-2 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-brand-white/90 p-0 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-brand-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 sm:h-auto sm:w-auto sm:p-1.5"
         >
           {isBusy ? (
             <LoadingSpinner decorative size="sm" className="text-brand-red" />
           ) : (
             <Heart
-              className={`h-3.5 w-3.5 transition-all duration-300 ${
+              className={`h-4 w-4 transition-all duration-300 sm:h-3.5 sm:w-3.5 ${
                 isWishlisted
                   ? "scale-110 fill-brand-red text-brand-red"
                   : "text-brand-text-muted hover:text-brand-red"
@@ -291,7 +291,7 @@ export default function ProductCard({
           aria-label={
             requiresOptionSelection ? "Select product options" : "Add to cart"
           }
-          className="absolute right-2 top-11 z-20 flex items-center gap-1.5 rounded-full bg-brand-white/95 p-1.5 text-xs font-semibold text-brand-red opacity-100 shadow-md backdrop-blur-sm transition-all duration-300 hover:bg-brand-red hover:text-brand-white sm:bottom-2 sm:left-1/2 sm:right-auto sm:top-auto sm:-translate-x-1/2 sm:px-3 sm:py-1.5 sm:can-hover:translate-y-2 sm:can-hover:opacity-0 sm:can-hover:group-hover:translate-y-0 sm:can-hover:group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-60"
+          className="absolute right-2 top-14 z-20 flex h-11 w-11 items-center justify-center gap-1.5 rounded-full bg-brand-white/95 p-0 text-xs font-semibold text-brand-red opacity-100 shadow-md backdrop-blur-sm transition-all duration-300 hover:bg-brand-red hover:text-brand-white sm:bottom-2 sm:left-1/2 sm:right-auto sm:top-auto sm:h-auto sm:w-auto sm:-translate-x-1/2 sm:px-3 sm:py-1.5 sm:can-hover:translate-y-2 sm:can-hover:opacity-0 sm:can-hover:group-hover:translate-y-0 sm:can-hover:group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isCartBusy ? (
             <>
@@ -333,20 +333,20 @@ export default function ProductCard({
         )}
 
         <Link href={productHref}>
-          <h3 className="line-clamp-1 text-xs font-semibold leading-tight text-foreground transition-colors hover:text-brand-black sm:text-sm">
+          <h3 className="line-clamp-2 min-h-8 text-xs font-semibold leading-tight text-foreground transition-colors hover:text-brand-black sm:line-clamp-1 sm:min-h-0 sm:text-sm">
             {name}
           </h3>
         </Link>
 
-        <div className="mt-1 flex items-center gap-1.5">
+        <div className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
           <CurrencyAmount
             amountBDT={price}
-            className="text-sm font-bold text-brand-red"
+            className="max-w-full text-sm font-bold text-brand-red [overflow-wrap:anywhere]"
           />
           {originalPrice && originalPrice > price && (
             <CurrencyAmount
               amountBDT={originalPrice}
-              className="text-[11px] text-brand-text-muted line-through"
+              className="max-w-full text-[11px] text-brand-text-muted line-through [overflow-wrap:anywhere]"
             />
           )}
         </div>

@@ -113,12 +113,12 @@ export default function SavedForLater({
                       .join(" · ")}
                   </p>
                 )}
-                <div className="mt-1 flex items-baseline gap-1.5">
-                  <span className="text-sm font-bold text-brand-red">
+                <div className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                  <span className="min-w-0 max-w-full text-sm font-bold text-brand-red [overflow-wrap:anywhere]">
                     <CurrencyAmount amountBDT={item.price} />
                   </span>
                   {item.originalPrice && item.originalPrice > item.price && (
-                    <span className="text-[10px] text-gray-400 line-through">
+                    <span className="min-w-0 max-w-full text-[10px] text-gray-400 line-through [overflow-wrap:anywhere]">
                       <CurrencyAmount amountBDT={item.originalPrice} />
                     </span>
                   )}
