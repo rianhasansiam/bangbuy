@@ -115,6 +115,10 @@ type TestPayment = {
   idempotencyKey: string | null;
   amount: Decimal;
   currency: string;
+  baseAmount: Decimal | null;
+  baseCurrency: string | null;
+  exchangeRate: Decimal | null;
+  exchangeRateAt: Date | null;
   status: PaymentTransactionStatus;
   providerStatus: string | null;
   requiresReview: boolean;
@@ -131,6 +135,8 @@ type TestOrder = {
   paymentStatus: string;
   status: string;
   currency: string;
+  baseCurrency: string;
+  displayCurrency: string;
   subtotal: Decimal;
   deliveryCharge: Decimal;
   discountAmount: Decimal;
@@ -165,8 +171,13 @@ let transactionClient: {
       where: { id: string };
       data: Record<string, unknown>;
     }) => Promise<TestOrder>;
+    updateMany: (input: {
+      where: { id: string };
+      data: Record<string, unknown>;
+    }) => Promise<{ count: number }>;
   };
   paymentTransaction: {
+    findUnique: (input: { where: { id: string } }) => Promise<TestPayment | null>;
     findFirst: (input: {
       where: {
         transactionId?: string;
@@ -177,17 +188,24 @@ let transactionClient: {
       where: { id: string };
       data: Record<string, unknown>;
     }) => Promise<TestPayment>;
+    updateMany: (input: {
+      where: { id: string };
+      data: Record<string, unknown>;
+    }) => Promise<{ count: number }>;
   };
 };
 
 function makeOrder(): TestOrder {
+  const exchangeRateAt = new Date("2026-08-22T00:00:00.000Z");
   return {
     id: ORDER_ID,
     userId: USER_ID,
     paymentMethod: "AIRWALLEX",
-    paymentStatus: "UNPAID",
+    paymentStatus: "PENDING",
     status: "PENDING",
-    currency: "usd",
+    currency: "BDT",
+    baseCurrency: "BDT",
+    displayCurrency: "USD",
     subtotal: new Decimal("100.05"),
     deliveryCharge: new Decimal("20.50"),
     discountAmount: new Decimal("5.00"),
@@ -204,7 +222,24 @@ function makeOrder(): TestOrder {
         totalPrice: new Decimal("100.05"),
       },
     ],
-    payments: [],
+    payments: [
+      {
+        id: "payment-created",
+        orderId: ORDER_ID,
+        provider: "AIRWALLEX",
+        transactionId: null,
+        idempotencyKey: REQUEST_ID,
+        amount: new Decimal("1.05"),
+        currency: "USD",
+        baseAmount: new Decimal("125.55"),
+        baseCurrency: "BDT",
+        exchangeRate: new Decimal("0.0083333333"),
+        exchangeRateAt,
+        status: "CREATED",
+        providerStatus: "LOCAL_CREATED",
+        requiresReview: false,
+      },
+    ],
   };
 }
 
@@ -219,12 +254,16 @@ function addExistingAttempt(
     idempotencyKey: REQUEST_ID,
     amount: new Decimal("125.55"),
     currency: "USD",
+    baseAmount: new Decimal("125.55"),
+    baseCurrency: "BDT",
+    exchangeRate: new Decimal("1"),
+    exchangeRateAt: new Date("2026-08-22T00:00:00.000Z"),
     status: "REQUIRES_PAYMENT_METHOD",
     providerStatus: "REQUIRES_PAYMENT_METHOD",
     requiresReview: false,
     ...overrides,
   };
-  state.order.payments.unshift(payment);
+  state.order.payments = [payment];
   return payment;
 }
 
@@ -234,7 +273,7 @@ function providerIntent(
   return {
     id: "int_created123",
     request_id: REQUEST_ID,
-    amount: 125.55,
+    amount: 1.05,
     currency: "USD",
     merchant_order_id: ORDER_ID,
     status: "REQUIRES_PAYMENT_METHOD",
@@ -258,8 +297,16 @@ function configureTransactionHarness(): void {
         Object.assign(state.order, data);
         return state.order;
       },
+      updateMany: async ({ where, data }) => {
+        if (where.id !== state.order.id) return { count: 0 };
+        state.orderWrites.push(data);
+        Object.assign(state.order, data);
+        return { count: 1 };
+      },
     },
     paymentTransaction: {
+      findUnique: async ({ where }) =>
+        state.order.payments.find((payment) => payment.id === where.id) ?? null,
       findFirst: async ({ where }) => {
         const match = state.order.payments.find(
           (payment) =>
@@ -276,6 +323,15 @@ function configureTransactionHarness(): void {
         state.paymentWrites.push(data);
         Object.assign(payment, data);
         return payment;
+      },
+      updateMany: async ({ where, data }) => {
+        const payment = state.order.payments.find(
+          (candidate) => candidate.id === where.id,
+        );
+        if (!payment) return { count: 0 };
+        state.paymentWrites.push(data);
+        Object.assign(payment, data);
+        return { count: 1 };
       },
     },
   };
@@ -317,6 +373,10 @@ beforeEach(() => {
         requestId: string;
         amount: Decimal;
         currency: string;
+        baseAmount: Decimal;
+        baseCurrency: string;
+        exchangeRate: Decimal;
+        exchangeRateAt: Date;
       },
     ) => {
       const payment: TestPayment = {
@@ -327,6 +387,10 @@ beforeEach(() => {
         idempotencyKey: input.requestId,
         amount: input.amount,
         currency: input.currency,
+        baseAmount: input.baseAmount,
+        baseCurrency: input.baseCurrency,
+        exchangeRate: input.exchangeRate,
+        exchangeRateAt: input.exchangeRateAt,
         status: "CREATED",
         providerStatus: "LOCAL_CREATED",
         requiresReview: false,
@@ -418,18 +482,24 @@ describe("initiateAirwallexPayment", () => {
     expect(mocks.createIntent).not.toHaveBeenCalled();
   });
 
-  it("sends the persisted Decimal total and normalized currency to Airwallex", async () => {
+  it("sends the persisted frozen USD quote to Airwallex", async () => {
     const result = await initiateAirwallexPayment(USER_ID, ORDER_ID);
 
     expect(mocks.createIntent).toHaveBeenCalledWith({
       request_id: REQUEST_ID,
-      amount: 125.55,
+      amount: 1.05,
       currency: "USD",
       merchant_order_id: ORDER_ID,
       return_url: expect.stringContaining(`orderId=${ORDER_ID}`),
       metadata: {
         bangbuy_order_id: ORDER_ID,
         bangbuy_payment_attempt_id: "payment-created",
+        bangbuy_base_currency: "BDT",
+        bangbuy_base_amount: "125.55",
+        bangbuy_display_currency: "USD",
+        bangbuy_payment_currency: "USD",
+        bangbuy_exchange_rate: "0.0083333333",
+        bangbuy_exchange_rate_at: "2026-08-22T00:00:00.000Z",
       },
     });
     expect(result).toEqual({
@@ -441,21 +511,30 @@ describe("initiateAirwallexPayment", () => {
       cancelUrl: expect.stringContaining("flow=cancelled"),
     });
     expect(state.order.payments[0]).toMatchObject({
-      amount: new Decimal("125.55"),
+      amount: new Decimal("1.05"),
       currency: "USD",
+      baseAmount: new Decimal("125.55"),
+      baseCurrency: "BDT",
+      exchangeRate: new Decimal("0.0083333333"),
       transactionId: "int_created123",
       status: "REQUIRES_PAYMENT_METHOD",
     });
   });
 
-  it("converts a canonical BDT order once and sends only USD to Airwallex", async () => {
-    vi.stubEnv("BDT_TO_USD_RATE", "120");
-    state.order.currency = "BDT";
+  it("uses the persisted frozen EUR quote without repricing at initiation", async () => {
+    state.order.displayCurrency = "EUR";
     state.order.subtotal = new Decimal("1071.30");
     state.order.deliveryCharge = new Decimal("0");
     state.order.discountAmount = new Decimal("0");
     state.order.taxAmount = new Decimal("0");
     state.order.totalAmount = new Decimal("1071.30");
+    Object.assign(state.order.payments[0]!, {
+      amount: new Decimal("8.03"),
+      currency: "EUR",
+      baseAmount: new Decimal("1071.30"),
+      baseCurrency: "BDT",
+      exchangeRate: new Decimal("0.0075"),
+    });
     state.order.items = [
       {
         id: "item-1",
@@ -468,22 +547,20 @@ describe("initiateAirwallexPayment", () => {
 
     await initiateAirwallexPayment(USER_ID, ORDER_ID);
 
-    expect(mocks.createAttempt).toHaveBeenCalledWith(
-      transactionClient,
-      expect.objectContaining({
-        amount: new Decimal("8.93"),
-        currency: "USD",
-      }),
-    );
+    expect(mocks.createAttempt).not.toHaveBeenCalled();
     expect(mocks.createIntent).toHaveBeenCalledWith(
       expect.objectContaining({
-        amount: 8.93,
-        currency: "USD",
+        amount: 8.03,
+        currency: "EUR",
         metadata: {
           bangbuy_order_id: ORDER_ID,
           bangbuy_payment_attempt_id: "payment-created",
-          bangbuy_original_currency: "BDT",
-          bangbuy_original_amount: "1071.30",
+          bangbuy_base_currency: "BDT",
+          bangbuy_base_amount: "1071.30",
+          bangbuy_display_currency: "EUR",
+          bangbuy_payment_currency: "EUR",
+          bangbuy_exchange_rate: "0.0075",
+          bangbuy_exchange_rate_at: "2026-08-22T00:00:00.000Z",
         },
       }),
     );
@@ -506,7 +583,47 @@ describe("initiateAirwallexPayment", () => {
       providerStatus: "LOCAL_CREATED",
     });
     expect(state.order.paymentStatus).not.toBe("PAID");
-    expect(mocks.logEvent).not.toHaveBeenCalled();
+    expect(mocks.logEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: "PAYMENT_INTENT_CREATE_REQUESTED",
+        orderId: ORDER_ID,
+        baseCurrency: "BDT",
+        displayCurrency: "USD",
+        paymentCurrency: "USD",
+        baseAmount: "125.55",
+        paymentAmount: "1.05",
+        exchangeRate: "0.0083333333",
+      }),
+    );
+  });
+
+  it("terminalizes a definitive provider create rejection", async () => {
+    const error = new AirwallexApiError({
+      providerStatus: 400,
+      providerCode: "currency_not_supported",
+    });
+    mocks.createIntent.mockRejectedValue(error);
+
+    await expect(
+      initiateAirwallexPayment(USER_ID, ORDER_ID),
+    ).rejects.toBe(error);
+
+    expect(state.order.paymentStatus).toBe("FAILED");
+    expect(state.order.payments[0]).toMatchObject({
+      transactionId: null,
+      status: "FAILED",
+      providerStatus: "CREATE_REJECTED_400",
+      failureCode: "CURRENCY_NOT_SUPPORTED",
+      requiresReview: false,
+    });
+    expect(state.transitionWrites).toContainEqual(
+      expect.objectContaining({
+        eventName: "payment_intent.create_rejected",
+        fromStatus: "CREATED",
+        toStatus: "FAILED",
+        providerStatus: "CREATE_REJECTED_400",
+      }),
+    );
   });
 
   it("reuses a fresh existing PaymentIntent without creating another", async () => {
@@ -563,7 +680,23 @@ describe("initiateAirwallexPayment", () => {
 
     expect(mocks.cancelIntent).toHaveBeenCalledWith("int_existing123");
     expect(mocks.createIntent).toHaveBeenCalledWith(
-      expect.objectContaining({ request_id: RETRY_REQUEST_ID }),
+      expect.objectContaining({
+        request_id: RETRY_REQUEST_ID,
+        amount: 125.55,
+        currency: "USD",
+      }),
+    );
+    expect(mocks.createAttempt).toHaveBeenCalledWith(
+      transactionClient,
+      expect.objectContaining({
+        requestId: RETRY_REQUEST_ID,
+        amount: new Decimal("125.55"),
+        currency: "USD",
+        baseAmount: new Decimal("125.55"),
+        baseCurrency: "BDT",
+        exchangeRate: new Decimal("1"),
+        exchangeRateAt: new Date("2026-08-22T00:00:00.000Z"),
+      }),
     );
     expect(result.intentId).toBe("int_created123");
     expect(state.order.payments).toHaveLength(2);
@@ -580,8 +713,8 @@ describe("initiateAirwallexPayment", () => {
 
     expect(first.intentId).toBe(created.id);
     expect(second.intentId).toBe(created.id);
-    expect(mocks.createRequestId).toHaveBeenCalledOnce();
-    expect(mocks.createAttempt).toHaveBeenCalledOnce();
+    expect(mocks.createRequestId).not.toHaveBeenCalled();
+    expect(mocks.createAttempt).not.toHaveBeenCalled();
     expect(mocks.createIntent).toHaveBeenCalledOnce();
     expect(mocks.createIntent).toHaveBeenCalledWith(
       expect.objectContaining({ request_id: REQUEST_ID }),

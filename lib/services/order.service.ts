@@ -14,6 +14,10 @@ import {
   STATUS_TRANSITIONS,
 } from "@/lib/orders/status";
 import {
+  gatewayPaymentBlocksCancellation,
+  isGatewayManagedPaymentMethod,
+} from "@/lib/orders/payment-cancellation";
+import {
   lockOrderForStatusChange,
   lockPaymentAttempt,
   recordStatusHistory,
@@ -61,44 +65,6 @@ export class OrderError extends ServiceError {
   }
 }
 
-function isGatewayManagedPaymentMethod(method: string): boolean {
-  return method === "SSLCOMMERZ" || method === "AIRWALLEX";
-}
-
-type CancellationPaymentSnapshot = {
-  provider: string;
-  status: string;
-  requiresReview: boolean;
-};
-
-const TERMINAL_AIRWALLEX_CANCELLATION_STATUSES = new Set([
-  "CANCELLED",
-  "REFUNDED",
-  "EXPIRED",
-]);
-
-function gatewayPaymentBlocksCancellation(input: {
-  paymentMethod: string;
-  paymentStatus: string;
-  payments: readonly CancellationPaymentSnapshot[];
-}): boolean {
-  if (!isGatewayManagedPaymentMethod(input.paymentMethod)) return false;
-  if (input.paymentStatus === "PAID") return true;
-
-  return input.payments
-    .filter((payment) => payment.provider === input.paymentMethod)
-    .some((payment) => {
-      if (payment.status === "SUCCESS" || payment.requiresReview) return true;
-      if (input.paymentMethod !== "AIRWALLEX") return false;
-
-      // Initiation releases the order lock during the provider HTTP request,
-      // so even CREATED can be in-flight. A failed PaymentAttempt can also
-      // leave its PaymentIntent reusable. Stock remains reserved until an
-      // authoritative cancellation/refund/expiry makes release safe.
-      return !TERMINAL_AIRWALLEX_CANCELLATION_STATUSES.has(payment.status);
-    });
-}
-
 /* -------------------------------------------------------------------------- */
 /*  Selects / shapes                                                          */
 /* -------------------------------------------------------------------------- */
@@ -121,14 +87,21 @@ const orderInclude = {
   // Full audit trail, oldest first, so the customer tracker and admin
   // timeline render chronologically without a client-side sort.
   statusHistory: { orderBy: { createdAt: "asc" } },
-  // Expose only a derived hold flag at the JSON boundary; payment record IDs
-  // and provider evidence remain server-side.
+  // Keep the latest Airwallex quote available for the customer-facing payment
+  // snapshot, plus every unresolved review regardless of provider. Payment
+  // record IDs and raw provider evidence never cross the JSON boundary.
   payments: {
     where: {
+      OR: [{ provider: "AIRWALLEX" }, { requiresReview: true }],
+    },
+    select: {
+      provider: true,
+      amount: true,
+      currency: true,
+      status: true,
       requiresReview: true,
     },
-    select: { id: true },
-    take: 1,
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
   },
 } satisfies Prisma.OrderInclude;
 
@@ -198,7 +171,9 @@ export function serializeOrder<T extends OrderWithItems>(order: T) {
     exchangeRate: rest.exchangeRate.toString(),
     exchangeRateTimestamp: rest.exchangeRateAt?.toISOString() ?? null,
     items: rest.items.map(serializeOrderItem),
-    requiresPaymentReview: payments.length > 0,
+    requiresPaymentReview: payments.some(
+      (payment) => payment.requiresReview,
+    ),
   };
 }
 
@@ -245,6 +220,17 @@ export function serializeCustomerOrder<T extends OrderWithItems>(order: T) {
   const baseTaxAmount = toNumber(rest.taxAmount);
   const baseTotalAmount = toNumber(rest.totalAmount);
   const baseAdvancePayment = toNumber(rest.advancePayment);
+  const latestAirwallexPayment =
+    rest.paymentMethod === "AIRWALLEX"
+      ? (payments.find(
+          (payment) =>
+            payment.provider === "AIRWALLEX" &&
+            ["SUCCESS", "REFUNDED"].includes(payment.status),
+        ) ?? payments.find((payment) => payment.provider === "AIRWALLEX"))
+      : undefined;
+  const airwallexPaymentCurrency = latestAirwallexPayment
+    ? parseCurrencyCode(latestAirwallexPayment.currency.trim().toUpperCase())
+    : null;
 
   return {
     ...rest,
@@ -265,7 +251,11 @@ export function serializeCustomerOrder<T extends OrderWithItems>(order: T) {
     ),
     currency: context.currency,
     baseCurrency: BASE_CURRENCY,
-    paymentCurrency: BASE_CURRENCY,
+    paymentAmount:
+      latestAirwallexPayment && airwallexPaymentCurrency
+        ? toNumber(latestAirwallexPayment.amount)
+        : null,
+    paymentCurrency: airwallexPaymentCurrency ?? BASE_CURRENCY,
     baseSubtotal,
     baseDeliveryCharge,
     baseDiscountAmount,
@@ -292,7 +282,9 @@ export function serializeCustomerOrder<T extends OrderWithItems>(order: T) {
     items: rest.items.map((item) =>
       serializeCustomerOrderItem(item, useDisplaySnapshot),
     ),
-    requiresPaymentReview: payments.length > 0,
+    requiresPaymentReview: payments.some(
+      (payment) => payment.requiresReview,
+    ),
   };
 }
 
@@ -363,6 +355,23 @@ export function getOrderForUser(orderId: string, userId: string) {
     .then(serializeCustomerOrderOrNull);
 }
 
+/**
+ * Admin-authorized read for the customer-facing order page/API.
+ *
+ * Keep this separate from `getOrderForAdmin`: the admin endpoint returns the
+ * canonical operational shape, while `/api/orders/[id]` must return the same
+ * display/payment contract regardless of whether the viewer is the owner or
+ * an administrator.
+ */
+export function getCustomerOrderViewForAdmin(orderId: string) {
+  return prisma.order
+    .findUnique({
+      where: { id: orderId },
+      include: orderInclude,
+    })
+    .then(serializeCustomerOrderOrNull);
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Cancellation                                                              */
 /* -------------------------------------------------------------------------- */
@@ -405,6 +414,8 @@ export async function cancelOrderAsCustomer(orderId: string, userId: string) {
             id: true,
             provider: true,
             status: true,
+            transactionId: true,
+            providerStatus: true,
             requiresReview: true,
           },
         },
@@ -623,6 +634,8 @@ export async function updateOrderStatus(
             id: true,
             provider: true,
             status: true,
+            transactionId: true,
+            providerStatus: true,
             requiresReview: true,
           },
         },

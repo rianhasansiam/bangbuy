@@ -3,13 +3,24 @@ import type { NextRequest } from "next/server";
 import { z } from "zod";
 
 import { jsonError, ok } from "@/lib/api/response";
+import { airwallexConfig } from "@/lib/airwallex/config/airwallex.config";
+import {
+  AirwallexConfigurationError,
+  AirwallexExchangeRateUnavailableError,
+  AirwallexValidationError,
+} from "@/lib/airwallex/errors/airwallex.errors";
+import {
+  quoteAirwallexPayment,
+  toPublicAirwallexPaymentQuote,
+  type PublicAirwallexPaymentQuote,
+} from "@/lib/airwallex/services/airwallex-currency.service";
+import { createAirwallexPaymentQuoteToken } from "@/lib/airwallex/security/airwallex-payment-quote-token";
 import { auth } from "@/lib/auth/auth";
 import { toAppSession } from "@/lib/auth/session";
+import { getCurrencyContextFromRequest } from "@/lib/currency/request-currency";
 import { previewCheckout } from "@/lib/services/checkout.service";
 import { handleServiceError } from "@/lib/services/service-error";
 import { checkoutPreviewSchema } from "@/lib/validations/checkout.validation";
-import { airwallexConfig } from "@/lib/airwallex/config/airwallex.config";
-import { getCurrencyContextFromRequest } from "@/lib/currency/request-currency";
 
 /**
  * POST /api/checkout/preview
@@ -47,11 +58,40 @@ export async function POST(request: NextRequest) {
       parsed.data,
       currencyContext,
     );
+
+    let airwallexPaymentQuote:
+      | (PublicAirwallexPaymentQuote & { quoteToken: string })
+      | null = null;
+    if (airwallexConfig.enabled && session?.user.id) {
+      try {
+        const quote = await quoteAirwallexPayment({
+          baseAmount: preview.summary.baseTotal,
+          displayContext: currencyContext,
+        });
+        airwallexPaymentQuote = {
+          ...toPublicAirwallexPaymentQuote(quote),
+          quoteToken: createAirwallexPaymentQuoteToken({
+            userId: session.user.id,
+            quote,
+          }),
+        };
+      } catch (error) {
+        if (
+          !(error instanceof AirwallexConfigurationError) &&
+          !(error instanceof AirwallexExchangeRateUnavailableError) &&
+          !(error instanceof AirwallexValidationError)
+        ) {
+          throw error;
+        }
+      }
+    }
+
     return ok({
       ...preview,
+      airwallexPaymentQuote,
       availablePaymentMethods: [
         "CASH_ON_DELIVERY" as const,
-        ...(airwallexConfig.enabled ? (["AIRWALLEX"] as const) : []),
+        ...(airwallexPaymentQuote ? (["AIRWALLEX"] as const) : []),
       ],
     });
   } catch (error) {

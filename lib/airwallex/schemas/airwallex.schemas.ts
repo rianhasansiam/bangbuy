@@ -10,6 +10,10 @@ import {
   AIRWALLEX_METADATA_VALUE_MAX_LENGTH,
   AIRWALLEX_REQUEST_ID_MAX_LENGTH,
 } from "../constants/airwallex.constants";
+import {
+  isAirwallexHttpsUrl,
+  isAirwallexReturnUrl,
+} from "../security/airwallex-return-url";
 
 const MAX_PROVIDER_IDENTIFIER_LENGTH = 255;
 const MAX_PROVIDER_SECRET_LENGTH = 8_192;
@@ -25,20 +29,6 @@ function isValidTimestamp(value: string) {
   );
 }
 
-function isSafeHttpsUrl(value: string) {
-  try {
-    const url = new URL(value);
-    return (
-      url.protocol === "https:" &&
-      url.username === "" &&
-      url.password === "" &&
-      url.hash === ""
-    );
-  } catch {
-    return false;
-  }
-}
-
 export const airwallexTimestampSchema = z
   .string()
   .trim()
@@ -51,7 +41,17 @@ export const airwallexHttpsUrlSchema = z
   .trim()
   .min(1)
   .max(MAX_URL_LENGTH)
-  .refine(isSafeHttpsUrl, "Expected a credential-free HTTPS URL.");
+  .refine(isAirwallexHttpsUrl, "Expected a credential-free HTTPS URL.");
+
+export const airwallexReturnUrlSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(MAX_URL_LENGTH)
+  .refine(
+    (value) => isAirwallexReturnUrl(value, "sandbox"),
+    "Expected a credential-free HTTPS URL or a sandbox loopback HTTP URL.",
+  );
 
 export const airwallexCurrencySchema = z
   .string()
@@ -151,10 +151,10 @@ export const airwallexAuthenticationResponseSchema = z
 export const airwallexPaymentIntentCreateRequestSchema = z
   .object({
     request_id: airwallexRequestIdSchema,
-    amount: airwallexAmountSchema,
+    amount: airwallexAmountSchema.positive(),
     currency: airwallexCurrencySchema,
     merchant_order_id: airwallexMerchantOrderIdSchema,
-    return_url: airwallexHttpsUrlSchema.optional(),
+    return_url: airwallexReturnUrlSchema.optional(),
     descriptor: z
       .string()
       .trim()
@@ -248,13 +248,24 @@ export const airwallexHostedPaymentPageConfigSchema = z
     clientSecret: airwallexClientSecretSchema,
     currency: airwallexCurrencySchema,
     environment: z.enum(["demo", "prod"]),
-    successUrl: airwallexHttpsUrlSchema,
-    cancelUrl: airwallexHttpsUrlSchema.optional(),
+    successUrl: airwallexReturnUrlSchema,
+    cancelUrl: airwallexReturnUrlSchema.optional(),
     countryCode: airwallexCountryCodeSchema.optional(),
-    /** Present when the order currency (e.g. BDT) was converted to USD. */
-    amountInUsd: airwallexAmountSchema.optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((config, context) => {
+    if (config.environment !== "prod") return;
+    for (const field of ["successUrl", "cancelUrl"] as const) {
+      const value = config[field];
+      if (value && !isAirwallexHttpsUrl(value)) {
+        context.addIssue({
+          code: "custom",
+          path: [field],
+          message: "Production Airwallex return URLs must use HTTPS.",
+        });
+      }
+    }
+  });
 
 /** Exact non-deprecated HPP redirect properties used by Airwallex.js. */
 export const airwallexHostedPaymentPageRedirectOptionsSchema = z
@@ -263,8 +274,8 @@ export const airwallexHostedPaymentPageRedirectOptionsSchema = z
     intent_id: airwallexPaymentIntentIdSchema,
     client_secret: airwallexClientSecretSchema,
     currency: airwallexCurrencySchema,
-    successUrl: airwallexHttpsUrlSchema,
-    cancelUrl: airwallexHttpsUrlSchema.optional(),
+    successUrl: airwallexReturnUrlSchema,
+    cancelUrl: airwallexReturnUrlSchema.optional(),
     country_code: airwallexCountryCodeSchema.optional(),
   })
   .strict();

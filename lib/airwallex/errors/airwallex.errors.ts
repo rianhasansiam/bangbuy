@@ -3,6 +3,7 @@ import { jsonError } from "@/lib/api/response";
 
 export type AirwallexErrorCode =
   | "AIRWALLEX_CONFIGURATION_ERROR"
+  | "AIRWALLEX_EXCHANGE_RATE_UNAVAILABLE"
   | "AIRWALLEX_AUTHENTICATION_ERROR"
   | "AIRWALLEX_API_ERROR"
   | "AIRWALLEX_TIMEOUT"
@@ -44,6 +45,19 @@ export class AirwallexConfigurationError extends AirwallexError {
         "Airwallex payments are temporarily unavailable. Please choose another payment method.",
     });
     this.name = "AirwallexConfigurationError";
+  }
+}
+
+export class AirwallexExchangeRateUnavailableError extends AirwallexError {
+  constructor() {
+    super({
+      code: "AIRWALLEX_EXCHANGE_RATE_UNAVAILABLE",
+      status: 503,
+      message:
+        "Airwallex payment pricing is temporarily unavailable. Please choose another payment method.",
+      retryable: true,
+    });
+    this.name = "AirwallexExchangeRateUnavailableError";
   }
 }
 

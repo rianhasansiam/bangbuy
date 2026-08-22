@@ -31,6 +31,11 @@ import type {
 } from "@/lib/validations/checkout.validation";
 import { createAirwallexAttempt } from "@/lib/airwallex/repositories/airwallex-payment.repository";
 import {
+  createAirwallexPaymentQuote,
+  type AirwallexPaymentQuote,
+} from "@/lib/airwallex/services/airwallex-currency.service";
+import { verifyAirwallexPaymentQuoteToken } from "@/lib/airwallex/security/airwallex-payment-quote-token";
+import {
   BASE_CURRENCY,
   parseCurrencyCode,
   type CurrencyContext,
@@ -752,6 +757,8 @@ type OrderPaymentOptions = {
   advancePayment?: number;
   /** Persisted atomically with inventory before any provider request. */
   paymentAttempt?: OnlinePaymentAttempt;
+  /** Server-signed preview quote used only for a new Airwallex reservation. */
+  airwallexPaymentQuote?: AirwallexPaymentQuote;
 };
 
 async function lockCheckoutCatalogRows(
@@ -794,6 +801,15 @@ async function placeOrderInternal(
     throw new CheckoutError(
       400,
       "Payment attempt metadata does not match the selected payment method.",
+    );
+  }
+  if (
+    (options.paymentAttempt?.provider === "AIRWALLEX") !==
+    Boolean(options.airwallexPaymentQuote)
+  ) {
+    throw new CheckoutError(
+      400,
+      "Airwallex payment pricing is not valid for this checkout.",
     );
   }
 
@@ -879,6 +895,39 @@ async function placeOrderInternal(
         },
         currencyContext,
       );
+      const airwallexPaymentQuote =
+        options.paymentAttempt?.provider === "AIRWALLEX" &&
+        options.airwallexPaymentQuote
+          ? createAirwallexPaymentQuote({
+              baseAmount: totalAmount,
+              displayCurrency: currencySnapshot.displayCurrency,
+              paymentRate: {
+                baseCurrency: options.airwallexPaymentQuote.baseCurrency,
+                displayCurrency: options.airwallexPaymentQuote.displayCurrency,
+                paymentCurrency: options.airwallexPaymentQuote.paymentCurrency,
+                exchangeRate:
+                  options.airwallexPaymentQuote.exchangeRate.toString(),
+                exchangeRateTimestamp:
+                  options.airwallexPaymentQuote.exchangeRateAt.toISOString(),
+                stale: options.airwallexPaymentQuote.stale,
+              },
+            })
+          : null;
+      if (
+        airwallexPaymentQuote &&
+        options.airwallexPaymentQuote &&
+        (!airwallexPaymentQuote.baseAmount.equals(
+          options.airwallexPaymentQuote.baseAmount,
+        ) ||
+          !airwallexPaymentQuote.paymentAmount.equals(
+            options.airwallexPaymentQuote.paymentAmount,
+          ))
+      ) {
+        throw new CheckoutError(
+          409,
+          "Your order total changed. Review the refreshed payment amount and try again.",
+        );
+      }
       const summary = presentSummary(baseSummary, currencyContext);
 
       // Atomic stock decrement on the variant: the WHERE clause guards
@@ -1008,8 +1057,12 @@ async function placeOrderInternal(
               id: options.paymentAttempt.id,
               orderId: order.id,
               requestId: options.paymentAttempt.idempotencyKey,
-              amount: toDecimal(baseSummary.total),
-              currency: BASE_CURRENCY,
+              amount: airwallexPaymentQuote!.paymentAmount,
+              currency: airwallexPaymentQuote!.paymentCurrency,
+              baseAmount: airwallexPaymentQuote!.baseAmount,
+              baseCurrency: airwallexPaymentQuote!.baseCurrency,
+              exchangeRate: airwallexPaymentQuote!.exchangeRate,
+              exchangeRateAt: airwallexPaymentQuote!.exchangeRateAt,
             })
           : await tx.paymentTransaction.create({
               data: {
@@ -1193,12 +1246,24 @@ export async function reserveOrderForAirwallex(
   );
   if (existing) return existing;
 
+  if (!input.airwallexQuoteToken) {
+    throw new CheckoutError(
+      409,
+      "Refresh checkout to obtain a secure payment quote.",
+    );
+  }
+  const airwallexPaymentQuote = verifyAirwallexPaymentQuoteToken({
+    token: input.airwallexQuoteToken,
+    userId,
+    displayCurrency: currencyContext.currency,
+  });
+
   let result: Awaited<ReturnType<typeof placeOrderInternal>>;
   try {
     result = await placeOrderInternal(
       userId,
       input,
-      { paymentAttempt },
+      { paymentAttempt, airwallexPaymentQuote },
       currencyContext,
     );
   } catch (error) {

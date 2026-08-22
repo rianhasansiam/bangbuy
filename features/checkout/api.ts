@@ -7,6 +7,11 @@ import {
   BASE_CURRENCY,
   type CurrencyCode,
 } from "@/lib/currency/config";
+import type { PublicAirwallexPaymentQuote } from "@/lib/airwallex/services/airwallex-currency.service";
+
+export type CheckoutAirwallexPaymentQuote = PublicAirwallexPaymentQuote & {
+  quoteToken: string;
+};
 
 export type CheckoutPaymentMethod =
   | "CASH_ON_DELIVERY"
@@ -92,6 +97,7 @@ export type CheckoutPreview = {
   items: CheckoutItemPriced[];
   summary: CheckoutSummary;
   promo: CheckoutPromo;
+  airwallexPaymentQuote: CheckoutAirwallexPaymentQuote | null;
   availablePaymentMethods: CheckoutPaymentMethod[];
 };
 
@@ -137,6 +143,8 @@ export type PlaceOrderRequest = {
    * It identifies the attempt only; prices and totals remain server-owned.
    */
   idempotencyKey?: string;
+  /** Opaque server-signed quote; it never grants client authority over money. */
+  airwallexQuoteToken?: string;
 };
 
 export type PlacedOrderResult = {

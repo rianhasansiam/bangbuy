@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   airwallexAuthenticationResponseSchema,
+  airwallexHostedPaymentPageConfigSchema,
   airwallexInitiatePaymentRequestSchema,
   airwallexPaymentIntentCreateRequestSchema,
 } from "../schemas/airwallex.schemas";
@@ -150,5 +151,71 @@ describe("Airwallex provider schemas", () => {
     });
 
     expect(result.success).toBe(false);
+  });
+
+  it("rejects a zero-value PaymentIntent create request", () => {
+    const result = airwallexPaymentIntentCreateRequestSchema.safeParse({
+      request_id: paymentIntent.request_id,
+      amount: 0,
+      currency: paymentIntent.currency,
+      merchant_order_id: paymentIntent.merchant_order_id,
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts sandbox localhost return URLs across initiation boundaries", () => {
+    const returnUrl =
+      "http://localhost:3000/orders/payment-return?orderId=order_123";
+
+    expect(
+      airwallexPaymentIntentCreateRequestSchema.safeParse({
+        request_id: paymentIntent.request_id,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+        merchant_order_id: paymentIntent.merchant_order_id,
+        return_url: returnUrl,
+      }).success,
+    ).toBe(true);
+
+    expect(
+      airwallexHostedPaymentPageConfigSchema.safeParse({
+        intentId: paymentIntent.id,
+        clientSecret: "client-secret",
+        currency: paymentIntent.currency,
+        environment: "demo",
+        successUrl: returnUrl,
+        cancelUrl: `${returnUrl}&flow=cancelled`,
+      }).success,
+    ).toBe(true);
+  });
+
+  it.each([
+    "http://shop.example.test/orders/payment-return",
+    "https://user:password@shop.example.test/orders/payment-return",
+    "https://shop.example.test/orders/payment-return#secret",
+  ])("rejects an unsafe PaymentIntent return URL: %s", (returnUrl) => {
+    expect(
+      airwallexPaymentIntentCreateRequestSchema.safeParse({
+        request_id: paymentIntent.request_id,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+        merchant_order_id: paymentIntent.merchant_order_id,
+        return_url: returnUrl,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires HTTPS return URLs for the production HPP environment", () => {
+    expect(
+      airwallexHostedPaymentPageConfigSchema.safeParse({
+        intentId: paymentIntent.id,
+        clientSecret: "client-secret",
+        currency: paymentIntent.currency,
+        environment: "prod",
+        successUrl:
+          "http://localhost:3000/orders/payment-return?orderId=order_123",
+      }).success,
+    ).toBe(false);
   });
 });

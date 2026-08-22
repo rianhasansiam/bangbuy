@@ -2,6 +2,11 @@ import "server-only";
 
 import { z } from "zod";
 
+import {
+  isAirwallexHttpsUrl,
+  isAirwallexReturnUrl,
+} from "../security/airwallex-return-url";
+
 const DEFAULTS = {
   sandboxApiBaseUrl: "https://api.sandbox.airwallex.com",
   productionApiBaseUrl: "https://api.airwallex.com",
@@ -20,39 +25,6 @@ const optionalSecret = (minimumLength = 1) =>
     z.string().min(minimumLength).optional(),
   );
 
-function isSecureHttpUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return (
-      url.protocol === "https:" &&
-      !url.username &&
-      !url.password &&
-      !url.hash
-    );
-  } catch {
-    return false;
-  }
-}
-
-function isTrustedReturnUrl(
-  value: string,
-  airwallexEnvironment: "sandbox" | "production",
-): boolean {
-  try {
-    const url = new URL(value);
-    if (url.username || url.password || url.hash) return false;
-    if (url.protocol === "https:") return true;
-    const localHostnames = new Set(["localhost", "127.0.0.1", "::1"]);
-    return (
-      airwallexEnvironment === "sandbox" &&
-      url.protocol === "http:" &&
-      localHostnames.has(url.hostname)
-    );
-  } catch {
-    return false;
-  }
-}
-
 const positiveInteger = (minimum: number, maximum: number) =>
   z.coerce.number().int().min(minimum).max(maximum);
 
@@ -69,12 +41,18 @@ const rawEnvironmentSchema = z
     AIRWALLEX_SANDBOX_API_BASE_URL: z
       .string()
       .url()
-      .refine(isSecureHttpUrl, "Sandbox API URL must be a secure HTTPS URL.")
+      .refine(
+        isAirwallexHttpsUrl,
+        "Sandbox API URL must be a secure HTTPS URL.",
+      )
       .default(DEFAULTS.sandboxApiBaseUrl),
     AIRWALLEX_PRODUCTION_API_BASE_URL: z
       .string()
       .url()
-      .refine(isSecureHttpUrl, "Production API URL must be a secure HTTPS URL.")
+      .refine(
+        isAirwallexHttpsUrl,
+        "Production API URL must be a secure HTTPS URL.",
+      )
       .default(DEFAULTS.productionApiBaseUrl),
     AIRWALLEX_HTTP_TIMEOUT_MS: positiveInteger(1_000, 60_000).default(
       Number(DEFAULTS.httpTimeoutMs),
@@ -88,7 +66,10 @@ const rawEnvironmentSchema = z
   })
   .superRefine((value, context) => {
     if (
-      !isTrustedReturnUrl(value.AIRWALLEX_RETURN_URL, value.AIRWALLEX_ENV)
+      !isAirwallexReturnUrl(
+        value.AIRWALLEX_RETURN_URL,
+        value.AIRWALLEX_ENV,
+      )
     ) {
       context.addIssue({
         code: "custom",

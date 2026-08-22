@@ -12,7 +12,7 @@ import {
 import { findAirwallexVerificationMismatch } from "../services/airwallex-payment-verification.service";
 
 describe("Airwallex payment status mapping", () => {
-  it("does not treat lifecycle request_id changes as an identity mismatch", () => {
+  it("accepts a valid EUR webhook against the persisted frozen quote", () => {
     const order = {
       id: "order-1",
       subtotal: new Decimal("100.00"),
@@ -20,7 +20,9 @@ describe("Airwallex payment status mapping", () => {
       discountAmount: new Decimal("5.00"),
       taxAmount: new Decimal("2.00"),
       totalAmount: new Decimal("107.00"),
-      currency: "USD",
+      currency: "BDT",
+      baseCurrency: "BDT",
+      displayCurrency: "EUR",
       promoCode: null,
       promoCodeUsages: [],
       items: [
@@ -36,20 +38,70 @@ describe("Airwallex payment status mapping", () => {
       findAirwallexVerificationMismatch(
         {
           transactionId: "int_test123",
-          amount: new Decimal("107.00"),
-          currency: "USD",
+          amount: new Decimal("1.07"),
+          currency: "EUR",
+          baseAmount: new Decimal("107.00"),
+          baseCurrency: "BDT",
+          exchangeRate: new Decimal("0.01"),
+          exchangeRateAt: new Date("2026-08-22T00:00:00.000Z"),
           order,
         },
         {
           paymentIntentId: "int_test123",
           requestId: "request-from-a-later-confirm-operation",
           merchantOrderId: "order-1",
-          amount: 107,
-          currency: "USD",
+          amount: 1.07,
+          currency: "EUR",
           providerStatus: "SUCCEEDED",
         },
       ),
     ).toBeNull();
+  });
+
+  it("quarantines a provider currency that disagrees with the frozen EUR quote", () => {
+    const order = {
+      id: "order-1",
+      subtotal: new Decimal("100.00"),
+      deliveryCharge: new Decimal("10.00"),
+      discountAmount: new Decimal("5.00"),
+      taxAmount: new Decimal("2.00"),
+      totalAmount: new Decimal("107.00"),
+      currency: "BDT",
+      baseCurrency: "BDT",
+      displayCurrency: "EUR",
+      promoCode: null,
+      promoCodeUsages: [],
+      items: [
+        {
+          quantity: 1,
+          unitPrice: new Decimal("100.00"),
+          totalPrice: new Decimal("100.00"),
+        },
+      ],
+    };
+
+    expect(
+      findAirwallexVerificationMismatch(
+        {
+          transactionId: "int_test123",
+          amount: new Decimal("1.07"),
+          currency: "EUR",
+          baseAmount: new Decimal("107.00"),
+          baseCurrency: "BDT",
+          exchangeRate: new Decimal("0.01"),
+          exchangeRateAt: new Date("2026-08-22T00:00:00.000Z"),
+          order,
+        },
+        {
+          paymentIntentId: "int_test123",
+          requestId: "request-from-a-later-confirm-operation",
+          merchantOrderId: "order-1",
+          amount: 1.07,
+          currency: "USD",
+          providerStatus: "SUCCEEDED",
+        },
+      ),
+    ).toBe("CURRENCY_MISMATCH");
   });
 
   it.each([

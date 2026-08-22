@@ -107,6 +107,7 @@ const checkoutBaseSchema = z.object({
     .trim()
     .uuid("Payment request ID must be a UUID.")
     .optional(),
+  airwallexQuoteToken: z.string().trim().min(80).max(4096).optional(),
   promoCode: z
     .string()
     .trim()
@@ -132,6 +133,13 @@ export const checkoutSchema = checkoutBaseSchema.superRefine((value, context) =>
       message: "A payment request ID is required for online payment.",
     });
   }
+  if (value.paymentMethod === "AIRWALLEX" && !value.airwallexQuoteToken) {
+    context.addIssue({
+      code: "custom",
+      path: ["airwallexQuoteToken"],
+      message: "Refresh checkout to obtain a secure payment quote.",
+    });
+  }
 });
 
 /**
@@ -144,6 +152,7 @@ export const adminCheckoutSchema = checkoutBaseSchema.extend({
   // until a separate staff payment workflow is designed.
   paymentMethod: z.literal("CASH_ON_DELIVERY").default("CASH_ON_DELIVERY"),
   idempotencyKey: z.never().optional(),
+  airwallexQuoteToken: z.never().optional(),
   // Empty means a guest / walk-in customer. A non-empty value is verified
   // server-side to ensure it belongs to a regular customer account.
   customerId: z.string().trim().min(1).optional().or(z.literal("")),

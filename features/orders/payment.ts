@@ -2,6 +2,10 @@ import type {
   OrderPaymentMethod,
   PaymentStatus,
 } from "@/features/orders/api";
+import {
+  isCurrencyCode,
+  type CurrencyCode,
+} from "@/lib/currency/config";
 
 export const PAYMENT_STATUS_META = {
   PAID: {
@@ -71,4 +75,44 @@ export function isAwaitingSslCommerzConfirmation(
     method === "SSLCOMMERZ" &&
     (status === "PENDING" || status === "UNPAID")
   );
+}
+
+export type AirwallexPaymentDisplay = {
+  amount: number;
+  currency: CurrencyCode;
+};
+
+/**
+ * Treat API JSON as untrusted at the render boundary. This prevents a stale
+ * deployment or malformed legacy response from passing `undefined`/an unknown
+ * currency into the strict money formatter.
+ */
+export function getAirwallexPaymentDisplay(input: {
+  paymentMethod: OrderPaymentMethod | string;
+  paymentAmount: unknown;
+  paymentCurrency: unknown;
+  displayAmount: number;
+  displayCurrency: CurrencyCode;
+}): AirwallexPaymentDisplay | null {
+  if (
+    input.paymentMethod !== "AIRWALLEX" ||
+    typeof input.paymentAmount !== "number" ||
+    !Number.isFinite(input.paymentAmount) ||
+    input.paymentAmount <= 0 ||
+    !isCurrencyCode(input.paymentCurrency)
+  ) {
+    return null;
+  }
+
+  if (
+    input.paymentCurrency === input.displayCurrency &&
+    input.paymentAmount === input.displayAmount
+  ) {
+    return null;
+  }
+
+  return {
+    amount: input.paymentAmount,
+    currency: input.paymentCurrency,
+  };
 }

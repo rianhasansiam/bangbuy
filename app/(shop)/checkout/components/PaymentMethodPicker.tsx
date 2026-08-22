@@ -27,13 +27,13 @@ const OPTIONS: PaymentOption[] = [
     icon: <Banknote className="h-5 w-5" />,
     badge: "No prepayment",
   },
-  // {
-  //   value: "AIRWALLEX",
-  //   label: "Pay securely online",
-  //   description: "Continue to Airwallex's hosted checkout to complete payment.",
-  //   icon: <CreditCard className="h-5 w-5" />,
-  //   badge: "Card / wallet",
-  // },
+  {
+    value: "AIRWALLEX",
+    label: "Pay securely online",
+    description: "Continue to Airwallex's hosted checkout to complete payment.",
+    icon: <CreditCard className="h-5 w-5" />,
+    badge: "Card / wallet",
+  },
   // {
   //   value: "SSLCOMMERZ",
   //   label: "Online payment",

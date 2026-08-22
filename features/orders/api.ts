@@ -85,7 +85,8 @@ export type OrderDetail = {
   advancePayment: number;
   currency: CurrencyCode;
   baseCurrency: typeof BASE_CURRENCY;
-  paymentCurrency: typeof BASE_CURRENCY;
+  paymentAmount: number | null;
+  paymentCurrency: CurrencyCode;
   baseSubtotal: number;
   baseDeliveryCharge: number;
   baseDiscountAmount: number;
@@ -140,7 +141,8 @@ export type MyOrderSummary = {
   advancePayment: number;
   currency: CurrencyCode;
   baseCurrency: typeof BASE_CURRENCY;
-  paymentCurrency: typeof BASE_CURRENCY;
+  paymentAmount: number | null;
+  paymentCurrency: CurrencyCode;
   baseTotalAmount: number;
   baseAdvancePayment: number;
   exchangeRate: string;

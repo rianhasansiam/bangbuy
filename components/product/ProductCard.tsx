@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth/use-app-session";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "@/lib/feedback";
 import { LoadingSpinner } from "@/components/ui/loading";
@@ -64,6 +64,10 @@ type ProductCardProps = {
   variantCount?: number;
 };
 
+const subscribeToHydration = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerHydrationSnapshot = () => false;
+
 export default function ProductCard({
   id,
   slug,
@@ -82,9 +86,18 @@ export default function ProductCard({
   const [isBusy, setIsBusy] = useState(false);
   const [isCartBusy, setIsCartBusy] = useState(false);
 
-  const isWishlisted = useSelector((state: RootState) =>
+  const isWishlistedInStore = useSelector((state: RootState) =>
     state.wishlist.items.some((item) => item.id === id),
   );
+  const isHydrated = useSyncExternalStore(
+    subscribeToHydration,
+    getHydratedSnapshot,
+    getServerHydrationSnapshot,
+  );
+  // The server store starts empty. Mask localStorage-backed Redux updates until
+  // this card hydrates so a streamed card cannot receive different ARIA/icon
+  // attributes from StoreHydrator midway through hydration.
+  const isWishlisted = isHydrated && isWishlistedInStore;
 
   const discount = originalPrice
     ? Math.round(((originalPrice - price) / originalPrice) * 100)
@@ -118,7 +131,7 @@ export default function ProductCard({
 
     dispatch(setWishlistError(null));
 
-    if (isWishlisted) {
+    if (isWishlistedInStore) {
       const nextLocal = localBefore.filter((item) => item.id !== id);
       writeLocalWishlist(nextLocal);
       dispatch(removeWishlistItem(id));

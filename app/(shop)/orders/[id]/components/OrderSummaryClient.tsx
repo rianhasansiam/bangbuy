@@ -21,6 +21,7 @@ import { useSession } from "@/lib/auth/use-app-session";
 
 import { fetchOrderDetail, type OrderDetail } from "@/features/orders/api";
 import {
+  getAirwallexPaymentDisplay,
   isAwaitingAirwallexConfirmation,
   isAwaitingSslCommerzConfirmation,
   paymentMethodLabel,
@@ -29,7 +30,11 @@ import {
 import { downloadOrderPdf } from "@/features/orders/pdf";
 import { clearOrderSnapshot } from "@/features/orders/storage";
 import { ORDER_STATUS_META } from "@/lib/orders/status";
-import type { CurrencyCode } from "@/lib/currency/config";
+import {
+  BASE_CURRENCY,
+  isCurrencyCode,
+  type CurrencyCode,
+} from "@/lib/currency/config";
 import FormattedCurrencyAmount from "@/components/currency/FormattedCurrencyAmount";
 import ColorBadge from "@/components/ui/ColorBadge";
 import { ButtonLoader, OrderDetailsPageSkeleton } from "@/components/ui/loading";
@@ -273,7 +278,19 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
       order.paymentMethod,
       order.paymentStatus,
     ) || order.paymentStatus === "FAILED");
-  const currency = order.currency;
+  const currency = isCurrencyCode(order.currency)
+    ? order.currency
+    : BASE_CURRENCY;
+  const paymentCurrency = isCurrencyCode(order.paymentCurrency)
+    ? order.paymentCurrency
+    : BASE_CURRENCY;
+  const airwallexPaymentCharge = getAirwallexPaymentDisplay({
+    paymentMethod: order.paymentMethod,
+    paymentAmount: order.paymentAmount,
+    paymentCurrency: order.paymentCurrency,
+    displayAmount: order.totalAmount,
+    displayCurrency: currency,
+  });
 
   const addressLines = [
     order.customerAddress,
@@ -668,6 +685,21 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                     className="text-2xl font-extrabold text-brand-red sm:text-3xl"
                   />
                 </div>
+                {airwallexPaymentCharge && (
+                  <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-brand-border pt-3">
+                    <span className="text-xs font-semibold text-gray-600">
+                      {order.paymentStatus === "PAID" ||
+                      order.paymentStatus === "REFUNDED"
+                        ? "Airwallex charge"
+                        : "Expected Airwallex payment"}
+                    </span>
+                    <FormattedCurrencyAmount
+                      amount={airwallexPaymentCharge.amount}
+                      currency={airwallexPaymentCharge.currency}
+                      className="shrink-0 text-base font-bold text-gray-900"
+                    />
+                  </div>
+                )}
                 {totalSavings > 0 && (
                   <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
                     You saved{" "}
@@ -696,7 +728,7 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                           order.baseTotalAmount - order.baseAdvancePayment,
                           0,
                         )}
-                        currency={order.paymentCurrency}
+                        currency={paymentCurrency}
                       />
                       .
                     </p>

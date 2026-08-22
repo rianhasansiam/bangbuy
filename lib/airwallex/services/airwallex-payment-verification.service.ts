@@ -6,6 +6,7 @@ import {
 } from "@/app/generated/prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
+import { BASE_CURRENCY, parseCurrencyCode } from "@/lib/currency/config";
 import { sumDecimals, toDecimal } from "@/lib/money";
 import {
   lockOrderForStatusChange,
@@ -36,10 +37,7 @@ import {
   type AirwallexReviewReason,
 } from "./airwallex-risk.service";
 import type { AirwallexPaymentIntentRetrieveResponse } from "../types/airwallex.types";
-import {
-  requiresCurrencyConversion,
-  AIRWALLEX_SETTLEMENT_CURRENCY,
-} from "./airwallex-currency.service";
+import { findAirwallexPaymentQuoteMismatch } from "./airwallex-currency.service";
 
 export type AirwallexAuthoritativePayment = {
   paymentIntentId: string;
@@ -96,6 +94,8 @@ export type PersistedOrderSnapshot = {
   taxAmount: Prisma.Decimal;
   totalAmount: Prisma.Decimal;
   currency: string;
+  baseCurrency: string;
+  displayCurrency: string;
   promoCode: string | null;
   promoCodeUsages: readonly { id: string }[];
   items: readonly {
@@ -155,7 +155,11 @@ export function verifyPersistedAirwallexOrderSnapshot(
   if (order.promoCode && order.promoCodeUsages.length === 0) {
     return "ORDER_TOTAL_MISMATCH";
   }
-  if (!/^[A-Z]{3}$/.test(order.currency.toUpperCase())) {
+  if (
+    order.currency.trim().toUpperCase() !== BASE_CURRENCY ||
+    order.baseCurrency.trim().toUpperCase() !== BASE_CURRENCY ||
+    !parseCurrencyCode(order.displayCurrency.trim().toUpperCase())
+  ) {
     return "CURRENCY_MISMATCH";
   }
   return null;
@@ -166,6 +170,10 @@ export function findAirwallexVerificationMismatch(
     transactionId: string | null;
     amount: Prisma.Decimal;
     currency: string;
+    baseAmount: Prisma.Decimal | null;
+    baseCurrency: string | null;
+    exchangeRate: Prisma.Decimal | null;
+    exchangeRateAt: Date | null;
     order: PersistedOrderSnapshot;
   },
   authoritative: AirwallexAuthoritativePayment,
@@ -191,34 +199,29 @@ export function findAirwallexVerificationMismatch(
 
   const paymentCurrency = payment.currency.toUpperCase();
   const providerCurrency = authoritative.currency.toUpperCase();
-  const orderCurrency = payment.order.currency.toUpperCase();
-
   if (paymentCurrency !== providerCurrency) {
     // Payment record and Airwallex must always agree on currency.
     return "CURRENCY_MISMATCH";
   }
 
-  if (paymentCurrency === orderCurrency) {
-    // No conversion — original strict equality check.
-    if (!toDecimal(payment.amount).equals(payment.order.totalAmount)) {
-      return "ORDER_TOTAL_MISMATCH";
-    }
-  } else if (
-    requiresCurrencyConversion(orderCurrency) &&
-    paymentCurrency === AIRWALLEX_SETTLEMENT_CURRENCY
+  if (
+    payment.baseAmount == null ||
+    payment.baseCurrency == null ||
+    payment.exchangeRate == null ||
+    payment.exchangeRateAt == null
   ) {
-    // BDT order → USD payment: the amounts differ by design (conversion).
-    // The order's internal line-item consistency was already verified above
-    // by verifyPersistedAirwallexOrderSnapshot, and the payment amount was
-    // checked against Airwallex's amount. Rechecking the conversion rate
-    // here would be fragile if the rate is updated between creation and
-    // reconciliation, so we accept the pair as valid.
-  } else {
-    // Unknown currency pair — flag for review.
-    return "CURRENCY_MISMATCH";
+    return "PAYMENT_QUOTE_MISMATCH";
   }
-
-  return null;
+  return findAirwallexPaymentQuoteMismatch({
+    canonicalBaseAmount: payment.order.totalAmount,
+    displayCurrency: payment.order.displayCurrency,
+    baseAmount: payment.baseAmount,
+    baseCurrency: payment.baseCurrency,
+    paymentAmount: payment.amount,
+    paymentCurrency: payment.currency,
+    exchangeRate: payment.exchangeRate,
+    exchangeRateAt: payment.exchangeRateAt,
+  });
 }
 
 export type ApplyAirwallexPaymentResult = {

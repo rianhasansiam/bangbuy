@@ -55,6 +55,10 @@ export function createAirwallexAttempt(
     requestId: string;
     amount: Prisma.Decimal;
     currency: string;
+    baseAmount: Prisma.Decimal;
+    baseCurrency: string;
+    exchangeRate: Prisma.Decimal;
+    exchangeRateAt: Date;
   },
 ) {
   return tx.paymentTransaction.create({
@@ -65,6 +69,10 @@ export function createAirwallexAttempt(
       idempotencyKey: input.requestId,
       amount: input.amount,
       currency: input.currency,
+      baseAmount: input.baseAmount,
+      baseCurrency: input.baseCurrency,
+      exchangeRate: input.exchangeRate,
+      exchangeRateAt: input.exchangeRateAt,
       status: "CREATED",
       providerStatus: "LOCAL_CREATED",
       events: {

@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server";
 import { isAdminRequest, requireUser } from "@/lib/api/guards";
 import { jsonError, ok } from "@/lib/api/response";
 import {
-  getOrderForAdmin,
+  getCustomerOrderViewForAdmin,
   getOrderForUser,
 } from "@/lib/services/order.service";
 import { handleServiceError } from "@/lib/services/service-error";
@@ -26,7 +26,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   try {
     const order =
       (await isAdminRequest())
-        ? await getOrderForAdmin(id)
+        ? await getCustomerOrderViewForAdmin(id)
         : await getOrderForUser(id, guard.session.user.id);
 
     if (!order) return jsonError(404, "Order not found.");

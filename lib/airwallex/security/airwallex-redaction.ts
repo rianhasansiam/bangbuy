@@ -43,6 +43,14 @@ export type AirwallexLogContext = {
   paymentIntentId?: string;
   providerEventId?: string;
   eventName?: string;
+  baseCurrency?: string;
+  displayCurrency?: string;
+  paymentCurrency?: string;
+  baseAmount?: string;
+  paymentAmount?: string;
+  exchangeRate?: string;
+  exchangeRateAt?: string;
+  rateStale?: boolean;
   fromStatus?: string;
   toStatus?: string;
   durationMs?: number;
@@ -58,4 +66,3 @@ export function logAirwallexEvent(context: AirwallexLogContext): void {
     console.info("[payments.airwallex]", safe);
   }
 }
-

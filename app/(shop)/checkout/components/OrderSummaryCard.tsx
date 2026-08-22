@@ -16,6 +16,7 @@ import FormattedCurrencyAmount from "@/components/currency/FormattedCurrencyAmou
 import { ButtonLoader, Skeleton } from "@/components/ui/loading";
 import type {
   CheckoutPaymentMethod,
+  CheckoutPreview,
   CheckoutSummary,
 } from "@/features/checkout/api";
 import type { CurrencyCode } from "@/lib/currency/config";
@@ -40,6 +41,7 @@ type OrderSummaryCardProps = {
   isPlacing: boolean;
   submitError: string | null;
   paymentMethod: CheckoutPaymentMethod;
+  airwallexPaymentQuote: CheckoutPreview["airwallexPaymentQuote"];
 };
 
 export default function OrderSummaryCard({
@@ -55,6 +57,7 @@ export default function OrderSummaryCard({
   isPlacing,
   submitError,
   paymentMethod,
+  airwallexPaymentQuote,
 }: OrderSummaryCardProps) {
   const totalSaved = summary?.totalSaved ?? 0;
 
@@ -221,6 +224,21 @@ export default function OrderSummaryCard({
               className="text-2xl font-extrabold text-brand-red sm:text-3xl"
             />
           </div>
+          {paymentMethod === "AIRWALLEX" &&
+            airwallexPaymentQuote &&
+            airwallexPaymentQuote.displayCurrency !==
+              airwallexPaymentQuote.paymentCurrency && (
+              <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-brand-border pt-3">
+                <span className="text-xs font-semibold text-gray-600">
+                  Payment processed as
+                </span>
+                <FormattedCurrencyAmount
+                  amount={airwallexPaymentQuote.paymentAmount}
+                  currency={airwallexPaymentQuote.paymentCurrency}
+                  className="shrink-0 text-base font-bold text-gray-900"
+                />
+              </div>
+            )}
           {totalSaved > 0 && (
             <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
               <Sparkles className="h-3 w-3" />

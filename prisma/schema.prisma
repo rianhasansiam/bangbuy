@@ -698,6 +698,10 @@ model PaymentTransaction {
   riskLevel                 Int?
   amount                    Decimal                  @db.Decimal(12, 2)
   currency                  String                   @default("BDT")
+  baseAmount                Decimal?                 @db.Decimal(12, 2)
+  baseCurrency              String?
+  exchangeRate              Decimal?                 @db.Decimal(20, 10)
+  exchangeRateAt            DateTime?
   status                    PaymentTransactionStatus @default(PENDING)
   providerStatus            String?
   failureCode               String?

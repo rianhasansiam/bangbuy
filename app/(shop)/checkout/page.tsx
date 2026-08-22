@@ -276,6 +276,12 @@ function CheckoutPageInner() {
         if (ignore) return;
 
         setPreview(next);
+        setPaymentMethod((current) =>
+          current === "AIRWALLEX" &&
+          !next.availablePaymentMethods.includes("AIRWALLEX")
+            ? "CASH_ON_DELIVERY"
+            : current,
+        );
 
         if (appliedPromo && next.promo) {
           if (next.promo.ok) {
@@ -403,6 +409,15 @@ function CheckoutPageInner() {
       toast.error(msg);
       return;
     }
+    if (
+      paymentMethod === "AIRWALLEX" &&
+      !preview.airwallexPaymentQuote?.quoteToken
+    ) {
+      const msg = "Refresh checkout to obtain a secure payment quote.";
+      setSubmitError(msg);
+      toast.error(msg);
+      return;
+    }
 
     if (!validateForm()) {
       toast.warning("Please fill in all required fields.");
@@ -429,6 +444,12 @@ function CheckoutPageInner() {
         paymentMethod,
         promoCode: appliedPromo,
         clearCart: source.kind !== "buy-now",
+        ...(paymentMethod === "AIRWALLEX"
+          ? {
+              airwallexQuoteToken:
+                preview.airwallexPaymentQuote?.quoteToken,
+            }
+          : {}),
       };
 
       if (
@@ -623,6 +644,7 @@ function CheckoutPageInner() {
                 isPlacing={isPlacingOrder}
                 submitError={submitError}
                 paymentMethod={paymentMethod}
+                airwallexPaymentQuote={preview?.airwallexPaymentQuote ?? null}
               />
             </div>
           </div>

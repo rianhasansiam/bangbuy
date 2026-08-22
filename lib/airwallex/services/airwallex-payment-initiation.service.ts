@@ -4,7 +4,6 @@ import {
   Prisma,
   type PaymentTransactionStatus,
 } from "@/app/generated/prisma/client";
-import { Decimal } from "@prisma/client/runtime/client";
 
 import { prisma } from "@/lib/db/prisma";
 import { toDecimal } from "@/lib/money";
@@ -19,6 +18,7 @@ import {
 } from "../config/airwallex.config";
 import { AIRWALLEX_CLIENT_SECRET_LIFETIME_MS } from "../constants/airwallex.constants";
 import {
+  AirwallexApiError,
   AirwallexError,
   AirwallexPaymentAlreadyProcessedError,
   AirwallexStateTransitionError,
@@ -59,9 +59,8 @@ import {
   type AirwallexReviewReason,
 } from "./airwallex-risk.service";
 import {
-  convertBdtToUsd,
-  requiresCurrencyConversion,
-  AIRWALLEX_SETTLEMENT_CURRENCY,
+  findAirwallexPaymentQuoteMismatch,
+  resolveAirwallexPaymentCurrency,
 } from "./airwallex-currency.service";
 
 const CLIENT_SECRET_REFRESH_SKEW_MS = 5 * 60_000;
@@ -73,19 +72,19 @@ const CANCELLABLE_PROVIDER_STATUSES = new Set([
   "REQUIRES_PAYMENT_METHOD",
   "REQUIRES_CUSTOMER_ACTION",
 ]);
+const AMBIGUOUS_CREATE_REJECTION_STATUSES = new Set([408, 409, 425, 429]);
 
 type PreparedAttempt = {
   orderId: string;
   attemptId: string;
   requestId: string;
-  /** Settlement amount sent to Airwallex (USD when converted from BDT). */
-  amount: string;
-  /** Settlement currency sent to Airwallex (USD when converted from BDT). */
-  currency: string;
-  /** Original order amount before conversion (e.g. BDT amount). */
-  originalAmount: string;
-  /** Original order currency before conversion (e.g. "BDT"). */
-  originalCurrency: string;
+  baseAmount: string;
+  baseCurrency: string;
+  displayCurrency: string;
+  paymentAmount: string;
+  paymentCurrency: string;
+  exchangeRate: string;
+  exchangeRateAt: string;
   paymentIntentId: string | null;
   status: PaymentTransactionStatus;
 };
@@ -176,6 +175,101 @@ async function quarantineAttempt(
   });
 }
 
+function isDefinitiveCreateRejection(
+  error: unknown,
+): error is AirwallexApiError & { providerStatus: number } {
+  if (!(error instanceof AirwallexApiError)) return false;
+  const status = error.providerStatus;
+  return (
+    status !== null &&
+    status >= 400 &&
+    status < 500 &&
+    !error.retryable &&
+    !AMBIGUOUS_CREATE_REJECTION_STATUSES.has(status)
+  );
+}
+
+async function recordDefinitiveCreateRejection(
+  prepared: PreparedAttempt,
+  error: AirwallexApiError & { providerStatus: number },
+): Promise<void> {
+  const providerStatus = `CREATE_REJECTED_${error.providerStatus}`;
+  const providerCode = sanitizeAirwallexCode(error.details?.providerCode);
+
+  await prisma.$transaction(async (tx) => {
+    await lockOrderForStatusChange(tx, prepared.orderId);
+    await lockPaymentAttempt(tx, prepared.attemptId);
+    const attempt = await tx.paymentTransaction.findUnique({
+      where: { id: prepared.attemptId },
+      select: {
+        orderId: true,
+        idempotencyKey: true,
+        transactionId: true,
+        status: true,
+      },
+    });
+    if (
+      !attempt ||
+      attempt.orderId !== prepared.orderId ||
+      attempt.idempotencyKey !== prepared.requestId ||
+      attempt.transactionId !== null ||
+      attempt.status !== "CREATED"
+    ) {
+      return;
+    }
+
+    const updated = await tx.paymentTransaction.updateMany({
+      where: {
+        id: prepared.attemptId,
+        transactionId: null,
+        status: "CREATED",
+      },
+      data: {
+        status: "FAILED",
+        providerStatus,
+        failureCode: providerCode ?? "CREATE_REJECTED",
+        failureMessage: null,
+        requiresReview: false,
+        reviewReason: null,
+      },
+    });
+    if (updated.count !== 1) return;
+
+    await appendAirwallexTransition(tx, {
+      paymentTransactionId: prepared.attemptId,
+      source: "INITIATION",
+      eventName: "payment_intent.create_rejected",
+      fromStatus: "CREATED",
+      toStatus: "FAILED",
+      providerStatus,
+      reasonCode: providerCode ?? "CREATE_REJECTED",
+      requiresReview: false,
+    });
+    await tx.order.updateMany({
+      where: {
+        id: prepared.orderId,
+        paymentStatus: { not: "PAID" },
+      },
+      data: { paymentStatus: "FAILED" },
+    });
+  });
+
+  logAirwallexEvent({
+    event: "PAYMENT_INTENT_CREATE_REJECTED",
+    orderId: prepared.orderId,
+    paymentAttemptId: prepared.attemptId,
+    baseCurrency: prepared.baseCurrency,
+    displayCurrency: prepared.displayCurrency,
+    paymentCurrency: prepared.paymentCurrency,
+    baseAmount: prepared.baseAmount,
+    paymentAmount: prepared.paymentAmount,
+    exchangeRate: prepared.exchangeRate,
+    exchangeRateAt: prepared.exchangeRateAt,
+    toStatus: "FAILED",
+    errorCode: providerCode ?? providerStatus,
+  });
+}
+
 async function prepareAttempt(
   userId: string,
   orderId: string,
@@ -196,39 +290,22 @@ async function prepareAttempt(
       throw new AirwallexStateTransitionError();
     }
 
-    const orderCurrency = order.currency.trim().toUpperCase();
+    const expectedPaymentCurrency = resolveAirwallexPaymentCurrency(
+      order.displayCurrency,
+    );
     const latest = order.payments[0];
 
-    // ── BDT → USD conversion ──────────────────────────────────────────
-    // The order stores amounts in BDT, but Airwallex settles in USD.
-    // Convert once and use the settlement values for the PaymentTransaction
-    // so reconciliation against Airwallex's USD response matches naturally.
-    // Computed early so settlementCurrency is available for the stale-
-    // attempt checks that follow.
-    let settlementCurrency: string;
-    let settlementAmount: Prisma.Decimal;
-
-    if (requiresCurrencyConversion(orderCurrency)) {
-      const { amountInUsd } = convertBdtToUsd(order.totalAmount);
-      settlementCurrency = AIRWALLEX_SETTLEMENT_CURRENCY;
-      settlementAmount = new Decimal(amountInUsd);
-    } else {
-      settlementCurrency = orderCurrency;
-      settlementAmount = order.totalAmount;
-    }
-
+    // The order and persisted payment quote are the only money authorities.
     if (order.payments.some((payment) => payment.status === "SUCCESS")) {
       throw new AirwallexPaymentAlreadyProcessedError();
     }
-    // Only block on quarantined attempts whose currency matches the current
-    // settlement currency. Old attempts created before BDT→USD conversion
-    // was enabled may have been quarantined with "BDT"; those must not
-    // permanently block new USD payment attempts for the same order.
+    // A quarantined quote in another currency can be a legacy-policy row;
+    // only review in the currently expected payment currency blocks retry.
     if (
       order.payments.some(
         (payment) =>
           (payment.requiresReview || payment.status === "REQUIRES_REVIEW") &&
-          payment.currency.toUpperCase() === settlementCurrency,
+          payment.currency.toUpperCase() === expectedPaymentCurrency,
       )
     ) {
       return { ok: false, reason: "REVIEW" };
@@ -247,6 +324,40 @@ async function prepareAttempt(
       return { ok: false, reason: "REVIEW" };
     }
 
+    if (!latest) {
+      // Airwallex orders are reserved with their frozen attempt atomically.
+      // Missing state is an integrity failure, not a reason to reprice.
+      throw new AirwallexStateTransitionError();
+    }
+
+    const quoteFieldsMissing =
+      latest.baseAmount == null ||
+      latest.baseCurrency == null ||
+      latest.exchangeRate == null ||
+      latest.exchangeRateAt == null;
+    const quoteMismatch = quoteFieldsMissing
+      ? "PAYMENT_QUOTE_MISMATCH"
+      : findAirwallexPaymentQuoteMismatch({
+          canonicalBaseAmount: order.totalAmount,
+          displayCurrency: order.displayCurrency,
+          baseAmount: latest.baseAmount,
+          baseCurrency: latest.baseCurrency,
+          paymentAmount: latest.amount,
+          paymentCurrency: latest.currency,
+          exchangeRate: latest.exchangeRate,
+          exchangeRateAt: latest.exchangeRateAt,
+        });
+    if (quoteMismatch) {
+      await lockPaymentAttempt(tx, latest.id);
+      await quarantineAttempt(tx, {
+        attemptId: latest.id,
+        fromStatus: latest.status,
+        providerStatus: latest.providerStatus ?? "LOCAL_VALIDATION_FAILED",
+        reason: quoteMismatch,
+      });
+      return { ok: false, reason: "REVIEW" };
+    }
+
     let attempt: (typeof order.payments)[number] | undefined = latest;
     if (attempt?.status === "SUCCESS") {
       throw new AirwallexPaymentAlreadyProcessedError();
@@ -262,19 +373,18 @@ async function prepareAttempt(
       attempt = undefined;
     }
 
-    // When the settlement currency changed (e.g. after enabling BDT→USD
-    // conversion), existing attempts with the old currency cannot be reused.
-    // Skip them so a fresh attempt is created with the correct currency.
-    if (attempt && attempt.currency.toUpperCase() !== settlementCurrency) {
-      attempt = undefined;
-    }
-
+    // A new provider request identity copies the original frozen quote. It
+    // must not consult today's FX table and silently change the charge.
     if (!attempt) {
       attempt = await createAirwallexAttempt(tx, {
         orderId: order.id,
         requestId: createAirwallexRequestId(),
-        amount: settlementAmount,
-        currency: settlementCurrency,
+        amount: latest.amount,
+        currency: latest.currency,
+        baseAmount: latest.baseAmount!,
+        baseCurrency: latest.baseCurrency!,
+        exchangeRate: latest.exchangeRate!,
+        exchangeRateAt: latest.exchangeRateAt!,
       });
       if (order.paymentStatus !== "PENDING") {
         await tx.order.update({
@@ -286,17 +396,17 @@ async function prepareAttempt(
 
     if (
       !attempt.idempotencyKey ||
-      !toDecimal(attempt.amount).equals(settlementAmount) ||
-      attempt.currency.toUpperCase() !== settlementCurrency
+      attempt.baseAmount == null ||
+      attempt.baseCurrency == null ||
+      attempt.exchangeRate == null ||
+      attempt.exchangeRateAt == null
     ) {
       await lockPaymentAttempt(tx, attempt.id);
       await quarantineAttempt(tx, {
         attemptId: attempt.id,
         fromStatus: attempt.status,
         providerStatus: attempt.providerStatus ?? "LOCAL_VALIDATION_FAILED",
-        reason: !toDecimal(attempt.amount).equals(settlementAmount)
-          ? "AMOUNT_MISMATCH"
-          : "CURRENCY_MISMATCH",
+        reason: "PAYMENT_QUOTE_MISMATCH",
       });
       return { ok: false, reason: "REVIEW" };
     }
@@ -307,10 +417,13 @@ async function prepareAttempt(
         orderId: order.id,
         attemptId: attempt.id,
         requestId: attempt.idempotencyKey,
-        amount: settlementAmount.toFixed(2),
-        currency: settlementCurrency,
-        originalAmount: toDecimal(order.totalAmount).toFixed(2),
-        originalCurrency: orderCurrency,
+        baseAmount: toDecimal(attempt.baseAmount).toFixed(2),
+        baseCurrency: attempt.baseCurrency.trim().toUpperCase(),
+        displayCurrency: order.displayCurrency.trim().toUpperCase(),
+        paymentAmount: toDecimal(attempt.amount).toFixed(2),
+        paymentCurrency: attempt.currency.trim().toUpperCase(),
+        exchangeRate: toDecimal(attempt.exchangeRate).toString(),
+        exchangeRateAt: attempt.exchangeRateAt.toISOString(),
         paymentIntentId: attempt.transactionId,
         status: attempt.status,
       },
@@ -324,10 +437,12 @@ function creationMismatch(
 ): AirwallexReviewReason | null {
   if (intent.request_id !== prepared.requestId) return "REQUEST_ID_MISMATCH";
   if (intent.merchant_order_id !== prepared.orderId) return "ORDER_ID_MISMATCH";
-  if (!amountMatchesAirwallex(toDecimal(prepared.amount), intent.amount)) {
+  if (
+    !amountMatchesAirwallex(toDecimal(prepared.paymentAmount), intent.amount)
+  ) {
     return "AMOUNT_MISMATCH";
   }
-  if (intent.currency.toUpperCase() !== prepared.currency) {
+  if (intent.currency.toUpperCase() !== prepared.paymentCurrency) {
     return "CURRENCY_MISMATCH";
   }
   if (mapAirwallexPaymentStatus(intent.status) === "REQUIRES_REVIEW") {
@@ -448,15 +563,10 @@ function hostedPageConfig(
   return {
     intentId: intent.id,
     clientSecret: intent.client_secret,
-    currency: prepared.currency,
+    currency: prepared.paymentCurrency,
     environment: config.browserEnvironment,
     successUrl: urls.successUrl,
     cancelUrl: urls.cancelUrl,
-    // Include the USD amount when a BDT→USD conversion was applied so the
-    // frontend knows the exact amount Airwallex will charge.
-    ...(prepared.currency !== prepared.originalCurrency
-      ? { amountInUsd: Number(prepared.amount) }
-      : {}),
   };
 }
 
@@ -526,6 +636,13 @@ export async function initiateAirwallexPayment(
         orderId: prepared.orderId,
         paymentAttemptId: prepared.attemptId,
         paymentIntentId: existing.id,
+        baseCurrency: prepared.baseCurrency,
+        displayCurrency: prepared.displayCurrency,
+        paymentCurrency: prepared.paymentCurrency,
+        baseAmount: prepared.baseAmount,
+        paymentAmount: prepared.paymentAmount,
+        exchangeRate: prepared.exchangeRate,
+        exchangeRateAt: prepared.exchangeRateAt,
         toStatus: status,
       });
       return hostedPageConfig(
@@ -549,24 +666,43 @@ export async function initiateAirwallexPayment(
   }
 
   const urls = buildAirwallexReturnUrls(prepared.orderId);
-  const created = await createAirwallexPaymentIntent({
-    request_id: prepared.requestId,
-    amount: Number(prepared.amount),
-    currency: prepared.currency,
-    merchant_order_id: prepared.orderId,
-    return_url: urls.successUrl,
-    metadata: {
-      bangbuy_order_id: prepared.orderId,
-      bangbuy_payment_attempt_id: prepared.attemptId,
-      // Preserve original BDT values for audit trail when converted.
-      ...(prepared.currency !== prepared.originalCurrency
-        ? {
-            bangbuy_original_currency: prepared.originalCurrency,
-            bangbuy_original_amount: prepared.originalAmount,
-          }
-        : {}),
-    },
+  logAirwallexEvent({
+    event: "PAYMENT_INTENT_CREATE_REQUESTED",
+    orderId: prepared.orderId,
+    paymentAttemptId: prepared.attemptId,
+    baseCurrency: prepared.baseCurrency,
+    displayCurrency: prepared.displayCurrency,
+    paymentCurrency: prepared.paymentCurrency,
+    baseAmount: prepared.baseAmount,
+    paymentAmount: prepared.paymentAmount,
+    exchangeRate: prepared.exchangeRate,
+    exchangeRateAt: prepared.exchangeRateAt,
   });
+  let created: Awaited<ReturnType<typeof createAirwallexPaymentIntent>>;
+  try {
+    created = await createAirwallexPaymentIntent({
+      request_id: prepared.requestId,
+      amount: Number(prepared.paymentAmount),
+      currency: prepared.paymentCurrency,
+      merchant_order_id: prepared.orderId,
+      return_url: urls.successUrl,
+      metadata: {
+        bangbuy_order_id: prepared.orderId,
+        bangbuy_payment_attempt_id: prepared.attemptId,
+        bangbuy_base_currency: prepared.baseCurrency,
+        bangbuy_base_amount: prepared.baseAmount,
+        bangbuy_display_currency: prepared.displayCurrency,
+        bangbuy_payment_currency: prepared.paymentCurrency,
+        bangbuy_exchange_rate: prepared.exchangeRate,
+        bangbuy_exchange_rate_at: prepared.exchangeRateAt,
+      },
+    });
+  } catch (error) {
+    if (isDefinitiveCreateRejection(error)) {
+      await recordDefinitiveCreateRejection(prepared, error);
+    }
+    throw error;
+  }
   const persisted = await persistCreatedIntent(userId, prepared, created);
   if (persisted.requiresReview) throw new AirwallexStateTransitionError();
   if (persisted.status === "SUCCESS") {
@@ -581,6 +717,13 @@ export async function initiateAirwallexPayment(
     orderId: prepared.orderId,
     paymentAttemptId: prepared.attemptId,
     paymentIntentId: created.id,
+    baseCurrency: prepared.baseCurrency,
+    displayCurrency: prepared.displayCurrency,
+    paymentCurrency: prepared.paymentCurrency,
+    baseAmount: prepared.baseAmount,
+    paymentAmount: prepared.paymentAmount,
+    exchangeRate: prepared.exchangeRate,
+    exchangeRateAt: prepared.exchangeRateAt,
     toStatus: persisted.status,
   });
   return hostedPageConfig(prepared, created);

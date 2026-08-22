@@ -6,6 +6,7 @@ export type AirwallexReviewReason =
   | "ORDER_ID_MISMATCH"
   | "AMOUNT_MISMATCH"
   | "CURRENCY_MISMATCH"
+  | "PAYMENT_QUOTE_MISMATCH"
   | "ORDER_TOTAL_MISMATCH"
   | "ORDER_NOT_ELIGIBLE"
   | "MULTIPLE_SUCCESSFUL_PAYMENTS"
@@ -19,6 +20,7 @@ export function safeAirwallexReviewMessage(
   switch (reason) {
     case "AMOUNT_MISMATCH":
     case "CURRENCY_MISMATCH":
+    case "PAYMENT_QUOTE_MISMATCH":
     case "ORDER_TOTAL_MISMATCH":
       return "Payment details require manual verification.";
     case "UNKNOWN_PROVIDER_STATUS":
