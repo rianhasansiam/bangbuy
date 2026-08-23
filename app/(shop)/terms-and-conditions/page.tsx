@@ -26,7 +26,7 @@ export const metadata: Metadata = buildMetadata({
   keywords: ["terms and conditions", "terms of service", "user agreement", siteConfig.name],
 });
 
-const LAST_UPDATED = "2026-06-03";
+const LAST_UPDATED = "2026-08-23";
 
 export default function TermsAndConditionsPage() {
   return (
@@ -268,6 +268,16 @@ export default function TermsAndConditionsPage() {
         title="17. Contact Information"
         intro="If you have any questions about these Terms & Conditions, please reach out to us."
       >
+        <div className="space-y-1">
+          <p>
+            <span className="font-semibold text-gray-900">Company name:</span> Xianhao Yida (Hong
+            Kong) Limited
+          </p>
+          <p>
+            <span className="font-semibold text-gray-900">Company address:</span> S027, 2/F,
+            Capital Plaza, 61-65 Chatham Rd S, TST, Hong Kong
+          </p>
+        </div>
         <PolicyContactBlock />
       </PolicySection>
     </PolicyLayout>

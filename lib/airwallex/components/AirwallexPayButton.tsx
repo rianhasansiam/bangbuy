@@ -46,6 +46,8 @@ export async function startAirwallexHostedCheckout(
     });
     if (!payments) throw new Error(INITIATION_ERROR);
 
+    // Keep card networks and payment methods account-driven. Adding either
+    // allowlist here would hide otherwise eligible options from the HPP.
     const redirectError = payments.redirectToCheckout({
       mode: "payment",
       intent_id: config.intentId,
