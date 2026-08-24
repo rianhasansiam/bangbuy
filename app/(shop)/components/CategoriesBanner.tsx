@@ -12,7 +12,7 @@ type SaleBanner = {
 
 export function CategoriesBanner({ saleBanner }: { saleBanner: SaleBanner }) {
   return (
-    <div className="group relative order-first flex min-h-56 min-w-0 w-full shrink-0 flex-col justify-center overflow-hidden rounded-2xl bg-brand-black p-4 text-brand-white shadow-lg transition-all duration-300 hover:shadow-xl lg:order-none lg:w-52">
+    <div className="group relative order-first flex min-h-32 min-w-0 w-full shrink-0 flex-col justify-center overflow-hidden rounded-2xl bg-brand-black p-4 text-brand-white shadow-lg transition-all duration-300 hover:shadow-xl lg:order-none lg:w-52">
       <Image
         src={saleBanner.image}
         alt={saleBanner.heading}
@@ -38,7 +38,7 @@ export function CategoriesBanner({ saleBanner }: { saleBanner: SaleBanner }) {
         </p>
         <Link
           href={saleBanner.link}
-          className="block w-full rounded-full bg-brand-white px-4 py-2 text-center text-xs font-bold text-brand-black shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-red hover:text-brand-white hover:shadow-lg"
+          className="block w-[40%]  rounded-full bg-brand-white px-4 py-2 text-center text-xs font-bold text-brand-black shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-red hover:text-brand-white hover:shadow-lg  sm:w-[60%] md:w-[70%] lg:w-[80%]"
         >
           Shop now →
         </Link>

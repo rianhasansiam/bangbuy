@@ -91,7 +91,7 @@ export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
           <div className="absolute top-1/2 left-1/2 w-48 h-48 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
         </div>
 
-        <div className="relative z-10 flex min-h-[50vh] flex-row items-center justify-between gap-3 px-4 py-4 sm:gap-6 sm:px-8 sm:py-6 md:min-h-0 md:px-10 md:py-12">
+        <div className="relative z-10 flex min-h-[30vh] flex-row items-center justify-between gap-3 px-4 py-4 sm:gap-6 sm:px-8 sm:py-6 md:min-h-0 md:px-10 md:py-12">
           {/* Text Content */}
           <div
             key={activeDeal.id}

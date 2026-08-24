@@ -5,7 +5,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/auth/use-app-session";
-import { useState, useSyncExternalStore } from "react";
+import {
+  useState,
+  useSyncExternalStore,
+  type MouseEvent,
+} from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "@/lib/feedback";
 import { LoadingSpinner } from "@/components/ui/loading";
@@ -237,9 +241,21 @@ export default function ProductCard({
     toast.success("Added to cart");
   };
 
+  const handleWishlistClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    void handleToggleWishlist();
+  };
+
+  const handleCartClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    void handleAddToCart();
+  };
+
   return (
-    <div className="group relative min-w-0 overflow-hidden rounded-xl border border-brand-border bg-brand-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-brand-border hover:shadow-lg">
-      <div className="relative aspect-4/3 overflow-hidden bg-brand-light-bg">
+    <div className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-brand-border bg-brand-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-brand-border hover:shadow-lg">
+      <div className="relative aspect-4/3 shrink-0 overflow-hidden bg-brand-light-bg">
         <Link
           href={productHref}
           aria-label={`View ${name}`}
@@ -255,7 +271,7 @@ export default function ProductCard({
         </Link>
 
         {badge && (
-          <span className="absolute left-2 top-2 z-10 max-w-[calc(100%-3.75rem)] truncate rounded-full bg-brand-red px-2 py-0.5 text-[10px] font-semibold text-brand-white">
+          <span className="absolute left-2 top-2 z-10 max-w-[calc(100%-1rem)] truncate rounded-full bg-brand-red px-2 py-0.5 text-[10px] font-semibold text-brand-white sm:max-w-[calc(100%-3.75rem)]">
             {badge}
           </span>
         )}
@@ -268,22 +284,18 @@ export default function ProductCard({
 
         <button
           type="button"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            void handleToggleWishlist();
-          }}
+          onClick={handleWishlistClick}
           disabled={isBusy}
           aria-busy={isBusy}
           aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
           aria-pressed={isWishlisted}
-          className="absolute right-2 top-2 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-brand-white/90 p-0 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-brand-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 sm:h-auto sm:w-auto sm:p-1.5"
+          className="absolute right-2 top-2 z-20 hidden h-9 w-9 items-center justify-center rounded-full bg-brand-white/90 p-0 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-brand-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 sm:can-hover:flex"
         >
           {isBusy ? (
             <LoadingSpinner decorative size="sm" className="text-brand-red" />
           ) : (
             <Heart
-              className={`h-4 w-4 transition-all duration-300 sm:h-3.5 sm:w-3.5 ${
+              className={`h-4 w-4 transition-all duration-300 ${
                 isWishlisted
                   ? "scale-110 fill-brand-red text-brand-red"
                   : "text-brand-text-muted hover:text-brand-red"
@@ -294,22 +306,18 @@ export default function ProductCard({
 
         <button
           type="button"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            void handleAddToCart();
-          }}
+          onClick={handleCartClick}
           disabled={isCartBusy}
           aria-busy={isCartBusy}
           aria-label={
             requiresOptionSelection ? "Select product options" : "Add to cart"
           }
-          className="absolute right-2 top-14 z-20 flex h-11 w-11 items-center justify-center gap-1.5 rounded-full bg-brand-white/95 p-0 text-xs font-semibold text-brand-red opacity-100 shadow-md backdrop-blur-sm transition-all duration-300 hover:bg-brand-red hover:text-brand-white sm:bottom-2 sm:left-1/2 sm:right-auto sm:top-auto sm:h-auto sm:w-auto sm:-translate-x-1/2 sm:px-3 sm:py-1.5 sm:can-hover:translate-y-2 sm:can-hover:opacity-0 sm:can-hover:group-hover:translate-y-0 sm:can-hover:group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-60"
+          className="absolute bottom-2 left-1/2 z-20 hidden -translate-x-1/2 items-center justify-center gap-1.5 rounded-full bg-brand-white/95 px-3 py-1.5 text-xs font-semibold text-brand-red opacity-100 shadow-md backdrop-blur-sm transition-all duration-300 hover:bg-brand-red hover:text-brand-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 sm:can-hover:flex sm:can-hover:translate-y-2 sm:can-hover:opacity-0 sm:can-hover:group-hover:translate-y-0 sm:can-hover:group-hover:opacity-100 sm:can-hover:focus-visible:translate-y-0 sm:can-hover:focus-visible:opacity-100 disabled:cursor-not-allowed disabled:opacity-60 "
         >
           {isCartBusy ? (
             <>
               <LoadingSpinner decorative size="sm" />
-              <span className="hidden sm:inline">Adding</span>
+              <span>Adding</span>
             </>
           ) : (
             <>
@@ -318,7 +326,7 @@ export default function ProductCard({
               ) : (
                 <ShoppingCart className="h-3.5 w-3.5" />
               )}
-              <span className="hidden sm:inline">
+              <span>
                 {requiresOptionSelection ? "Options" : "Add"}
               </span>
             </>
@@ -326,7 +334,7 @@ export default function ProductCard({
         </button>
       </div>
 
-      <div className="p-2 sm:p-2.5">
+      <div className="flex flex-1 flex-col p-2 sm:p-2.5">
         {rating > 0 && (
           <div className="mb-1 flex items-center gap-0.5">
             <div className="flex items-center">
@@ -351,7 +359,7 @@ export default function ProductCard({
           </h3>
         </Link>
 
-        <div className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+        <div className="mt-auto flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5 pt-1.5">
           <CurrencyAmount
             amountBDT={price}
             className="max-w-full text-sm font-bold text-brand-red [overflow-wrap:anywhere]"
@@ -362,6 +370,51 @@ export default function ProductCard({
               className="max-w-full text-[11px] text-brand-text-muted line-through [overflow-wrap:anywhere]"
             />
           )}
+        </div>
+
+        <div className="mt-2 flex items-center justify-center gap-1.5 border-t border-brand-border/70 pt-2 sm:can-hover:hidden">
+          <button
+            type="button"
+            onClick={handleCartClick}
+            disabled={isCartBusy}
+            aria-busy={isCartBusy}
+            aria-label={
+              requiresOptionSelection ? "Select product options" : "Add to cart"
+            }
+            className="flex py-2 min-w-0 max-w-24 flex-1 items-center justify-center rounded-lg bg-brand-red px-1.5 text-[11px] font-semibold text-brand-white shadow-sm transition-colors hover:bg-brand-red-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 active:bg-brand-red-hover disabled:cursor-not-allowed disabled:opacity-60 "
+          >
+            <span className="truncate">
+              {isCartBusy
+                ? "Adding..."
+                : requiresOptionSelection
+                  ? "Options"
+                  : "Add"}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleWishlistClick}
+            disabled={isBusy}
+            aria-busy={isBusy}
+            aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+            aria-pressed={isWishlisted}
+            className={`flex py-2 w-11 shrink-0 items-center justify-center rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
+              isWishlisted
+                ? "border-brand-red/30 bg-red-50 text-brand-red"
+                : "border-brand-border bg-brand-white text-brand-text-muted hover:border-brand-red/40 hover:text-brand-red"
+            }`}
+          >
+            {isBusy ? (
+              <LoadingSpinner decorative size="sm" className="text-brand-red" />
+            ) : (
+              <Heart
+                className={`h-4 w-4 transition-transform duration-200 ${
+                  isWishlisted ? "scale-110 fill-current" : ""
+                }`}
+              />
+            )}
+          </button>
         </div>
       </div>
     </div>

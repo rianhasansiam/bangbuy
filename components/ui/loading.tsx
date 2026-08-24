@@ -102,18 +102,22 @@ export function ProductCardSkeleton({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border border-brand-border bg-brand-white shadow-sm",
+        "flex h-full flex-col overflow-hidden rounded-xl border border-brand-border bg-brand-white shadow-sm",
         className,
       )}
       aria-hidden="true"
     >
       <Skeleton className="aspect-4/3 w-full rounded-none" />
-      <div className="space-y-2 p-2.5">
+      <div className="flex flex-1 flex-col space-y-2 p-2.5">
         <Skeleton className="h-3 w-2/3" />
         <Skeleton className="h-4 w-full" />
-        <div className="flex items-center gap-2">
+        <div className="mt-auto flex items-center gap-2">
           <Skeleton className="h-4 w-16 min-[360px]:w-20" />
           <Skeleton className="h-3 w-10 min-[360px]:w-12" />
+        </div>
+        <div className="flex items-center justify-center gap-1.5 border-t border-brand-border/70 pt-2 sm:can-hover:hidden">
+          <Skeleton className="h-10 min-w-0 max-w-24 flex-1 rounded-lg" />
+          <Skeleton className="h-11 w-11 shrink-0 rounded-lg" />
         </div>
       </div>
     </div>
