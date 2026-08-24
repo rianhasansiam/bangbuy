@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 
 type AppliedPromo = {
   code: string;
-  discount: number;
+  discountBDT: number;
   description: string | null;
 };
 
@@ -61,7 +61,7 @@ export default function PromoCodeInput({
               ) : (
                 <>
                   {applied.description ? `${applied.description} · ` : ""}
-                  <CurrencyAmount amountBDT={-applied.discount} />
+                  -<CurrencyAmount amountBDT={applied.discountBDT} />
                 </>
               )}
             </p>

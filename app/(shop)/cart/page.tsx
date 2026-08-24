@@ -43,6 +43,11 @@ import {
 } from "@/features/cart/storage";
 import type { CartItem } from "@/features/cart/api";
 import {
+  mergeCartItemWithCheckoutPreview,
+  shouldShowCartBootstrap,
+  toCanonicalCartSummary,
+} from "@/features/cart/checkout-preview";
+import {
   type SavedItem,
   readLocalSaved,
   writeLocalSaved,
@@ -57,7 +62,7 @@ import { ButtonLoader, LoadingSpinner, SectionLoader } from "@/components/ui/loa
 
 type AppliedPromo = {
   code: string;
-  discount: number;
+  discountBDT: number;
   description: string | null;
 };
 
@@ -115,37 +120,6 @@ function toCartViewModel(item: CartItem) {
     inStock: item.status === "ACTIVE" && item.stock > 0,
     deliveryDays: 4,
     perks: ["Free returns"],
-  };
-}
-
-function enrichCartItemFromPreview(
-  item: CartItem,
-  preview: CheckoutPreview | null,
-): CartItem {
-  const priced = preview?.items.find((candidate) =>
-    item.variantId
-      ? candidate.variantId === item.variantId
-      : candidate.productId === item.productId,
-  );
-  if (!priced) return item;
-
-  return {
-    ...item,
-    productId: priced.productId,
-    variantId: priced.variantId,
-    sku: priced.sku,
-    variantName: priced.variantName,
-    color: priced.color,
-    size: priced.size,
-    attributes: priced.attributes,
-    attributeSummary: priced.attributeSummary,
-    name: priced.name,
-    image: priced.image ?? item.image,
-    unitPrice: priced.unitPrice,
-    originalPrice: priced.originalPrice,
-    lineTotal: priced.lineTotal,
-    stock: priced.stock,
-    status: "ACTIVE",
   };
 }
 
@@ -296,7 +270,7 @@ export default function CartPage() {
           if (next.promo?.ok) {
             setPromo({
               code: next.promo.code,
-              discount: next.promo.discount,
+              discountBDT: next.promo.baseDiscount,
               description: next.promo.description,
             });
             setPromoCandidate(null);
@@ -480,7 +454,7 @@ export default function CartPage() {
     const target = currentItems.find((item) => item.id === id);
     if (!target) return;
 
-    const verifiedTarget = enrichCartItemFromPreview(
+    const verifiedTarget = mergeCartItemWithCheckoutPreview(
       target,
       pricingReady && !pricingLoading ? checkoutPreview : null,
     );
@@ -584,7 +558,7 @@ export default function CartPage() {
     if (!target) return;
 
     const savedItem = toSavedItem(
-      enrichCartItemFromPreview(
+      mergeCartItemWithCheckoutPreview(
         target,
         pricingReady && !pricingLoading ? checkoutPreview : null,
       ),
@@ -785,12 +759,20 @@ export default function CartPage() {
     pricingReady && !pricingLoading && selectedItems.length > 0
       ? checkoutPreview
       : null;
-  const verifiedSummary = verifiedPreview?.summary ?? null;
+  const verifiedSummary = verifiedPreview
+    ? toCanonicalCartSummary(verifiedPreview.summary)
+    : null;
   const itemCards = visibleCartItems.map((item) =>
-    toCartViewModel(enrichCartItemFromPreview(item, verifiedPreview)),
+    toCartViewModel(mergeCartItemWithCheckoutPreview(item, verifiedPreview)),
   );
-  const mobileAmount = verifiedSummary?.total ?? selectedTotals.subtotal;
+  const mobileAmountBDT =
+    verifiedSummary?.totalBDT ?? selectedTotals.subtotal;
   const isQuantitySyncing = pendingQuantityUpdates > 0;
+  const isCartBootstrapping = shouldShowCartBootstrap({
+    isHydrated,
+    isLoading,
+    sessionStatus: status,
+  });
 
   return (
     <main className="min-h-screen bg-brand-light-bg">
@@ -820,7 +802,7 @@ export default function CartPage() {
           </div>
         )}
 
-        {isLoading && isEmpty ? (
+        {isCartBootstrapping || (isLoading && isEmpty) ? (
           <SectionLoader title="Loading cart" rows={6} className="mt-6" />
         ) : isEmpty ? (
           <>
@@ -838,12 +820,13 @@ export default function CartPage() {
         ) : (
           <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-8">
             <div className="flex min-w-0 flex-col gap-4">
-              {verifiedSummary && verifiedSummary.freeShippingThreshold > 0 && (
+              {verifiedSummary &&
+                verifiedSummary.freeShippingThresholdBDT > 0 && (
                 <FreeShippingBar
-                  subtotal={
-                    verifiedSummary.subtotal - verifiedSummary.discount
+                  subtotalBDT={
+                    verifiedSummary.subtotalBDT - verifiedSummary.discountBDT
                   }
-                  threshold={verifiedSummary.freeShippingThreshold}
+                  thresholdBDT={verifiedSummary.freeShippingThresholdBDT}
                 />
               )}
 
@@ -923,7 +906,7 @@ export default function CartPage() {
             <div className="hidden lg:block">
               <OrderSummary
                 summary={verifiedSummary}
-                fallbackSubtotal={selectedTotals.subtotal}
+                fallbackSubtotalBDT={selectedTotals.subtotal}
                 itemCount={selectedTotals.itemCount}
                 promo={promo}
                 promoError={promoError}
@@ -942,7 +925,7 @@ export default function CartPage() {
             <div className="min-w-0 lg:hidden">
               <OrderSummary
                 summary={verifiedSummary}
-                fallbackSubtotal={selectedTotals.subtotal}
+                fallbackSubtotalBDT={selectedTotals.subtotal}
                 itemCount={selectedTotals.itemCount}
                 promo={promo}
                 promoError={promoError}
@@ -974,7 +957,7 @@ export default function CartPage() {
                 {selectedTotals.itemCount === 1 ? "item" : "items"})
               </p>
               <p className="text-base font-extrabold text-brand-red min-[360px]:text-lg">
-                <CurrencyAmount amountBDT={mobileAmount} />
+                <CurrencyAmount amountBDT={mobileAmountBDT} />
               </p>
             </div>
             <button

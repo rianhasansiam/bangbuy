@@ -3,17 +3,17 @@ import { Truck, PartyPopper } from "lucide-react";
 import { CurrencyAmount } from "@/components/currency/CurrencyAmount";
 
 type FreeShippingBarProps = {
-  subtotal: number;
-  threshold: number;
+  subtotalBDT: number;
+  thresholdBDT: number;
 };
 
 export default function FreeShippingBar({
-  subtotal,
-  threshold,
+  subtotalBDT,
+  thresholdBDT,
 }: FreeShippingBarProps) {
-  const remaining = Math.max(0, threshold - subtotal);
-  const progress = Math.min(100, (subtotal / threshold) * 100);
-  const reached = remaining === 0;
+  const remainingBDT = Math.max(0, thresholdBDT - subtotalBDT);
+  const progress = Math.min(100, (subtotalBDT / thresholdBDT) * 100);
+  const reached = remainingBDT === 0;
 
   return (
     <div
@@ -46,7 +46,7 @@ export default function FreeShippingBar({
             <p className="text-sm font-semibold text-gray-800">
               Add{" "}
               <span className="text-brand-red">
-                <CurrencyAmount amountBDT={remaining} />
+                <CurrencyAmount amountBDT={remainingBDT} />
               </span>{" "}
               more for free shipping
             </p>

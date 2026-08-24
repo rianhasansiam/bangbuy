@@ -9,19 +9,19 @@ import {
 
 import { CurrencyAmount } from "@/components/currency/CurrencyAmount";
 import { ButtonLoader } from "@/components/ui/loading";
-import type { CheckoutSummary } from "@/features/checkout/api";
+import type { CanonicalCartSummary } from "@/features/cart/checkout-preview";
 
 import PromoCodeInput from "./PromoCodeInput";
 
 type AppliedPromo = {
   code: string;
-  discount: number;
+  discountBDT: number;
   description: string | null;
 };
 
 type OrderSummaryProps = {
-  summary: CheckoutSummary | null;
-  fallbackSubtotal: number;
+  summary: CanonicalCartSummary | null;
+  fallbackSubtotalBDT: number;
   itemCount: number;
   promo: AppliedPromo | null;
   promoError: string | null;
@@ -38,7 +38,7 @@ type OrderSummaryProps = {
 
 export default function OrderSummary({
   summary,
-  fallbackSubtotal,
+  fallbackSubtotalBDT,
   itemCount,
   promo,
   promoError,
@@ -53,10 +53,8 @@ export default function OrderSummary({
   isCheckoutDisabled = false,
 }: OrderSummaryProps) {
   const verifiedSummary = isPricingLoading ? null : summary;
-  const subtotal = verifiedSummary?.subtotal ?? fallbackSubtotal;
-  const totalSaved = verifiedSummary
-    ? verifiedSummary.totalSavings + verifiedSummary.discount
-    : 0;
+  const subtotalBDT = verifiedSummary?.subtotalBDT ?? fallbackSubtotalBDT;
+  const totalSavedBDT = verifiedSummary?.totalSavedBDT ?? 0;
 
   return (
     <aside
@@ -84,11 +82,11 @@ export default function OrderSummary({
       />
 
       <div className="space-y-2.5 border-t border-dashed border-brand-border pt-4 text-sm">
-        <SummaryRow label="Subtotal" value={subtotal} />
-        {verifiedSummary?.discount && promo ? (
+        <SummaryRow label="Subtotal" valueBDT={subtotalBDT} />
+        {verifiedSummary?.discountBDT && promo ? (
           <SummaryRow
             label={`Promo (${promo.code})`}
-            value={-verifiedSummary.discount}
+            valueBDT={-verifiedSummary.discountBDT}
             tone="success"
           />
         ) : null}
@@ -100,14 +98,14 @@ export default function OrderSummary({
                   ? "Delivery outside Dhaka"
                   : "Delivery inside Dhaka"
               }
-              value={verifiedSummary.shipping}
+              valueBDT={verifiedSummary.shippingBDT}
               freeLabel={
-                verifiedSummary.shipping === 0 ? "FREE" : undefined
+                verifiedSummary.shippingBDT === 0 ? "FREE" : undefined
               }
             />
             <SummaryRow
               label={`Tax (${Math.round(verifiedSummary.taxRate * 100)}%)`}
-              value={verifiedSummary.tax}
+              valueBDT={verifiedSummary.taxBDT}
             />
           </>
         ) : (
@@ -130,13 +128,15 @@ export default function OrderSummary({
             {verifiedSummary ? "Total" : "Subtotal"}
           </span>
           <span className="min-w-0 text-2xl font-extrabold text-brand-red sm:text-3xl">
-            <CurrencyAmount amountBDT={verifiedSummary?.total ?? subtotal} />
+            <CurrencyAmount
+              amountBDT={verifiedSummary?.totalBDT ?? subtotalBDT}
+            />
           </span>
         </div>
-        {verifiedSummary && totalSaved > 0 && (
+        {verifiedSummary && totalSavedBDT > 0 && (
           <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
             <Sparkles className="h-3 w-3" />
-            You&apos;re saving <CurrencyAmount amountBDT={totalSaved} /> today
+            You&apos;re saving <CurrencyAmount amountBDT={totalSavedBDT} /> today
           </p>
         )}
         {!verifiedSummary && (
@@ -189,12 +189,12 @@ function SummaryTextRow({ label, value }: { label: string; value: string }) {
 
 function SummaryRow({
   label,
-  value,
+  valueBDT,
   tone = "default",
   freeLabel,
 }: {
   label: string;
-  value: number;
+  valueBDT: number;
   tone?: "default" | "success";
   freeLabel?: string;
 }) {
@@ -213,7 +213,8 @@ function SummaryRow({
             tone === "success" ? "text-emerald-600" : "text-gray-900"
           }`}
         >
-          <CurrencyAmount amountBDT={value} />
+          {valueBDT < 0 ? "-" : null}
+          <CurrencyAmount amountBDT={Math.abs(valueBDT)} />
         </span>
       )}
     </div>
