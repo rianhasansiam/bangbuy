@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "db:tunnel": "ssh -fNT -L 127.0.0.1:15432:127.0.0.1:5432 -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 root@187.127.138.53",
     "build": "next build",
     "postinstall": "prisma generate",
     "start": "next start",

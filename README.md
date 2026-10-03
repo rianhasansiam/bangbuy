@@ -78,6 +78,10 @@ when it changes. Verify events in Meta Events Manager's Test Events view.
 
 ### Step 4 — Apply database migrations
 
+Use a separate development database for this step. When connected to the VPS
+production database through the tunnel described below, skip development
+migrations, resets, and seeding.
+
 ```bash
 npx prisma migrate dev
 ```
@@ -93,6 +97,41 @@ npm run dev
 ```
 
 The app will be available at **http://localhost:3000**.
+
+### Connect local development to the VPS database
+
+PostgreSQL on the VPS listens on its own loopback interface. On your computer,
+start an SSH tunnel before starting Next.js:
+
+```bash
+npm run db:tunnel
+npm run dev
+```
+
+The tunnel authenticates with your SSH key or prompts for the VPS SSH password,
+then runs in the background. It forwards local `127.0.0.1:15432` to PostgreSQL
+on the VPS at `127.0.0.1:5432`. Start it again after a reboot or disconnection.
+An existing tunnel already listening on port `15432` can be reused.
+
+Set the local `.env` connection to:
+
+```dotenv
+DATABASE_URL="postgresql://myapp:<URL-encoded-password>@127.0.0.1:15432/bangbuy_db"
+```
+
+Replace the password placeholder with the real database password, encoding
+special characters (`?` becomes `%3F`). If `DIRECT_URL` is set, use the same
+local tunnel connection. Fully restart `npm run dev` after changing either URL
+so Prisma creates a new connection pool.
+
+This connection accesses **production data**; local app writes affect the live
+store. The production VPS `.env` continues to use port `5432` directly.
+
+In development, ImgBB requests to `/_next/image` use BangBuy's production image
+optimizer and cache. This avoids downloading large ImgBB originals over the
+local connection, which can exceed Next.js's seven-second fetch timeout. Local
+assets and other image hosts still use the local optimizer. The image rewrite
+is disabled in production builds.
 
 ---
 
@@ -200,3 +239,7 @@ bangbuy/
 ├── .env.example                # Environment variable template
 └── package.json                # Project dependencies and scripts
 ```
+
+
+npm run db:tunnel
+npm run dev

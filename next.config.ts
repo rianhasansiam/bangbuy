@@ -4,6 +4,29 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  async rewrites() {
+    if (process.env.NODE_ENV !== "development") return [];
+
+    return {
+      beforeFiles: [
+        {
+          source: "/_next/image",
+          has: [
+            {
+              type: "query",
+              key: "url",
+              value: "https://i\\.ibb\\.co/.*",
+            },
+          ],
+          // ImgBB originals can exceed the local optimizer's fetch timeout.
+          // Reuse the storefront's resized cache for public images in dev.
+          destination: "https://bangbuy.net/_next/image",
+        },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
   images: {
     remotePatterns: [
       {
