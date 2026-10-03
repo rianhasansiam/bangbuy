@@ -63,6 +63,17 @@ Copy-Item .env.example .env
 cp .env.example .env
 
 ```
+
+To enable Meta Pixel, set `NEXT_PUBLIC_META_PIXEL_ID` in `.env` to the numeric
+Pixel ID from Meta Events Manager. Leaving it blank disables tracking; invalid
+IDs are also ignored. The integration sends `PageView` events on the initial
+load and when the pathname or query string changes, with a noscript fallback
+for browsers with JavaScript disabled.
+
+Restart the development server after changing the ID. For production, set the
+variable in your hosting environment before building, then rebuild and redeploy
+when it changes. Verify events in Meta Events Manager's Test Events view.
+
 ---
 
 ### Step 4 — Apply database migrations
