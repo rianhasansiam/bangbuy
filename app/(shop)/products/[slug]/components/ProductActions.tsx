@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState, useTransition } from "react";
-import { Heart, Minus, Plus, ShoppingCart, Zap } from "lucide-react";
+import { Check, Heart, Minus, Plus, ShoppingCart, Zap } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -393,21 +393,34 @@ const ProductActions = ({
 
       {hasMultipleVariants && (
         <fieldset
-          className="min-w-0 space-y-3"
+          className="min-w-0 space-y-2"
           aria-describedby="variant-selection-help"
         >
           <legend className="text-sm font-semibold text-gray-900">
-            Choose an option combination
+            Choose an option
           </legend>
-          <p id="variant-selection-help" className="text-xs text-gray-500">
+          <p id="variant-selection-help" className="sr-only">
             The first option is selected by default. Choose another available
             combination if you prefer.
           </p>
-          <div className="grid min-w-0 grid-cols-1 gap-2 min-[360px]:grid-cols-2">
+          <div className="flex min-w-0 flex-wrap gap-2">
             {activeVariants.map((variant) => {
               const isSelected = variant.id === selectedVariant?.id;
               const isOutOfStock = variant.stock <= 0;
               const options = variantDisplayOptions(variant);
+              const colorOption = options.find(
+                (option) => normalizedOptionKey(option.key) === "color",
+              );
+              const variantName = variant.name?.trim();
+              const combinationOptions = variantName
+                ? options.filter(
+                    (option) =>
+                      normalizedOptionKey(option.key) !== "color" ||
+                      (!colorIsHex(option.value) &&
+                        normalizedOptionKey(option.value) !==
+                          normalizedOptionKey(variantName)),
+                  )
+                : [];
 
               return (
                 <button
@@ -416,7 +429,12 @@ const ProductActions = ({
                   onClick={() => selectVariant(variant)}
                   disabled={isOutOfStock}
                   aria-pressed={isSelected}
-                  className={`min-w-0 rounded-xl border p-2.5 text-left transition sm:p-3 ${
+                  aria-label={[
+                    variantLabel(variant),
+                    ...options.map((option) => `${option.key}: ${option.value}`),
+                    ...(isOutOfStock ? ["Out of stock"] : []),
+                  ].join(", ")}
+                  className={`inline-flex min-h-11 min-w-0 max-w-full items-center gap-2 rounded-lg border px-3 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 ${
                     isSelected
                       ? "border-brand-red bg-brand-red/5 ring-1 ring-brand-red"
                       : isOutOfStock
@@ -424,56 +442,67 @@ const ProductActions = ({
                         : "border-gray-200 bg-white hover:border-brand-red/70 hover:bg-brand-red/5"
                   }`}
                 >
-                  <span className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                    <span className="min-w-0 text-sm font-semibold text-gray-900 [overflow-wrap:anywhere] sm:text-base">
+                  {colorOption && colorIsHex(colorOption.value) && (
+                    <span
+                      className="h-3.5 w-3.5 shrink-0 rounded-full ring-1 ring-inset ring-black/20"
+                      style={{ backgroundColor: colorOption.value }}
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5 [overflow-wrap:anywhere]">
+                    <span className="min-w-0 text-[13px] font-semibold leading-5 text-gray-900">
                       {variantLabel(variant)}
                     </span>
-                    <span
-                      className={`shrink-0 text-xs font-medium ${
-                        isOutOfStock ? "text-rose-600" : "text-emerald-700"
-                      }`}
-                    >
-                      {isOutOfStock
-                        ? "Out of stock"
-                        : `${variant.stock} available`}
-                    </span>
+                    {combinationOptions.map((option) => (
+                      <span
+                        key={`${variant.id}:${option.key}`}
+                        className="min-w-0 text-[11px] leading-4 text-gray-500"
+                      >
+                        {option.key}: {option.value}
+                      </span>
+                    ))}
+                    {isOutOfStock && (
+                      <span className="text-[11px] font-medium leading-4 text-rose-600">
+                        Out of stock
+                      </span>
+                    )}
                   </span>
-                  {options.length > 0 && (
-                    <span className="mt-2 flex min-w-0 flex-wrap gap-1.5">
-                      {options.map((option) => (
-                        <span
-                          key={`${variant.id}:${option.key}`}
-                          className="inline-flex max-w-full min-w-0 flex-wrap items-center gap-1 rounded-md bg-gray-100 px-2 py-1 text-xs text-gray-700 [overflow-wrap:anywhere]"
-                        >
-                          <span className="min-w-0 [overflow-wrap:anywhere]">
-                            {option.key}:
-                          </span>
-                          {normalizedOptionKey(option.key) === "color" &&
-                            colorIsHex(option.value) && (
-                              <span
-                                className="h-3 w-3 rounded-full ring-1 ring-inset ring-black/15"
-                                style={{ backgroundColor: option.value }}
-                                aria-hidden="true"
-                              />
-                            )}
-                          <span className="min-w-0 font-medium [overflow-wrap:anywhere]">
-                            {option.value}
-                          </span>
-                        </span>
-                      ))}
-                    </span>
-                  )}
-                  {(variant.modelNumber || variant.sku) && (
-                    <span className="mt-2 block text-xs text-gray-500 [overflow-wrap:anywhere]">
-                      {[variant.modelNumber, variant.sku]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  )}
+                  <Check
+                    className={`h-3.5 w-3.5 shrink-0 text-brand-red ${
+                      isSelected ? "opacity-100" : "opacity-0"
+                    }`}
+                    aria-hidden="true"
+                  />
                 </button>
               );
             })}
           </div>
+          {selectedVariant && (
+            <div
+              className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] leading-4 text-gray-500 [overflow-wrap:anywhere]"
+              aria-live="polite"
+            >
+              {variantDisplayOptions(selectedVariant).map((option) => (
+                <span key={option.key} className="min-w-0">
+                  {option.key}: {option.value}
+                </span>
+              ))}
+              {(selectedVariant.modelNumber || selectedVariant.sku) && (
+                <span className="min-w-0">
+                  {[selectedVariant.modelNumber, selectedVariant.sku]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              )}
+              <span
+                className={`font-medium ${
+                  isPurchasable ? "text-emerald-700" : "text-rose-600"
+                }`}
+              >
+                {isPurchasable ? `${stockCount} available` : "Out of stock"}
+              </span>
+            </div>
+          )}
         </fieldset>
       )}
 
