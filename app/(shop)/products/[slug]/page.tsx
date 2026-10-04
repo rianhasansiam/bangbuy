@@ -49,6 +49,7 @@ import ProductTabs from "./components/ProductTabs";
 import ProductDescriptionRenderer from "@/components/product/product-description/ProductDescriptionRenderer";
 import PromoBanners from "./components/PromoBanners";
 import RecentProducts from "./components/RecentProducts";
+import { initialVariantSelectionId } from "./components/variant-selection";
 import CurrencyAmount from "@/components/currency/CurrencyAmount";
 
 export const revalidate = 900;
@@ -505,10 +506,7 @@ export default async function ProductDetailsPage({ params }: Props) {
     productImageUrls[0] ??
     variantGalleryImages[0]?.url ??
     FALLBACK_PRODUCT_IMAGE;
-  const initialVariant =
-    activeVariants.find((variant: ProductVariant) => variant.stock > 0) ??
-    activeVariants[0] ??
-    null;
+  const initialVariantId = initialVariantSelectionId(product.variants);
   const categoryPath = product.category.path || product.category.slug;
   const categoryBreadcrumb =
     product.categoryBreadcrumb.length > 0
@@ -689,11 +687,7 @@ export default async function ProductDetailsPage({ params }: Props) {
               productId={product.id}
               images={productImages}
               variantImages={variantGalleryImages}
-              initialVariantId={
-                productImageUrls.length === 0
-                  ? (initialVariant?.id ?? null)
-                  : null
-              }
+              initialVariantId={initialVariantId}
               productName={product.name}
             />
           </div>

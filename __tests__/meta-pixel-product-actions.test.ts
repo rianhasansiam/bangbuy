@@ -151,25 +151,31 @@ afterEach(() => {
 });
 
 describe("product action business guards and responsive entry points", () => {
-  it("requires a complete variant selection before either cart button or Buy Now can act", async () => {
+  it("preselects the first active variant and enables both cart and Buy Now entry points", async () => {
     const browser = createBrowser();
     const fetchMock = mockSuccessfulFetch();
-    const buttons = await renderActions();
-    const addButtons = buttons.filter((button) => textContent(button.children).includes("Select"));
+    const buttons = await renderActions([
+      { ...variants[0], id: "inactive-variant", isActive: false },
+      ...variants,
+    ]);
+    expect(byLabel(buttons, "Blue / Small")["aria-pressed"]).toBe(true);
+    expect(byLabel(buttons, "Red / Large")["aria-pressed"]).toBe(false);
+    const addButtons = buttons.filter((button) => textContent(button.children) === "Add to cart");
     expect(addButtons).toHaveLength(2);
-    addButtons.forEach((button) => { expect(button.disabled).toBe(true); button.onClick(); });
+    addButtons.forEach((button) => { expect(button.disabled).toBe(false); });
     const buyButtons = buttons.filter((button) => textContent(button.children).includes("Buy now"));
-    buyButtons.forEach((button) => { expect(button.disabled).toBe(true); button.onClick(); });
+    expect(buyButtons).toHaveLength(2);
+    buyButtons.forEach((button) => { expect(button.disabled).toBe(false); });
     await settleOperation();
     expect(fetchMock).not.toHaveBeenCalled();
     expect(harness.router.push).not.toHaveBeenCalled();
     expect(events(browser)).toEqual([]);
   });
 
-  it.each([["desktop", 0], ["sticky mobile", 1]] as const)("tracks the successful simple-product addition from the %s button", async (_entry, buttonIndex) => {
+  it.each([["desktop", 0], ["sticky mobile", 1]] as const)("tracks the successful default-variant addition from the %s button", async (_entry, buttonIndex) => {
     const browser = createBrowser();
     const fetchMock = mockSuccessfulFetch();
-    const buttons = await renderActions([variants[0]]);
+    const buttons = await renderActions();
     const addButtons = buttons.filter((button) => textContent(button.children) === "Add to cart");
     expect(addButtons).toHaveLength(2);
     addButtons[buttonIndex].onClick();
@@ -216,10 +222,13 @@ describe("product action business guards and responsive entry points", () => {
     ]);
   });
 
-  it("emits nothing and sends no cart request when the only variant is out of stock", async () => {
+  it("keeps the first variant selected and blocks purchase when it is out of stock", async () => {
     const browser = createBrowser();
     const fetchMock = mockSuccessfulFetch();
-    const buttons = await renderActions([{ ...variants[0], stock: 0 }]);
+    const buttons = await renderActions([{ ...variants[0], stock: 0 }, variants[1]]);
+    expect(byLabel(buttons, "Blue / Small")["aria-pressed"]).toBe(true);
+    expect(byLabel(buttons, "Add to cart").disabled).toBe(true);
+    expect(byLabel(buttons, "Buy now").disabled).toBe(true);
     byLabel(buttons, "Add to cart").onClick();
     byLabel(buttons, "Buy now").onClick();
     await settleOperation();

@@ -162,7 +162,7 @@ const ProductActions = ({
     () => variants.filter((variant) => variant.isActive),
     [variants],
   );
-  const requiresExplicitSelection = activeVariants.length > 1;
+  const hasMultipleVariants = activeVariants.length > 1;
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
     () => initialVariantSelectionId(variants),
   );
@@ -391,7 +391,7 @@ const ProductActions = ({
         )}
       </div>
 
-      {activeVariants.length > 1 && (
+      {hasMultipleVariants && (
         <fieldset
           className="min-w-0 space-y-3"
           aria-describedby="variant-selection-help"
@@ -400,8 +400,8 @@ const ProductActions = ({
             Choose an option combination
           </legend>
           <p id="variant-selection-help" className="text-xs text-gray-500">
-            Select one complete combination before adding this product to your
-            cart.
+            The first option is selected by default. Choose another available
+            combination if you prefer.
           </p>
           <div className="grid min-w-0 grid-cols-1 gap-2 min-[360px]:grid-cols-2">
             {activeVariants.map((variant) => {
@@ -510,7 +510,7 @@ const ProductActions = ({
           <span className="text-rose-600">
             This product is currently unavailable.
           </span>
-        ) : requiresExplicitSelection && !selectedVariant ? (
+        ) : hasMultipleVariants && !selectedVariant ? (
           "Choose an option combination to see its availability."
         ) : isPurchasable ? (
           <>
@@ -570,7 +570,7 @@ const ProductActions = ({
             <>
               <ShoppingCart className="h-4 w-4 shrink-0" />
               <span className="truncate">
-                {requiresExplicitSelection && !selectedVariant
+                {hasMultipleVariants && !selectedVariant
                   ? "Select an option"
                   : "Add to cart"}
               </span>
@@ -643,7 +643,7 @@ const ProductActions = ({
                 <>
                   <ShoppingCart className="h-4 w-4 shrink-0" />
                   <span className="truncate">
-                    {requiresExplicitSelection && !selectedVariant
+                    {hasMultipleVariants && !selectedVariant
                       ? "Select option"
                       : "Add to cart"}
                   </span>

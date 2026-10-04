@@ -3,10 +3,9 @@ export type VariantSelectionCandidate = {
   isActive: boolean;
 };
 
-/** Only one active variant is safe to preselect without customer input. */
+/** Preselect the first active variant in the product's existing order. */
 export function initialVariantSelectionId(
   variants: readonly VariantSelectionCandidate[],
 ): string | null {
-  const active = variants.filter((variant) => variant.isActive);
-  return active.length === 1 ? active[0].id : null;
+  return variants.find((variant) => variant.isActive)?.id ?? null;
 }
