@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db/prisma";
 
 export type HomeCategoryProduct = {
   id: string;
+  productCode: string;
   slug: string;
   name: string;
   description: string | null;
@@ -18,6 +19,7 @@ export type HomeCategoryProduct = {
   reviewCount: number;
   badge: string | null;
   variantCount: number;
+  inStock: boolean;
 };
 
 export type HomeCategoryLink = {
@@ -192,6 +194,7 @@ const getCachedHomeCategories = unstable_cache(
             take: productsPerCategory,
             select: {
               id: true,
+              productCode: true,
               slug: true,
               name: true,
               description: true,
@@ -201,7 +204,7 @@ const getCachedHomeCategories = unstable_cache(
                 orderBy: { position: "asc" },
                 select: { url: true },
               },
-              variants: { where: { isActive: true }, select: { id: true } },
+              variants: { where: { isActive: true }, select: { id: true, stock: true } },
               reviews: { select: { rating: true } },
             },
           }),
@@ -252,6 +255,7 @@ const getCachedHomeCategories = unstable_cache(
           const imageUrls = product.images.map((image) => image.url);
           return {
             id: product.id,
+            productCode: product.productCode,
             slug: product.slug,
             name: product.name,
             description: product.description,
@@ -266,6 +270,7 @@ const getCachedHomeCategories = unstable_cache(
             reviewCount: ratings.length,
             badge: null,
             variantCount: product.variants.length,
+            inStock: product.variants.some((variant) => variant.stock > 0),
           };
         }),
         categoryBanner: banner
@@ -282,7 +287,7 @@ const getCachedHomeCategories = unstable_cache(
       };
     });
   },
-  ["home-categories"],
+  ["home-categories-v2"],
   {
     revalidate: 600,
     tags: [

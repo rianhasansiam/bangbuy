@@ -34,6 +34,7 @@ import type {
 } from "@/lib/validations/order.validation";
 import { BASE_CURRENCY, parseCurrencyCode } from "@/lib/currency/config";
 import { createPricingContext } from "@/lib/currency/pricing.service";
+import { buildVerifiedPurchaseSnapshot } from "@/lib/analytics/order-purchase";
 
 /**
  * The single home for Order DB logic.
@@ -78,6 +79,7 @@ const orderItemInclude = {
       id: true,
       name: true,
       slug: true,
+      productCode: true,
     },
   },
 } satisfies Prisma.OrderItemInclude;
@@ -87,12 +89,12 @@ const orderInclude = {
   // Full audit trail, oldest first, so the customer tracker and admin
   // timeline render chronologically without a client-side sort.
   statusHistory: { orderBy: { createdAt: "asc" } },
-  // Keep the latest Airwallex quote available for the customer-facing payment
-  // snapshot, plus every unresolved review regardless of provider. Payment
-  // record IDs and raw provider evidence never cross the JSON boundary.
+  // Keep gateway evidence for verified analytics and the customer-facing
+  // Airwallex payment quote, plus unresolved reviews from any provider.
+  // Payment identifiers and raw evidence never cross the JSON boundary.
   payments: {
     where: {
-      OR: [{ provider: "AIRWALLEX" }, { requiresReview: true }],
+      OR: [{ provider: { in: ["AIRWALLEX", "SSLCOMMERZ"] } }, { requiresReview: true }],
     },
     select: {
       provider: true,
@@ -100,6 +102,13 @@ const orderInclude = {
       currency: true,
       status: true,
       requiresReview: true,
+      transactionId: true,
+      validationId: true,
+      providerStatus: true,
+      paidAt: true,
+      baseAmount: true,
+      baseCurrency: true,
+      exchangeRate: true,
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
   },
@@ -285,6 +294,7 @@ export function serializeCustomerOrder<T extends OrderWithItems>(order: T) {
     requiresPaymentReview: payments.some(
       (payment) => payment.requiresReview,
     ),
+    metaPurchase: buildVerifiedPurchaseSnapshot(order),
   };
 }
 

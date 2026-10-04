@@ -48,6 +48,7 @@ import {
   LIST_ITEM_VARIANTS,
 } from "@/lib/motion/list-removal";
 import { confirm, toast } from "@/lib/feedback";
+import { createEventId, trackLocalCartAddition } from "@/lib/analytics/meta-pixel";
 
 type WishlistView = "grid" | "list";
 
@@ -341,6 +342,7 @@ export default function WishlistPage() {
       return upsertLocalCartItem(acc, {
         id: `local:${item.id}`,
         productId: item.id,
+        productCode: item.productCode,
         name: item.name,
         image: item.image,
         quantity: 1,
@@ -354,6 +356,7 @@ export default function WishlistPage() {
 
     writeLocalCart(optimistic);
     dispatch(setCartData({ items: optimistic, summary: computeCartSummary(optimistic) }));
+    trackLocalCartAddition(localBefore, optimistic, createEventId());
 
     const removeIds = toMove.map((item) => item.id);
     removeSelection(removeIds);
@@ -441,6 +444,7 @@ export default function WishlistPage() {
   const handleSavedMoveToCart = (id: string) => {
     const target = saved.find((item) => item.id === id);
     if (!target || !target.inStock) return;
+    const cartEventId = createEventId();
 
     const canUseServerCart =
       status === "authenticated" && isServerWishlistRole(session?.user?.role);
@@ -451,7 +455,7 @@ export default function WishlistPage() {
         if (canUseServerCart) {
           dispatch(setCartErrorAction(null));
           try {
-            await addCartItemOnServer(target.productId, 1, target.variantId);
+            await addCartItemOnServer(target.productId, 1, target.variantId, cartEventId);
             const snapshot = await fetchServerCartSnapshot();
             writeLocalCart(snapshot.items);
             dispatch(setCartData(snapshot));
@@ -466,6 +470,7 @@ export default function WishlistPage() {
           const next = upsertLocalCartItem(localBefore, {
             id: `local:${target.variantId ?? target.productId}`,
             productId: target.productId,
+            productCode: target.productCode,
             variantId: target.variantId ?? null,
             sku: target.sku ?? null,
             color: target.color ?? null,
@@ -481,6 +486,7 @@ export default function WishlistPage() {
           });
           writeLocalCart(next);
           dispatch(setCartData({ items: next, summary: computeCartSummary(next) }));
+          trackLocalCartAddition(localBefore, next, cartEventId);
         }
 
         removeSavedFromLocal(id);

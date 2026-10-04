@@ -32,6 +32,8 @@ export function normalizeWishlistItem(raw: unknown): WishlistItem | null {
 
   return {
     id: entry.id,
+    productCode:
+      typeof entry.productCode === "string" ? entry.productCode : null,
     slug: typeof entry.slug === "string" && entry.slug ? entry.slug : undefined,
     name: entry.name,
     brand: typeof entry.brand === "string" && entry.brand ? entry.brand : "BangBuy",
@@ -50,6 +52,10 @@ export function normalizeWishlistItem(raw: unknown): WishlistItem | null {
         ? entry.priceDropFromAdded
         : undefined,
     badge: typeof entry.badge === "string" && entry.badge ? entry.badge : undefined,
+    variantCount:
+      typeof entry.variantCount === "number" && Number.isFinite(entry.variantCount)
+        ? Math.max(0, Math.round(entry.variantCount))
+        : undefined,
   };
 }
 

@@ -15,6 +15,7 @@ const FALLBACK_PRODUCT_IMAGE =
 export type SavedItem = {
   id: string;
   productId: string;
+  productCode?: string | null;
   slug: string;
   variantId?: string | null;
   sku?: string | null;
@@ -67,6 +68,8 @@ export function normalizeSavedItem(raw: unknown): SavedItem | null {
   return {
     id: id || `saved:${productId}`,
     productId,
+    productCode:
+      typeof entry.productCode === "string" ? entry.productCode : null,
     slug: typeof entry.slug === "string" && entry.slug ? entry.slug : productId,
     variantId: typeof entry.variantId === "string" ? entry.variantId : null,
     sku: typeof entry.sku === "string" ? entry.sku : null,

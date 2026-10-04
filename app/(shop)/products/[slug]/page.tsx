@@ -18,6 +18,7 @@ import { cleanVariantAttributes } from "@/lib/catalog/variant-options";
 import { dependOnCatalogTags } from "@/lib/cache/catalog-dependency";
 import { productDetailCacheTags } from "@/lib/cache/product-detail-dependencies";
 import JsonLd from "@/components/seo/JsonLd";
+import ProductView from "@/components/analytics/ProductView";
 import {
   productFallbackDescription,
   productFallbackTitle,
@@ -449,6 +450,9 @@ export default async function ProductDetailsPage({ params }: Props) {
     const cardOriginal = listPrice(row);
     return {
       id: row.id,
+      productCode: row.productCode,
+      variantCount: row.variants.filter((variant) => variant.isActive).length,
+      inStock: productIsInStock(row),
       slug: row.slug,
       name: row.name,
       image: row.images[0]?.url ?? FALLBACK_PRODUCT_IMAGE,
@@ -614,6 +618,13 @@ export default async function ProductDetailsPage({ params }: Props) {
 
   return (
     <main className="min-h-screen bg-brand-light-bg pb-[calc(3.75rem+env(safe-area-inset-bottom))] lg:pb-0">
+      <ProductView item={{
+        productId: product.id,
+        productCode: product.productCode,
+        name: product.name,
+        quantity: 1,
+        unitPrice: currentPrice,
+      }} />
       {productSchema && breadcrumbSchema && (
         <JsonLd
           data={
@@ -705,6 +716,7 @@ export default async function ProductDetailsPage({ params }: Props) {
               <ProductActions
                 key={product.id}
                 productId={product.id}
+                productCode={product.productCode}
                 productSlug={product.slug}
                 productName={product.name}
                 image={primaryDisplayImage}

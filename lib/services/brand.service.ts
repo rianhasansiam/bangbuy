@@ -152,12 +152,14 @@ export type PublicBrandSummary = {
 
 export type PublicBrandProduct = {
   id: string;
+  productCode: string;
   slug: string;
   name: string;
   price: number;
   discountPrice: number | null;
   image: string | null;
   variantCount: number;
+  inStock: boolean;
   rating: number;
   reviewCount: number;
 };
@@ -252,6 +254,7 @@ async function loadPublicBrandBySlug(
         id: true,
         slug: true,
         name: true,
+        productCode: true,
         salePrice: true,
         discountPrice: true,
         images: {
@@ -261,7 +264,7 @@ async function loadPublicBrandBySlug(
         },
         variants: {
           where: { isActive: true },
-          select: { id: true },
+          select: { id: true, stock: true },
         },
         reviews: { select: { rating: true } },
       },
@@ -278,6 +281,7 @@ async function loadPublicBrandBySlug(
       const reviewCount = product.reviews.length;
       return {
         id: product.id,
+        productCode: product.productCode,
         slug: product.slug,
         name: product.name,
         price,
@@ -287,6 +291,7 @@ async function loadPublicBrandBySlug(
             : null,
         image: product.images[0]?.url ?? null,
         variantCount: product.variants.length,
+        inStock: product.variants.some((variant) => variant.stock > 0),
         rating:
           reviewCount > 0
             ? product.reviews.reduce((sum, review) => sum + review.rating, 0) /
@@ -306,7 +311,7 @@ export function getPublicBrandBySlug(
 
   return unstable_cache(
     () => loadPublicBrandBySlug(normalizedSlug),
-    ["public-brand-by-slug-v2", normalizedSlug],
+    ["public-brand-by-slug-v3", normalizedSlug],
     {
       revalidate: PUBLIC_BRAND_CACHE_SECONDS,
       tags: [

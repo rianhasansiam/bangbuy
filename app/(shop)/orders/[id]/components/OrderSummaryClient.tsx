@@ -40,6 +40,7 @@ import ColorBadge from "@/components/ui/ColorBadge";
 import { ButtonLoader, OrderDetailsPageSkeleton } from "@/components/ui/loading";
 import { AirwallexPayButton } from "@/lib/airwallex/components/AirwallexPayButton";
 import { AirwallexPaymentStatus } from "@/lib/airwallex/components/AirwallexPaymentStatus";
+import { trackPendingOrderPurchase } from "@/lib/analytics/order-purchase-browser";
 import OrderTracker from "./OrderTracker";
 
 const FALLBACK_IMAGE =
@@ -77,7 +78,7 @@ const STATUS_TONE: Record<
 export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { status: authStatus } = useSession();
+  const { data: session, status: authStatus } = useSession();
 
   const justPlaced = searchParams.get("just-placed") === "1";
   const paymentParameter = searchParams.get("payment");
@@ -176,6 +177,12 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
   }, [authStatus, orderId, paymentReturnOutcome]);
 
   const order = state.status === "ready" ? state.order : null;
+
+  useEffect(() => {
+    // The API derives this snapshot from verified payment records. Admin
+    // receipt views, query flags, and COD confirmation never qualify.
+    if (order) trackPendingOrderPurchase(order, session?.user?.id);
+  }, [order, session?.user?.id]);
 
   const totalSavings = useMemo(() => {
     if (!order) return 0;

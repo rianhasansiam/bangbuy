@@ -210,6 +210,7 @@ export default async function BrandPage({ params }: Props) {
                 <ProductCard
                   key={product.id}
                   id={product.id}
+                  productCode={product.productCode}
                   slug={product.slug}
                   name={product.name}
                   price={product.discountPrice ?? product.price}
@@ -218,6 +219,7 @@ export default async function BrandPage({ params }: Props) {
                   }
                   image={product.image ?? PRODUCT_FALLBACK_IMAGE}
                   variantCount={product.variantCount}
+                  inStock={product.inStock}
                   rating={product.rating}
                   reviewCount={product.reviewCount}
                 />

@@ -58,6 +58,7 @@ import {
   LIST_ITEM_VARIANTS,
 } from "@/lib/motion/list-removal";
 import { confirm, toast } from "@/lib/feedback";
+import { createEventId, trackLocalCartAddition } from "@/lib/analytics/meta-pixel";
 import { ButtonLoader, LoadingSpinner, SectionLoader } from "@/components/ui/loading";
 
 type AppliedPromo = {
@@ -84,6 +85,7 @@ function toSavedItem(item: CartItem): SavedItem {
   return {
     id: `saved:${item.variantId ?? item.productId}`,
     productId: item.productId,
+    productCode: item.productCode,
     slug: item.slug ?? item.productId,
     variantId: item.variantId ?? null,
     sku: item.sku ?? null,
@@ -593,6 +595,7 @@ export default function CartPage() {
   const handleSavedMoveToCart = (id: string) => {
     const target = saved.find((item) => item.id === id);
     if (!target || !target.inStock) return;
+    const cartEventId = createEventId();
 
     queueSavedRemoval(
       id,
@@ -601,7 +604,7 @@ export default function CartPage() {
           dispatch(setCartError(null));
 
           try {
-            await addToCartOnServer(target.productId, 1, target.variantId);
+            await addToCartOnServer(target.productId, 1, target.variantId, cartEventId);
             const snapshot = await fetchServerCartSnapshot();
             dispatch(setCartData(snapshot));
             writeLocalCart(snapshot.items);
@@ -626,6 +629,7 @@ export default function CartPage() {
             : {
                 id: `local:${target.variantId ?? target.productId}`,
                 productId: target.productId,
+                productCode: target.productCode,
                 variantId: target.variantId ?? null,
                 sku: target.sku ?? null,
                 variantName: target.variantName ?? null,
@@ -656,6 +660,7 @@ export default function CartPage() {
               summary: computeCartSummary(localCartAfter),
             }),
           );
+          trackLocalCartAddition(localCartBefore, localCartAfter, cartEventId);
         }
 
         removeSavedFromLocal(id);

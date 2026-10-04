@@ -54,6 +54,7 @@ export class CartError extends ServiceError {
 /** Compact product info embedded inside each cart line. */
 const cartItemProductSelect = {
   id: true,
+  productCode: true,
   name: true,
   slug: true,
   status: true,
@@ -116,6 +117,7 @@ function effectiveProductPrice(product: {
 type CartLine = {
   id: string;
   productId: string;
+  productCode: string;
   slug: string;
   variantId: string;
   sku: string | null;
@@ -164,6 +166,7 @@ function toLine(
   const line: CartLine = {
     id: row.id,
     productId: p.id,
+    productCode: p.productCode,
     slug: p.slug,
     variantId: variant.id,
     sku: variant.sku,

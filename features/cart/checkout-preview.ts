@@ -73,6 +73,7 @@ export function mergeCartItemWithCheckoutPreview(
   return {
     ...item,
     productId: priced.productId,
+    productCode: priced.productCode ?? item.productCode,
     variantId: priced.variantId,
     sku: priced.sku,
     variantName: priced.variantName,

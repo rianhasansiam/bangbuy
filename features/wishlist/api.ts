@@ -2,6 +2,7 @@ import { readApiData } from "@/features/http/api-envelope";
 
 export type WishlistItem = {
   id: string;
+  productCode?: string | null;
   slug?: string;
   name: string;
   brand: string;

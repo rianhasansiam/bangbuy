@@ -13,6 +13,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { readApiData } from "@/features/http/api-envelope";
 import { cn } from "@/lib/utils";
+import { useSession } from "@/lib/auth/use-app-session";
+import { fetchOrderDetail } from "@/features/orders/api";
+import { trackPendingOrderPurchase } from "@/lib/analytics/order-purchase-browser";
 
 const POLL_INTERVAL_MS = 2_500;
 const POLL_TIMEOUT_MS = 60_000;
@@ -200,6 +203,7 @@ export function AirwallexPaymentStatus({
   className,
   onSettled,
 }: AirwallexPaymentStatusProps) {
+  const { data: session } = useSession();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [refreshToken, setRefreshToken] = useState(0);
   const [timedOut, setTimedOut] = useState(false);
@@ -223,6 +227,17 @@ export function AirwallexPaymentStatus({
         );
         if (stopped) return;
         setState({ status: "ready", snapshot });
+
+        if (snapshot.paymentStatus === "SUCCEEDED" && !snapshot.requiresReview) {
+          // The owner-scoped status starts this read, but only the order API's
+          // verified commerce snapshot can produce a Purchase. Keep the read
+          // independent of payment polling, presentation, and its callbacks.
+          void fetchOrderDetail(orderId)
+            .then((order) => {
+              if (!stopped) trackPendingOrderPurchase(order, session?.user?.id);
+            })
+            .catch(() => {});
+        }
 
         const settled =
           snapshot.terminal ||
@@ -264,7 +279,7 @@ export function AirwallexPaymentStatus({
       controller?.abort();
       if (timer !== undefined) window.clearTimeout(timer);
     };
-  }, [autoPoll, onSettled, orderId, refreshToken]);
+  }, [autoPoll, onSettled, orderId, refreshToken, session?.user?.id]);
 
   if (!orderId) {
     return (

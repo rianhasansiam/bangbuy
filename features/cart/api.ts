@@ -1,10 +1,12 @@
 import { readApiData } from "@/features/http/api-envelope";
+import { createEventId, trackAddToCart } from "@/lib/analytics/meta-pixel";
 
 export type CartStatus = "ACTIVE" | "INACTIVE";
 
 export type CartItem = {
   id: string;
   productId: string;
+  productCode?: string | null;
   slug?: string | null;
   variantId?: string | null;
   variantName?: string | null;
@@ -55,7 +57,11 @@ export async function createCartItemOnServer(
   productId: string,
   quantity = 1,
   variantId?: string | null,
+  eventId = createEventId(),
 ): Promise<CartItem> {
+  // Keep the submitted quantity/identity independent of the cumulative cart
+  // row returned by the server and of later UI selection changes.
+  const submittedQuantity = quantity;
   const response = await fetch("/api/cart", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -67,15 +73,18 @@ export async function createCartItemOnServer(
     cache: "no-store",
   });
 
-  return readApiData<CartItem>(response, "Failed to add item to cart.");
+  const item = await readApiData<CartItem>(response, "Failed to add item to cart.");
+  trackAddToCart({ ...item, quantity: submittedQuantity }, eventId);
+  return item;
 }
 
 export async function addToCartOnServer(
   productId: string,
   quantity = 1,
   variantId?: string | null,
+  eventId?: string,
 ): Promise<CartItem> {
-  return createCartItemOnServer(productId, quantity, variantId);
+  return createCartItemOnServer(productId, quantity, variantId, eventId);
 }
 
 export async function syncCartToServer(localItems: CartItem[]): Promise<CartSnapshot> {

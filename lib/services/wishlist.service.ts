@@ -28,6 +28,7 @@ const wishlistInclude = {
   product: {
     select: {
       id: true,
+      productCode: true,
       name: true,
       slug: true,
       status: true,
@@ -58,6 +59,7 @@ type WishlistWithProduct = Prisma.WishlistGetPayload<{
 
 export type WishlistUiItem = {
   id: string;
+  productCode: string;
   slug: string;
   name: string;
   brand: string;
@@ -104,6 +106,7 @@ function toWishlistUiItem(row: WishlistWithProduct): WishlistUiItem {
 
   return {
     id: row.product.id,
+    productCode: row.product.productCode,
     slug: row.product.slug,
     name: row.product.name,
     brand:

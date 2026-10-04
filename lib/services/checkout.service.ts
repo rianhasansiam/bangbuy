@@ -187,6 +187,7 @@ async function resolveItems(
 
 type PricedLine = {
   productId: string;
+  productCode: string;
   variantId: string;
   sku: string | null;
   variantKey: string;
@@ -224,6 +225,7 @@ async function priceLines(
       where: { id: { in: productIds } },
       select: {
         id: true,
+        productCode: true,
         name: true,
         status: true,
         categoryId: true,
@@ -305,6 +307,7 @@ async function priceLines(
     const attributes = cleanVariantAttributes(variant.attributes);
     return {
       productId: product.id,
+      productCode: product.productCode,
       variantId: variant.id,
       sku: variant.sku,
       variantKey: variant.variantKey,
@@ -680,6 +683,7 @@ export async function previewCheckout(
   return {
     items: lines.map((line) => ({
       productId: line.productId,
+      productCode: line.productCode,
       variantId: line.variantId,
       sku: line.sku,
       variantKey: line.variantKey,

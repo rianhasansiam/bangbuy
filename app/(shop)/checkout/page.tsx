@@ -38,6 +38,10 @@ import { writeLocalCart } from "@/features/cart/storage";
 import type { AppDispatch, RootState } from "@/store";
 import { toast } from "@/lib/feedback";
 import { BASE_CURRENCY } from "@/lib/currency/config";
+import {
+  getNavigationEventId,
+  trackInitiateCheckout,
+} from "@/lib/analytics/meta-pixel";
 import { startAirwallexHostedCheckout } from "@/lib/airwallex/components/AirwallexPayButton";
 import {
   CheckoutPageSkeleton,
@@ -262,6 +266,11 @@ function CheckoutPageInner() {
     let ignore = false;
 
     void (async () => {
+      const query = searchParams.toString();
+      const checkoutEventId = getNavigationEventId(
+        "checkout",
+        query ? `/checkout?${query}` : "/checkout",
+      );
       // setState calls live inside the async closure (microtask) so the
       // lint rule against synchronous effect-body setState is satisfied.
       setPreviewLoading(true);
@@ -276,6 +285,17 @@ function CheckoutPageInner() {
         if (ignore) return;
 
         setPreview(next);
+        // One accepted, server-priced preview starts a checkout attempt for
+        // Buy Now, selected cart, and the profile/full-cart link alike.
+        // Pricing refreshes and effect replay reuse this navigation identity.
+        trackInitiateCheckout(
+          {
+            items: next.items,
+            currency: next.summary.currency,
+            value: next.summary.total,
+          },
+          checkoutEventId,
+        );
         setPaymentMethod((current) =>
           current === "AIRWALLEX" &&
           !next.availablePaymentMethods.includes("AIRWALLEX")
@@ -323,6 +343,7 @@ function CheckoutPageInner() {
     previewToken,
     buildItemsPayload,
     form.deliveryZone,
+    searchParams,
   ]);
 
   const handleApplyPromo = () => {

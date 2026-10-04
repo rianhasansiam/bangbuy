@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ShoppingBag } from 'lucide-react'
 import { useSession } from '@/lib/auth/use-app-session'
 import { useDispatch } from 'react-redux'
@@ -28,9 +29,13 @@ import {
 } from '@/store/slices/cart.slice'
 import { ButtonLoader } from '@/components/ui/loading'
 import CurrencyAmount from '@/components/currency/CurrencyAmount'
+import { createEventId, trackLocalCartAddition } from '@/lib/analytics/meta-pixel'
 
 type RecentProductItem = {
   id: string
+  productCode?: string | null
+  variantCount?: number
+  inStock?: boolean
   slug: string
   name: string
   image: string
@@ -52,6 +57,7 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
   title = 'More Relevant Product',
 }) => {
   const dispatch = useDispatch<AppDispatch>()
+  const router = useRouter()
   const { data: session, status } = useSession()
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE)
   const [isLoading, setIsLoading] = useState(false)
@@ -70,6 +76,10 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
     product: RecentProductItem,
   ) => {
     if (cartBusyId) return
+    if ((product.variantCount ?? 1) > 1) {
+      router.push(`/products/${product.slug}`)
+      return
+    }
 
     const canUseServer = canUseServerCart(session?.user?.role, status)
     dispatch(setCartErrorAction(null))
@@ -97,6 +107,7 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
     const optimisticItem: CartItem = {
       id: `local:${product.id}`,
       productId: product.id,
+      productCode: product.productCode,
       slug: product.slug,
       name: product.name,
       image: product.image,
@@ -111,9 +122,12 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
     const nextLocal = upsertLocalCartItem(localBefore, optimisticItem)
     writeLocalCart(nextLocal)
     dispatch(setCartData({ items: nextLocal, summary: computeCartSummary(nextLocal) }))
+    if (product.inStock !== false && (product.variantCount ?? 1) > 0) {
+      trackLocalCartAddition(localBefore, nextLocal, createEventId())
+    }
     setCartBusyId(null)
     toast.success('Added to cart')
-  }, [cartBusyId, dispatch, session?.user?.role, status])
+  }, [cartBusyId, dispatch, router, session?.user?.role, status])
 
   if (!products || products.length === 0) {
     return null

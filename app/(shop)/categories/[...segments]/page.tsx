@@ -305,6 +305,7 @@ export default async function CategoryPage({ params }: Props) {
                 <div key={product.id} className="min-w-0">
                   <ProductCard
                     id={product.id}
+                    productCode={product.productCode}
                     slug={product.slug}
                     name={product.name}
                     price={product.discountPrice ?? product.price}
@@ -313,6 +314,7 @@ export default async function CategoryPage({ params }: Props) {
                     }
                     image={product.image ?? FALLBACK_PRODUCT_IMAGE}
                     variantCount={product.variantCount}
+                    inStock={product.inStock}
                     rating={product.rating}
                     reviewCount={product.reviewCount}
                   />

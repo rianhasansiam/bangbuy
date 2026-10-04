@@ -79,6 +79,8 @@ export function normalizeCartItem(
   return {
     id: id || `local:${productId}`,
     productId,
+    productCode:
+      typeof entry.productCode === "string" ? entry.productCode : null,
     slug: typeof entry.slug === "string" && entry.slug ? entry.slug : null,
     variantId: typeof entry.variantId === "string" ? entry.variantId : null,
     variantName:

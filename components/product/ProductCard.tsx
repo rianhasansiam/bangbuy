@@ -49,9 +49,11 @@ import {
 import type { CartItem } from "@/features/cart/api";
 import type { WishlistItem } from "@/features/wishlist/api";
 import CurrencyAmount from "@/components/currency/CurrencyAmount";
+import { createEventId, trackLocalCartAddition } from "@/lib/analytics/meta-pixel";
 
 type ProductCardProps = {
   id: string;
+  productCode?: string | null;
   slug?: string;
   name: string;
   price: number;
@@ -66,6 +68,8 @@ type ProductCardProps = {
    * blind quick-add. Defaults to 1 (single variant -> direct add).
    */
   variantCount?: number;
+  /** Known catalog availability; omitted for historical callers. */
+  inStock?: boolean;
 };
 
 const subscribeToHydration = () => () => {};
@@ -74,6 +78,7 @@ const getServerHydrationSnapshot = () => false;
 
 export default function ProductCard({
   id,
+  productCode,
   slug,
   name,
   price,
@@ -83,6 +88,7 @@ export default function ProductCard({
   reviewCount = 0,
   badge,
   variantCount = 1,
+  inStock,
 }: ProductCardProps) {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
@@ -119,6 +125,7 @@ export default function ProductCard({
     const localBefore = readLocalWishlist();
     const optimisticItem: WishlistItem = {
       id,
+      productCode,
       slug,
       name,
       brand: "BangBuy",
@@ -131,6 +138,7 @@ export default function ProductCard({
       inStock: true,
       addedAt: new Date().toISOString(),
       badge,
+      variantCount,
     };
 
     dispatch(setWishlistError(null));
@@ -225,6 +233,7 @@ export default function ProductCard({
     const optimisticItem: CartItem = {
       id: `local:${id}`,
       productId: id,
+      productCode,
       name,
       image,
       quantity: 1,
@@ -238,6 +247,9 @@ export default function ProductCard({
     const nextLocal = upsertLocalCartItem(localBefore, optimisticItem);
     writeLocalCart(nextLocal);
     dispatch(setCartData({ items: nextLocal, summary: computeCartSummary(nextLocal) }));
+    if (inStock !== false && variantCount > 0) {
+      trackLocalCartAddition(localBefore, nextLocal, createEventId());
+    }
     toast.success("Added to cart");
   };
 

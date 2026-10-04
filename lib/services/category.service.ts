@@ -477,6 +477,7 @@ export async function getCategoryById(
 
 export type PublicCategoryProduct = {
   id: string;
+  productCode: string;
   slug: string;
   name: string;
   description: string | null;
@@ -555,6 +556,7 @@ async function loadActiveCategoryByPath(
       slug: true,
       name: true,
       description: true,
+      productCode: true,
       salePrice: true,
       discountPrice: true,
       images: {
@@ -608,6 +610,7 @@ async function loadActiveCategoryByPath(
       const rating = reviewSummary?._avg.rating ?? 0;
       return {
         id: product.id,
+        productCode: product.productCode,
         slug: product.slug,
         name: product.name,
         description: product.description,
@@ -631,7 +634,7 @@ export function getActiveCategoryByPath(
 
   return unstable_cache(
     () => loadActiveCategoryByPath(normalizedPath),
-    ["active-category-by-path-v3", normalizedPath],
+    ["active-category-by-path-v4", normalizedPath],
     {
       revalidate: CATEGORY_CACHE_SECONDS,
       tags: [

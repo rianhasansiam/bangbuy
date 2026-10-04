@@ -61,6 +61,7 @@ export default function Categories({ initialCategories }: CategoriesProps) {
                 <div key={item.id} className="min-w-0">
                   <ProductCard
                     id={item.id}
+                    productCode={item.productCode}
                     slug={item.slug}
                     name={item.name}
                     price={item.discountPrice ?? item.price}
@@ -72,6 +73,7 @@ export default function Categories({ initialCategories }: CategoriesProps) {
                     reviewCount={item.reviewCount}
                     badge={item.badge ?? undefined}
                     variantCount={item.variantCount}
+                    inStock={item.inStock}
                   />
                 </div>
               ))}

@@ -26,6 +26,7 @@ import {
 } from "@/features/cart/storage";
 import type { CartItem } from "@/features/cart/api";
 import type { Product } from "@/features/products/api";
+import { createEventId, trackLocalCartAddition } from "@/lib/analytics/meta-pixel";
 
 type ViewMode = "grid" | "list";
 
@@ -118,6 +119,7 @@ export default function ProductsGrid({
         >
           <ProductCard
             id={p.id}
+            productCode={p.productCode}
             slug={p.slug}
             name={p.name}
             price={p.discountPrice ?? p.price}
@@ -127,6 +129,7 @@ export default function ProductsGrid({
             reviewCount={p.reviewCount}
             badge={p.badge ?? undefined}
             variantCount={p.variantCount}
+            inStock={p.inStock}
           />
         </div>
       ))}
@@ -180,6 +183,7 @@ function ListItem({ product }: { product: Product }) {
     const optimisticItem: CartItem = {
       id: `local:${product.id}`,
       productId: product.id,
+      productCode: product.productCode,
       name: product.name,
       image: product.image,
       quantity: 1,
@@ -193,6 +197,9 @@ function ListItem({ product }: { product: Product }) {
     const nextLocal = upsertLocalCartItem(localBefore, optimisticItem);
     writeLocalCart(nextLocal);
     dispatch(setCartData({ items: nextLocal, summary: computeCartSummary(nextLocal) }));
+    if (product.inStock && product.variantCount > 0) {
+      trackLocalCartAddition(localBefore, nextLocal, createEventId());
+    }
   };
 
   return (

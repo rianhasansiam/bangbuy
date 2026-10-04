@@ -32,6 +32,7 @@ import {
 } from "@/features/wishlist/storage";
 import { useSession } from "@/lib/auth/use-app-session";
 import { toast } from "@/lib/feedback";
+import { createEventId, trackLocalCartAddition } from "@/lib/analytics/meta-pixel";
 import { type AppDispatch, type RootState } from "@/store";
 import {
   setCartData,
@@ -124,6 +125,7 @@ function genericAttributeSummary(
 
 type ProductActionsProps = {
   productId: string;
+  productCode?: string | null;
   productSlug: string;
   productName: string;
   image?: string | null;
@@ -140,6 +142,7 @@ type ProductActionsProps = {
 
 const ProductActions = ({
   productId,
+  productCode,
   productSlug,
   productName,
   image,
@@ -243,6 +246,7 @@ const ProductActions = ({
     const optimisticItem: CartItem = {
       id: `local:${selectedVariant.id}`,
       productId,
+      productCode,
       slug: productSlug,
       variantId: selectedVariant.id,
       variantName: selectedVariant.name,
@@ -270,6 +274,7 @@ const ProductActions = ({
       }),
     );
     toast.success(`${productName} added to cart`);
+    trackLocalCartAddition(localBefore, nextLocal, createEventId());
   };
 
   const handleBuyNow = () => {
@@ -293,6 +298,7 @@ const ProductActions = ({
     const localBefore = readLocalWishlist();
     const optimisticItem: WishlistItem = {
       id: productId,
+      productCode,
       slug: productSlug,
       name: productName,
       brand: brand?.trim() || "BangBuy",
