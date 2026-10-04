@@ -236,3 +236,42 @@ Also compare the live build ID `LTKkCZ5aqVDRTiyWunwj-` and the live chunk SHA ab
 Use Chrome DevTools Network with Preserve log or Meta Pixel Helper on the intended live/staging dataset. Filter `fbevents.js`, `signals/config`, and `facebook.com/tr` requests; inspect GET parameters **or POST form data**, response/failure state, `id`, `ev`, `eid`/eventID, contents, IDs, quantity, currency, and value. Never export an unredacted HAR containing session cookies, identifiers, profile fields, or tokens. Network issuance or HTTP success alone does not prove Events Manager processed an event.
 
 In Events Manager Test Events for **dataset 1396304422710398**, open the affected product through the test interface, choose an available variant, add quantity 1 successfully, and start Buy Now and normal cart checkout as distinct attempts. Expected repaired event counts: one AddToCart per successful addition; one InitiateCheckout per valid checkout entry, with no handler/destination duplicate; one ViewContent per product navigation. Selection/quantity changes alone do not create these business-action conversions. Correlate browser event identities/payloads with received events, verify catalog IDs, and review the specific overlapping rules above. Do not place real orders or call fbq manually to manufacture test conversions. Keep browser issuance, Meta receipt, and post-release production validation recorded separately.
+
+## Authorized deployment attempt — 2026-10-04
+
+**Status: stopped at the required dirty-checkout preflight gate; no release performed.** Authorized SSH succeeded. Inspection stayed within BangBuy and its service metadata. No install, source checkout, build, migration, database write, backup restore, process stop/restart, Nginx change, or Meta-account change was performed. The SSH session was closed after the read-only checks.
+
+### Verified production configuration
+
+| Item | Observed result |
+| --- | --- |
+| Application directory | `/var/www/bangbuy`, verified from running process cwd, not assumed from the guide |
+| Service owner/manager | root; existing PM2 v7.0.4 daemon PID 1004, `/root/.pm2`; existing RPC socket used, no new daemon initialized |
+| BangBuy process | PM2 ID `0`, name `bangbuy`, online; `npm start`; Next server PID 44000 |
+| Nginx vhost | `/etc/nginx/sites-enabled/bangbuy` points to `/etc/nginx/sites-available/bangbuy`; bangbuy.net/www.bangbuy.net upstream `127.0.0.1:3000` |
+| Listener | Port 3000 belongs to the verified BangBuy Next process |
+| Production checkout HEAD | `2beec31085466cac59dbb13bf6b105e7634d80ee` |
+| Working tree | **Dirty:** modified `package.json` and `package-lock.json` |
+| Public and direct-origin served build | `LTKkCZ5aqVDRTiyWunwj-`; both affected-product responses returned HTTP 200 |
+| On-disk `.next/BUILD_ID` | `A2Iw8-wA0Dyl4filU5NTD`; differs from served RSC build identity |
+| Served old Pixel chunk | `19_u2tfjng5__.js`, SHA-256 `05d98faf596f7762108bfbcc30b303f42549f6ad8c5282f83a78f4fb863c3619` |
+| Required protected build environment | DATABASE_URL, AUTH_SECRET, AUTH_URL, SITE_URL, NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_META_PIXEL_ID all present under production-mode Next env loading |
+| Intended public Pixel ID | Matches `1396304422710398`; public secret-like environment-key count 0 |
+| Database health | Connection and `BEGIN READ ONLY; SELECT 1; ROLLBACK` passed; no credentials/connection strings printed |
+
+Fresh public downloads of all 15 initial PDP scripts still lack the repaired runtime markers and application ecommerce calls. The linked Pixel chunk remains the earlier PageView implementation. Checkout HEAD and on-disk BUILD_ID are therefore recorded separately from served artifact identity; neither proves which exact source produced the live response. The source/build discrepancy must be explained before selecting recoverable rollback artifacts. No repair deployment or post-release verification is claimed.
+
+### Production-only changes reviewed read-only
+
+The only changed top-level package.json field is `allowScripts`, allowing `@prisma/engines@7.9.1`, `prisma@7.9.1`, `esbuild@0.28.1`, `unrs-resolver@1.12.2`, and `core-js@3.49.0`. The lockfile has 48 changed package entries, all changes confined to `libc` metadata: no package addition/removal or version change. These are still uncommitted production-only changes and were neither discarded nor committed by this task. Their origin and desired preservation require reconciliation in a reviewed clean release.
+
+The clean local reviewed candidate at the start of this attempt was `4196c804ccd2db7c58ec46ae87627266507879da`. It contains target repair `2c7a205379767bd2388a6620c5369cfced728fc0`; its only later change is this investigation documentation. Production HEAD `2beec31085466cac59dbb13bf6b105e7634d80ee` is an ancestor of that candidate. This does not resolve the uncommitted production package changes or authorize resetting them.
+
+### Gates and rollback disposition
+
+- Install, Prisma validation/generation/migration-status, lint, types, tests, and release build were **not run** because the required dirty-checkout gate failed. The earlier isolated September-backup build was not used.
+- No baseline failure was accepted. The documented ProductCard responsive assertion must be resolved or explicitly accepted before a subsequent release; the historical 509-pass/1-fail suite is not a passing deployment gate.
+- No release rollback was needed: the verified BangBuy process and artifacts were left untouched. A complete recoverable previous source/build/dependency/protected-environment record and the documented verified database backup remain unprepared/unverified for this attempt. Do not infer rollback readiness from the mere presence of `.next` or the archived September dump.
+- Before resuming: reconcile the two production package files in a reviewed clean release; explain the served/on-disk build discrepancy; prepare and verify the existing backup/rollback procedure; resolve or explicitly accept the baseline assertion; then run all documented gates against the current production database before changing only PM2 process `0` under its verified owner. Reconfirm process identity at the time of release.
+
+No browser action or Pixel conversion was generated during this stopped deployment attempt. Post-release request payloads/counts and Events Manager receipt remain **unverified**. Marketer review is still required for the rule IDs above, particularly `28375500845454352` (Add to Cart mapped to ViewContent), `2161586941420481` (increase quantity mapped to AddToCart), and `1627530462301698` (Buy Now click mapped to InitiateCheckout). No marketer message was sent and no Meta settings were changed; coordinate that review when a release is actually ready.
