@@ -101,3 +101,138 @@ Verified against official Meta pages on 2026-10-04. The browser research tool re
 - [Handling Duplicate Pixel and Conversions API Events](https://developers.facebook.com/docs/marketing-api/conversions-api/deduplicate-pixel-and-server-events/): browser `eventID` is the fourth argument; pair it with server `event_id`, identical event/event_name, and the same Pixel within Meta's documented 48-hour deduplication window. Browser-only duplicates still need application suppression.
 
 CAPI is absent here and was not introduced. A future CAPI project must validate orders server-side, preserve consent/secret isolation, use the same normalized payload and action identity as browser delivery, and verify both target the intended dataset.
+
+
+## Live follow-up investigation — 2026-10-04
+
+### Deployment evidence
+
+The repair is local commit `2c7a205379767bd2388a6620c5369cfced728fc0` (`fixed pixel hishab`, committed 2026-10-04 10:53 Asia/Dhaka). The working tree was clean before this investigation. No tracking source was changed during the follow-up.
+
+**The currently served affected PDP does not contain the repair.** A fresh public HTTP read of `https://bangbuy.net/products/male-side-bag` returned Next build ID `LTKkCZ5aqVDRTiyWunwj-`. Its MetaPixel module still uses the earlier `isReady` state, `lastTrackedPage` ref, and inline Next Script bootstrap, and emits application PageView only. This structurally matches the preceding `2beec31` / `e01ec6a` implementation. All 15 initial PDP script assets lack `__bangbuyMetaPixel`, `enterfly:meta-checkout`, `enterfly:meta-purchase`, and application ViewContent/AddToCart/InitiateCheckout names. The actual ProductActions RSC props also lack the productCode added by the repair. This is artifact evidence, not an inference from local Git.
+
+The live old Pixel chunk is `https://bangbuy.net/_next/static/chunks/19_u2tfjng5__.js`, SHA-256 `05d98faf596f7762108bfbcc30b303f42549f6ad8c5282f83a78f4fb863c3619`. Exact deployed Git commit remains **unverified**: public build IDs are not commit provenance, and current VPS SSH authentication failed. The September 4 deployment guide documents `/var/www/bangbuy`, Nginx forwarding to one PM2 Next process on port 3000, and historic root ownership. Its later dedicated-user runbook is a conditional migration target, not proof of the current daemon owner. Confirm the current directory, owner, and process before running any deployment command.
+
+### Real affected-product flow
+
+A normal browser UI session selected the available **Black** variant and exercised exactly one cart addition and two checkout entries. The cart was initially empty. The added item persisted through a cart-page reload in Server + Local mode. Buy Now and normal selected-cart checkout both showed server-priced items and totals. Place order was never clicked. The test item was removed after inspection; no paid order or account setting was created or changed.
+
+| Action | Business result observed | Repaired helper | Repaired adapter accepted/queued | Actual Pixel request | Meta receipt |
+| --- | --- | --- | --- | --- | --- |
+| Select Black | Available stock 10; selected option enabled actions | No action event expected | Not applicable | Not verified | Not verified |
+| Add to Cart, quantity 1 | One Black item persisted in authenticated cart | Absent from served action/module | Repair adapter absent | Not verified; external rules may emit events | Not verified |
+| Buy Now | Valid server-priced checkout, explicit Black quantity 1 | InitiateCheckout helper absent from served checkout assets | Repair adapter absent | Not verified | Not verified |
+| Normal cart checkout | Valid selected-cart checkout with `source=cart` | InitiateCheckout helper absent from served checkout assets | Repair adapter absent | Not verified | Not verified |
+
+Public/current commerce identity: product `cmusafdcp0000fil54ce9a0ap`, catalog code `PRD-00072`, Black variant `cmusafdcv0001fil5s8wgojsk`. Observed merchandise price BDT 1,299 (regular BDT 1,770), quantity 1; checkout subtotal BDT 1,299 + shipping BDT 80 + tax BDT 0 = BDT 1,379. Both checkout entries used that same snapshot. These are business data/UI observations, **not captured Pixel payloads**.
+
+Expected repaired AddToCart payload: `content_ids=["PRD-00072"]`, `content_type="product"`, `contents=[{id:"PRD-00072",quantity:1,item_price:1299}]`, `variant_ids=["cmusafdcv0001fil5s8wgojsk"]`, `currency="BDT"`, `value=1299`, `num_items=1`, and product content_name. Expected InitiateCheckout uses the same item fields and `value=1379`; two distinct successful checkout entries should have distinct action identities. Do not label these expected payloads as observed Meta requests.
+
+Effective public Pixel ID `1396304422710398` is present in live HTML/RSC/inline bootstrap and in the loaded Meta dataset-configuration script. The browser loaded `fbevents.js` and the matching signals/config script; the initial console inspection exposed no warnings/errors. No consent UI or GTM installation was observed in the affected page/public application assets. Actual main-world consent/queue state, complete network payloads/counts, and rule firing were not available through the connected browser tooling; its asset inventory is not a complete network recorder. Main-world SDK state must not be inferred from an isolated read-only DOM evaluator. The current Events Manager login did not expose the intended dataset, so no test receipt was confirmed.
+
+Observed action counts: 1 legitimate successful cart addition, 1 Buy Now checkout entry, 1 normal cart checkout entry. **Tracking-request/event-receipt counts remain unverified**, not zero by assumption. The only explicit event name in served application tracking is PageView; configured external event names below are separate evidence.
+
+### Confirmed overlapping/misassigned Meta configuration
+
+A read-only download of Meta's public `https://connect.facebook.net/signals/config/1396304422710398` contains 42 ACTIVE Event Setup Tool rules: ViewContent 34, AddToCart 3, InitiateCheckout 1, AddPaymentInfo 2, Search 1, SubmitApplication 1. It also enables ESTRuleEngine, InferredEvents, and AutomaticMatching. No Purchase rule appears in this downloaded rules array. These are configuration counts, not received-event counts.
+
+| Configured condition value | Configured event | Rule ID | Marketer review |
+| --- | --- | --- | --- |
+| `add to cart` | ViewContent | `28375500845454352` | Misassigned business action; overlaps repaired successful cart tracking. |
+| `increase quantity` | AddToCart | `2161586941420481` | Quantity change is not a confirmed new cart addition. |
+| `buy now` | InitiateCheckout | `1627530462301698` | Click rule can precede valid checkout and overlap destination tracking. |
+| `show black variant image` | ViewContent | `1847510059928627` | Image/variant interaction differs from one parent-product view per navigation. |
+| `black available color xh black` | ViewContent | `2054929958477375` | Option-selection overlap. |
+| `view male side bag` | ViewContent | `1756671182229675` | Review overlap with repaired product-detail view policy. |
+| `decrease quantity` | ViewContent | `1117981157433394` | Quantity change is not a new product-detail navigation. |
+
+The public rule configuration supports a concrete explanation for unexpected event naming, but does not prove which rule matched a tested click. The marketer should inspect these rule IDs and disable only overlapping/misassigned rules in coordination with verified release of application tracking. No external rules were changed. Visual Setup Tool highlighting remains independent of application event delivery; no button redesign, DOM-selector tracking, or Pixel reinstall is warranted by this evidence.
+
+### Build/environment result
+
+Production-mode `@next/env` loading found DATABASE_URL, AUTH_SECRET, AUTH_URL, SITE_URL, NEXT_PUBLIC_SITE_URL, and NEXT_PUBLIC_META_PIXEL_ID present; DIRECT_URL absent. The intended numeric public Pixel ID matches `1396304422710398`. No tracking feature flag exists. No NEXT_PUBLIC secret/token/password/private-key configuration was found. Credentials and connection strings were not printed. The installed Next environment guide confirms direct NEXT_PUBLIC references are frozen into browser code by `next build`; changing runtime environment alone cannot repair an already compiled browser ID.
+
+The actual local configured database on loopback port 15432 failed TCP connection and read-only SELECT 1 with ECONNREFUSED. The README's known SSH tunnel requires VPS authentication, which the available SSH credentials could not satisfy. Do not interpret the historic Neon topology in the older guide as the current database configuration.
+
+A safe production build was then completed with **only** DATABASE_URL/DIRECT_URL overridden to a disposable loopback PostgreSQL 18.6 restore of the tracked September 4 backup. All 11 migration names/checksums matched current source; no migration or fabricated product data was introduced. `npm run build` exited 0: compilation, TypeScript, page-data collection, and all 113 static generation tasks completed. Local build ID: `qpyv0ksiPkGWNOuBblJos`; client chunk `1z-lm-yo1rrjz.js` contains the intended public ID, repair runtime, and standard event names. The disposable database, credentials, and private restore files were cleaned up afterward.
+
+The archive does not contain male-side-bag. This successful build verifies code/schema compatibility with real archived catalog data, **not current production database access or affected-product execution**. Do not deploy this archive-built local artifact as current production catalog data; rebuild with the verified release environment and current intended database.
+
+Regression command `npm test -- __tests__/meta-pixel-*.test.ts __tests__/order-purchase.test.ts`: exit 0, **6 suites / 107 tests passed**. There is no new code defect reproduced and no new regression test required. The earlier full-suite baseline UI assertion and lint warnings are recorded above; resolve or explicitly disposition the baseline test before release, without redesigning buttons for the Setup Tool.
+
+### Exact read-only production checks
+
+These commands are for the authorized VPS operator; they were not executed successfully against production in this investigation. The documented directory/account are historical evidence and must be confirmed. Keep all credentials in protected server environment files. Do not run unfiltered `pm2 env`, print connection strings, or dump whole environment objects.
+
+```bash
+# Read-only after an authorized operator authenticates to the documented VPS.
+# This task could not authenticate: root@187.127.138.53 was denied.
+ssh root@187.127.138.53
+
+# These paths are documented September 4 observations, not confirmed current state.
+test -d /var/www/bangbuy || { echo "Documented application directory is absent; locate the configured cwd first"; exit 1; }
+cd /var/www/bangbuy
+git rev-parse HEAD
+git status --short
+test -f .next/BUILD_ID && cat .next/BUILD_ID
+test -f .next/BUILD_ID && stat .next/BUILD_ID
+
+# Run under the account that owns the EXISTING PM2 daemon. Do not initialize a new daemon.
+# Historical daemon home was /root/.pm2; if migrated, confirm its current home before this command.
+test -S "${PM2_HOME:-$HOME/.pm2}/rpc.sock" || { echo "No existing PM2 daemon at this account/home; inspect current owner before proceeding"; exit 1; }
+pm2 jlist | node -e 'let raw="";process.stdin.on("data",x=>raw+=x);process.stdin.on("end",()=>{for(const p of JSON.parse(raw)){if(p.pm2_env.pm_cwd==="/var/www/bangbuy")console.log(JSON.stringify({id:p.pm_id,name:p.name,status:p.pm2_env.status,cwd:p.pm2_env.pm_cwd,execPath:p.pm2_env.pm_exec_path,startedAt:p.pm2_env.pm_uptime}));}})'
+
+# Validate the same production-mode load order as Next build, while suppressing env values.
+NODE_ENV=production node <<'NODE'
+const {loadEnvConfig}=require("@next/env");
+loadEnvConfig(process.cwd(),false,{info:()=>{},error:()=>{}});
+for(const key of ["DATABASE_URL","AUTH_SECRET","AUTH_URL","SITE_URL","NEXT_PUBLIC_SITE_URL","NEXT_PUBLIC_META_PIXEL_ID"])
+ console.log(key+": "+(process.env[key]?.trim()?"present":"absent"));
+console.log("Pixel ID matches intended dataset:",process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim()==="1396304422710398");
+console.log("Public secret-like keys:",Object.keys(process.env).filter(x=>x.startsWith("NEXT_PUBLIC_")&&/TOKEN|SECRET|PASSWORD|PRIVATE/i.test(x)));
+NODE
+
+# Check only the DB's health in a read-only transaction; never print credentials or URLs.
+NODE_ENV=production node <<'NODE'
+const {loadEnvConfig}=require("@next/env");const {Client}=require("pg");
+loadEnvConfig(process.cwd(),false,{info:()=>{},error:()=>{}});
+(async()=>{const c=new Client({connectionString:process.env.DATABASE_URL,connectionTimeoutMillis:5000});try{await c.connect();await c.query("BEGIN READ ONLY");await c.query("SELECT 1");await c.query("ROLLBACK");console.log("DB SELECT 1 passed");}catch(e){console.log("DB SELECT 1 failed:",e.code||e.name);process.exitCode=1;}finally{await c.end().catch(()=>{});}})();
+NODE
+
+# Source configuration + deployment artifacts are separate evidence.
+# Presence of marker strings proves candidate artifact content, not exact source SHA.
+rg -l '__bangbuyMetaPixel|enterfly:meta-checkout' .next/static/chunks
+# Compare chunk SHA-256 hashes with bytes actually fetched by the live product browser.
+# Do not treat checkout HEAD or .next/BUILD_ID alone as proven build-commit provenance.
+```
+
+Also compare the live build ID `LTKkCZ5aqVDRTiyWunwj-` and the live chunk SHA above with the selected running process's actual `.next` directory. Inspect any existing release/deployment manifest tying that artifact to a Git SHA. Matching checkout HEAD alone is insufficient. Record the source SHA, `.next/BUILD_ID`, and client chunk hashes together for the next release; no new public version endpoint is necessary for this repair.
+
+### Deployment preparation — commands require explicit approval
+
+1. Confirm the current Nginx upstream, BangBuy process owner/name/id/cwd, and clean release checkout. The VPS hosts another application; operate only on the confirmed BangBuy service. Use `development_guide.md` section 16 only after its dedicated-user assumption has been verified. If production still uses historic root PM2, do not blindly initialize another user's daemon or perform an unrelated service-account migration as part of this Pixel release.
+2. Plan the existing maintenance-window/rollback procedure. Save a recoverable previous source/artifact/environment record and the normal backup. Stop only the confirmed BangBuy process before replacing an in-place node_modules/.next. For a separate release directory, use only an already established release-switch procedure; none is verified by this investigation.
+3. In the confirmed release directory as its current application owner, fetch/select clean repair SHA `2c7a205379767bd2388a6620c5369cfced728fc0` after reviewing any production-only source changes. Do not reset or overwrite a dirty checkout. Run the repository's existing install/validation commands:
+
+   ```bash
+   git fetch --prune --tags
+   git checkout 2c7a205379767bd2388a6620c5369cfced728fc0
+   npm ci --include=dev
+   npx prisma validate
+   npx prisma generate
+   npx prisma migrate status
+   npm run lint
+   npx tsc --noEmit
+   npm test
+   npm run build
+   ```
+
+   The repair contains no schema migration. Apply no migration merely to release Pixel tracking; separately review any migration-status drift. Set the verified intended NEXT_PUBLIC_META_PIXEL_ID and available database/auth configuration **before** build, using protected environment configuration. Never substitute the isolated backup build or hide real database failures. The full-suite baseline failure must have an explicit reviewed disposition before proceeding.
+4. Record source SHA/build ID/client hashes. Confirm the built client contains the repair markers and intended ID. After successful gates and **only with release approval**, start/restart the existing selected BangBuy service using its confirmed manager. For PM2, the established command is `pm2 restart CONFIRMED_BANGBUY_PROCESS_ID --update-env` under the existing daemon's owner; replace the placeholder with the read-only verified ID. Do not restart all processes. No deployment/restart was performed here.
+5. Open the live affected page and verify the browser fetches the new recorded artifact, rather than the old chunk above. Confirm normal cart behavior and checkout; then separately confirm Meta receipt and duplicates with the marketer.
+
+### Remaining browser/account verification
+
+Use Chrome DevTools Network with Preserve log or Meta Pixel Helper on the intended live/staging dataset. Filter `fbevents.js`, `signals/config`, and `facebook.com/tr` requests; inspect GET parameters **or POST form data**, response/failure state, `id`, `ev`, `eid`/eventID, contents, IDs, quantity, currency, and value. Never export an unredacted HAR containing session cookies, identifiers, profile fields, or tokens. Network issuance or HTTP success alone does not prove Events Manager processed an event.
+
+In Events Manager Test Events for **dataset 1396304422710398**, open the affected product through the test interface, choose an available variant, add quantity 1 successfully, and start Buy Now and normal cart checkout as distinct attempts. Expected repaired event counts: one AddToCart per successful addition; one InitiateCheckout per valid checkout entry, with no handler/destination duplicate; one ViewContent per product navigation. Selection/quantity changes alone do not create these business-action conversions. Correlate browser event identities/payloads with received events, verify catalog IDs, and review the specific overlapping rules above. Do not place real orders or call fbq manually to manufacture test conversions. Keep browser issuance, Meta receipt, and post-release production validation recorded separately.
