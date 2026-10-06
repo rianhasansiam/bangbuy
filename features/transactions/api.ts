@@ -1,21 +1,20 @@
 import { readApiError } from "@/features/http/api-envelope";
 import { BASE_CURRENCY, parseCurrencyCode } from "@/lib/currency/config";
 import { formatMoney } from "@/lib/currency/format-money";
+import {
+  PAYMENT_TRANSACTION_STATUSES,
+  type PaymentTransactionStatus,
+} from "@/lib/payments/core/transaction-status";
 
-export const TRANSACTION_STATUS_VALUES = [
-  "PENDING",
-  "SUCCESS",
-  "FAILED",
-  "CANCELLED",
-  "REFUNDED",
-  "EXPIRED",
-] as const;
+export const TRANSACTION_STATUS_VALUES = PAYMENT_TRANSACTION_STATUSES;
 
-export type TransactionStatus = (typeof TRANSACTION_STATUS_VALUES)[number];
+export type TransactionStatus = PaymentTransactionStatus;
+
+type TransactionStatusMeta = { label: string; pill: string };
 
 export const TRANSACTION_STATUS_META: Record<
   TransactionStatus,
-  { label: string; pill: string }
+  TransactionStatusMeta
 > = {
   PENDING: {
     label: "Pending",
@@ -41,7 +40,42 @@ export const TRANSACTION_STATUS_META: Record<
     label: "Expired",
     pill: "bg-orange-100 text-orange-800 ring-orange-200",
   },
+  CREATED: {
+    label: "Created",
+    pill: "bg-sky-100 text-sky-800 ring-sky-200",
+  },
+  REQUIRES_PAYMENT_METHOD: {
+    label: "Payment method required",
+    pill: "bg-amber-100 text-amber-800 ring-amber-200",
+  },
+  PENDING_REVIEW: {
+    label: "Pending review",
+    pill: "bg-amber-100 text-amber-800 ring-amber-200",
+  },
+  PROCESSING: {
+    label: "Processing",
+    pill: "bg-blue-100 text-blue-800 ring-blue-200",
+  },
+  REQUIRES_REVIEW: {
+    label: "Review required",
+    pill: "bg-orange-100 text-orange-800 ring-orange-200",
+  },
 };
+
+const UNKNOWN_TRANSACTION_STATUS_META: TransactionStatusMeta = {
+  label: "Unknown",
+  pill: "bg-gray-100 text-gray-700 ring-gray-200",
+};
+
+export function getTransactionStatusMeta(status: unknown): TransactionStatusMeta {
+  if (
+    typeof status === "string" &&
+    Object.hasOwn(TRANSACTION_STATUS_META, status)
+  ) {
+    return TRANSACTION_STATUS_META[status as TransactionStatus];
+  }
+  return UNKNOWN_TRANSACTION_STATUS_META;
+}
 
 export type TransactionOrder = {
   id: string;

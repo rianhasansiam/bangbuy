@@ -16,6 +16,7 @@ import {
   fetchMyTransactions,
   formatTransactionAmount,
   formatTransactionDate,
+  getTransactionStatusMeta,
   paymentProviderLabel,
   TRANSACTION_STATUS_META,
   TRANSACTION_STATUS_VALUES,
@@ -213,7 +214,7 @@ function TransactionCard({
 }: {
   transaction: CustomerTransaction;
 }) {
-  const status = TRANSACTION_STATUS_META[transaction.status];
+  const status = getTransactionStatusMeta(transaction.status);
   const reference = transaction.transactionId ?? transaction.id;
   const completion = transaction.paidAt
     ? { label: "Paid", value: transaction.paidAt }

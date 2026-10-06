@@ -49,37 +49,25 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
       { href: "/admin/products", label: "Products", icon: Package },
       { href: "/admin/categories", label: "Categories", icon: FolderTree },
       { href: "/admin/brands", label: "Brands", icon: Tags },
-      {
-        href: "/admin/manufacturers",
-        label: "Manufacturers",
-        icon: Factory,
-      },
+      {href: "/admin/manufacturers",label: "Manufacturers",icon: Factory }
     ],
   },
   {
     label: "Operations",
     items: [
       { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
-      {
-        href: "/admin/transactions",
-        label: "Transactions",
-        icon: ReceiptText,
-      },
+      {href: "/admin/transactions",label: "Transactions",icon: ReceiptText},
       { href: "/admin/reviews", label: "Reviews", icon: Star },
       { href: "/admin/courier", label: "Courier Check", icon: ShieldCheck },
       { href: "/admin/users", label: "Customers", icon: Users },
-      { href: "/admin/messages", label: "Messages", icon: Mail },
+      { href: "/admin/messages", label: "Messages", icon: Mail }
     ],
   },
   {
     label: "Content & Business",
     items: [
       { href: "/admin/banners", label: "Banners", icon: ImageIcon },
-      {
-        href: "/admin/testimonials",
-        label: "Testimonials",
-        icon: MessageSquareQuote,
-      },
+      {href: "/admin/testimonials",label: "Testimonials",icon: MessageSquareQuote},
       { href: "/admin/capital-costs", label: "Capital & Costs", icon: Wallet },
       { href: "/admin/activities", label: "Activity Log", icon: Activity },
       { href: "/admin/reports", label: "Reports", icon: BarChart3 },

@@ -17,6 +17,7 @@ import {
   fetchAdminTransactions,
   formatTransactionAmount,
   formatTransactionDate,
+  getTransactionStatusMeta,
   paymentProviderLabel,
   TRANSACTION_STATUS_META,
   TRANSACTION_STATUS_VALUES,
@@ -483,7 +484,7 @@ function TransactionState({
 }: {
   transaction: AdminTransaction;
 }) {
-  const status = TRANSACTION_STATUS_META[transaction.status];
+  const status = getTransactionStatusMeta(transaction.status);
   const reviewCode = transaction.requiresReview
     ? transaction.reviewReason || "Review required"
     : transaction.reviewResolvedAt

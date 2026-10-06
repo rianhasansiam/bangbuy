@@ -6,15 +6,9 @@
  */
 
 import { z } from "zod";
+import { PAYMENT_TRANSACTION_STATUSES } from "@/lib/payments/core/transaction-status";
 
-export const PAYMENT_TRANSACTION_STATUSES = [
-  "PENDING",
-  "SUCCESS",
-  "FAILED",
-  "CANCELLED",
-  "REFUNDED",
-  "EXPIRED",
-] as const;
+export { PAYMENT_TRANSACTION_STATUSES };
 
 function normalizeOptionalText(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
