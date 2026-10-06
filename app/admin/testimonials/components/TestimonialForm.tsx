@@ -52,6 +52,7 @@ export default function TestimonialForm({
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-1">
           <ImageUploader
+            category="users"
             label="Avatar (optional)"
             value={form.image}
             onChange={(url) => update("image", url)}

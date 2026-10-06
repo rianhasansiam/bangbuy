@@ -525,7 +525,7 @@ export default function ProductFormDrawer({
                       />
                     </div>
                     <div className="mt-3">
-                      <Field label="Variant image"><ImageUploader value={variant.image} onChange={(image) => updateVariant(index, { image })} disabled={isSubmitting} /></Field>
+                      <Field label="Variant image"><ImageUploader category="products" value={variant.image} onChange={(image) => updateVariant(index, { image })} disabled={isSubmitting} /></Field>
                     </div>
                     </article>
                   );
@@ -542,7 +542,7 @@ export default function ProductFormDrawer({
 
             <Section title="Media" description="The first gallery image is used as the storefront card image.">
               <div className="space-y-4">
-                <Field label="Primary image"><ImageUploader value={form.image} onChange={(image) => onChange((current) => ({ ...current, image }))} disabled={isSubmitting} /></Field>
+                <Field label="Primary image"><ImageUploader category="products" value={form.image} onChange={(image) => onChange((current) => ({ ...current, image }))} disabled={isSubmitting} /></Field>
                 <Field label="Primary image alt text">
                   <input
                     value={form.primaryImageAlt}
@@ -555,7 +555,7 @@ export default function ProductFormDrawer({
                     maxLength={250}
                   />
                 </Field>
-                <Field label="Gallery images"><MultiImageUploader value={normalizeImagesInput(form.images)} onChange={(images) => onChange((current) => ({ ...current, images: images.join("\n") }))} disabled={isSubmitting} /></Field>
+                <Field label="Gallery images"><MultiImageUploader category="products" value={normalizeImagesInput(form.images)} onChange={(images) => onChange((current) => ({ ...current, images: images.join("\n") }))} disabled={isSubmitting} /></Field>
               </div>
             </Section>
 
@@ -592,6 +592,7 @@ export default function ProductFormDrawer({
                 <div className="sm:col-span-2">
                   <Field label="Social preview image">
                     <ImageUploader
+                      category="products"
                       value={form.ogImage}
                       onChange={(ogImage) => onChange((current) => ({
                         ...current,

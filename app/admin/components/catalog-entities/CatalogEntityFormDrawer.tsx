@@ -179,6 +179,7 @@ export default function CatalogEntityFormDrawer({
             <div className="space-y-1.5">
               <p className="text-sm font-semibold text-gray-700">Logo</p>
               <ImageUploader
+                category="other"
                 value={form.logo}
                 onChange={(logo) =>
                   onChange((previous) => ({ ...previous, logo }))
@@ -241,6 +242,7 @@ export default function CatalogEntityFormDrawer({
                 <div className="space-y-1.5">
                   <p className="text-sm font-semibold text-gray-700">Social share image</p>
                   <ImageUploader
+                    category="other"
                     value={form.ogImage}
                     onChange={(ogImage) =>
                       onChange((previous) => ({ ...previous, ogImage }))

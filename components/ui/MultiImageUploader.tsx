@@ -5,11 +5,13 @@
 import { useCallback, useId, useRef, useState } from "react";
 import { ImagePlus, UploadCloud, X } from "lucide-react";
 
-import { ACCEPTED_IMAGE_TYPES, uploadImage } from "@/features/upload/api";
+import { ACCEPTED_IMAGE_TYPES, uploadImage, type UploadCategory } from "@/features/upload/api";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading";
 
 type MultiImageUploaderProps = {
+  /** VPS directory matching the kind of images being uploaded. */
+  category: UploadCategory;
   /** Current list of hosted image URLs. */
   value: string[];
   /** Called with the next list whenever images are added or removed. */
@@ -27,6 +29,7 @@ type MultiImageUploaderProps = {
  * the list. No URL text inputs — images are managed purely as thumbnails.
  */
 export default function MultiImageUploader({
+  category,
   value,
   onChange,
   label,
@@ -57,7 +60,7 @@ export default function MultiImageUploader({
       const uploadedUrls: string[] = [];
       for (const file of selected) {
         try {
-          const uploaded = await uploadImage(file);
+          const uploaded = await uploadImage(file, category);
           uploadedUrls.push(uploaded.url);
         } catch (uploadError) {
           setError(
@@ -75,7 +78,7 @@ export default function MultiImageUploader({
       }
       if (inputRef.current) inputRef.current.value = "";
     },
-    [max, onChange, value],
+    [category, max, onChange, value],
   );
 
   const onInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {

@@ -59,6 +59,7 @@ export default function ImageTextBlockForm({ block, onChange, disabled }: Props)
            Only persists the hosted URL, never base64 or blob URLs. */}
       <div>
         <ImageUploader
+          category="products"
           label="Image *"
           value={block.imageUrl}
           onChange={(url) => patch({ imageUrl: url })}

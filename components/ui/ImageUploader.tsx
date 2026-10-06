@@ -5,11 +5,13 @@
 import { useCallback, useId, useRef, useState } from "react";
 import { ImagePlus, Trash2, UploadCloud } from "lucide-react";
 
-import { ACCEPTED_IMAGE_TYPES, uploadImage } from "@/features/upload/api";
+import { ACCEPTED_IMAGE_TYPES, uploadImage, type UploadCategory } from "@/features/upload/api";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/ui/loading";
 
 type ImageUploaderProps = {
+  /** VPS directory matching the kind of image being uploaded. */
+  category: UploadCategory;
   /** Current hosted image URL (empty string when none). */
   value: string;
   /** Called with the new hosted URL after a successful upload, or "" on clear. */
@@ -30,6 +32,7 @@ type ImageUploaderProps = {
  * holds so it works for both create (empty) and edit (existing) flows.
  */
 export default function ImageUploader({
+  category,
   value,
   onChange,
   label,
@@ -48,7 +51,7 @@ export default function ImageUploader({
       setError(null);
       setIsUploading(true);
       try {
-        const uploaded = await uploadImage(file);
+        const uploaded = await uploadImage(file, category);
         onChange(uploaded.url);
       } catch (uploadError) {
         setError(
@@ -61,7 +64,7 @@ export default function ImageUploader({
         if (inputRef.current) inputRef.current.value = "";
       }
     },
-    [onChange],
+    [category, onChange],
   );
 
   const onInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {

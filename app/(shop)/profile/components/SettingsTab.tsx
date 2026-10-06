@@ -222,6 +222,7 @@ export default function SettingsTab({ user, onUpdated }: SettingsTabProps) {
         />
         <div className="sm:col-span-2">
           <ImageUploader
+            category="users"
             label="Profile picture"
             value={form.image}
             onChange={handleChange("image")}

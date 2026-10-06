@@ -162,6 +162,18 @@ your SSH `known_hosts`. A connection failure displays
 **Upload storage is unavailable. Please try again later.** beneath the uploader.
 Deleting an uploaded image uses the same storage connection.
 
+Forms select the directory automatically under `UPLOAD_DIR`:
+
+| Image | Directory |
+|---|---|
+| Banners, carousels, deals, promotions | `banners/` |
+| Product primary, gallery, variant, description, and social images | `products/` |
+| Category and subcategory images, including social previews | `categories/` |
+| Profile and testimonial avatars | `users/` |
+| Brand/manufacturer logos and social images | `other/` |
+
+These assignments apply to new uploads. Existing image URLs retain their paths.
+
 The VPS uses a dedicated `bangbuy-upload` account with write access to the
 upload directory. Install [scripts/upload-storage.py](scripts/upload-storage.py)
 as `/usr/local/lib/bangbuy/upload-storage.py`, owned by root. Its public SSH key

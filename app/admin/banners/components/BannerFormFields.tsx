@@ -131,7 +131,7 @@ export function CarouselFormFields({
   return (
     <>
       <Field label="Image" required>
-        <ImageUploader value={form.image} onChange={(url) => update("image", url)} />
+        <ImageUploader category="banners" value={form.image} onChange={(url) => update("image", url)} />
       </Field>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Title" required>
@@ -306,7 +306,7 @@ export function CategoryBannerFormFields({
         </select>
       </Field>
       <Field label="Image" required>
-        <ImageUploader value={form.image} onChange={(url) => update("image", url)} />
+        <ImageUploader category="banners" value={form.image} onChange={(url) => update("image", url)} />
       </Field>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Label" required>
@@ -386,7 +386,7 @@ export function DealFormFields({
   return (
     <>
       <Field label="Image" required>
-        <ImageUploader value={form.image} onChange={(url) => update("image", url)} />
+        <ImageUploader category="banners" value={form.image} onChange={(url) => update("image", url)} />
       </Field>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Title" required>
@@ -465,7 +465,7 @@ export function PromoFormFields({
   return (
     <>
       <Field label="Image" required>
-        <ImageUploader value={form.image} onChange={(url) => update("image", url)} />
+        <ImageUploader category="banners" value={form.image} onChange={(url) => update("image", url)} />
       </Field>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label="Title" required>

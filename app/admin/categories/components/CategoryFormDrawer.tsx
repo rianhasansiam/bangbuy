@@ -167,6 +167,7 @@ export default function CategoryFormDrawer({
 
               <Field label="Image">
                 <ImageUploader
+                  category="categories"
                   value={form.image}
                   onChange={(url) => onChange((prev) => ({ ...prev, image: url }))}
                   disabled={isSubmitting}
@@ -224,6 +225,7 @@ export default function CategoryFormDrawer({
 
                   <Field label="Social image">
                     <ImageUploader
+                      category="categories"
                       value={form.ogImage}
                       onChange={(url) => onChange((prev) => ({ ...prev, ogImage: url }))}
                       disabled={isSubmitting}
