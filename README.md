@@ -16,7 +16,7 @@ A Bangladesh-focused, mobile-first e-commerce storefront and administration plat
 | Database | PostgreSQL, Prisma 7, `@prisma/adapter-pg` |
 | Payments | SSLCommerz, Airwallex |
 | Email | EmailJS (browser SDK) |
-| Image Uploads | ImgBB |
+| Image Uploads | VPS filesystem, Nginx, Sharp; restricted SSH for local development |
 | PDF Generation | jsPDF + jsPDF AutoTable |
 | Package Manager | npm |
 
@@ -132,6 +132,74 @@ optimizer and cache. This avoids downloading large ImgBB originals over the
 local connection, which can exceed Next.js's seven-second fetch timeout. Local
 assets and other image hosts still use the local optimizer. The image rewrite
 is disabled in production builds.
+
+### Upload photos to your VPS from local development
+
+`UPLOAD_DIR` is a filesystem path on the machine running Next.js. The Linux
+path `/var/www/uploads/bangbuy` cannot store files on a VPS when Next.js is
+running on your Mac. Select SSH storage in `.env.development.local` to send
+optimized images to the VPS and return the same public URLs used in production:
+
+```dotenv
+UPLOAD_STORAGE="ssh"
+UPLOAD_SSH_HOST="187.127.138.53"
+UPLOAD_SSH_USER="bangbuy-upload"
+UPLOAD_SSH_KEY="/absolute/path/to/.ssh/bangbuy_upload_ed25519"
+# UPLOAD_SSH_PORT="22"
+```
+
+Keep the shared upload settings in `.env`:
+
+```dotenv
+UPLOAD_DIR="/var/www/uploads/bangbuy"
+UPLOAD_PUBLIC_URL="https://bangbuy.net/uploads"
+MAX_UPLOAD_SIZE_MB="5"
+```
+
+Restart `npm run dev` after changing these settings. The SSH key must be usable
+without a password prompt, and the VPS host key must already be verified in
+your SSH `known_hosts`. A connection failure displays
+**Upload storage is unavailable. Please try again later.** beneath the uploader.
+Deleting an uploaded image uses the same storage connection.
+
+The VPS uses a dedicated `bangbuy-upload` account with write access to the
+upload directory. Install [scripts/upload-storage.py](scripts/upload-storage.py)
+as `/usr/local/lib/bangbuy/upload-storage.py`, owned by root. Its public SSH key
+entry in that account's `authorized_keys` must start with:
+
+```text
+restrict,command="/usr/bin/python3 /usr/local/lib/bangbuy/upload-storage.py --root /var/www/uploads/bangbuy" ssh-ed25519 <public-key> bangbuy-development-upload
+```
+
+This key can run the upload helper only. The helper validates paths, publishes
+complete images atomically, and times out stalled requests. The upload account
+and the production Next.js process must both be able to write to the upload
+directory; Nginx needs read access. Production defaults to filesystem storage
+when `UPLOAD_STORAGE` is unset, so it does not need the development SSH key.
+
+In the HTTPS Nginx server block, allow the 5 MB image limit plus multipart
+overhead and serve the persistent directory:
+
+```nginx
+client_max_body_size 6m;
+
+location /uploads/ {
+    alias /var/www/uploads/bangbuy/;
+    autoindex off;
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+    add_header X-Content-Type-Options "nosniff" always;
+}
+```
+
+Run `nginx -t` before reloading Nginx. Without the size directive, Nginx can
+reject images over its default request limit before the app receives them.
+Verify the storage code with:
+
+```bash
+npx vitest run __tests__/upload-service.test.ts __tests__/upload-ssh-storage.test.ts
+python3 -m unittest discover -s scripts/tests -p 'test_upload_storage.py'
+```
 
 ---
 

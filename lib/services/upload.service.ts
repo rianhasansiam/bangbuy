@@ -2,9 +2,14 @@ import "server-only";
 
 import { randomBytes } from "node:crypto";
 import { mkdir, writeFile, unlink, stat } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 
 import { ServiceError } from "@/lib/services/service-error";
+import {
+  deleteUploadFileViaSSH,
+  usesSSHUploadStorage,
+  writeUploadFileViaSSH,
+} from "@/lib/services/upload-ssh.storage";
 
 /**
  * VPS filesystem upload service.
@@ -287,6 +292,10 @@ export async function uploadImageToVPS(
     throw new ServiceError(415, "Unsupported image format.");
   }
 
+  // Verify URL configuration before writing so a configuration error cannot
+  // leave an image behind without returning its hosted URL.
+  const publicBase = getUploadPublicUrl();
+
   // Optimize image
   let optimized: {
     data: Buffer;
@@ -318,32 +327,33 @@ export async function uploadImageToVPS(
     throw new ServiceError(400, "Invalid upload path.");
   }
 
-  // Ensure the category directory exists
-  try {
-    await mkdir(targetDir, { recursive: true });
-  } catch (error) {
-    console.error("[upload.service] mkdir failed", error);
-    throw new ServiceError(
-      500,
-      "Upload storage is unavailable. Please try again later.",
-    );
-  }
+  if (usesSSHUploadStorage()) {
+    await writeUploadFileViaSSH(uploadRoot, category, filename, optimized.data);
+  } else {
+    // Ensure the category directory exists on the machine running Next.js.
+    try {
+      await mkdir(targetDir, { recursive: true });
+    } catch (error) {
+      console.error("[upload.service] mkdir failed", error);
+      throw new ServiceError(
+        500,
+        "Upload storage is unavailable. Please try again later.",
+      );
+    }
 
-  // Write the file atomically (write to temp, then rename is ideal,
-  // but for simplicity and because we use unique filenames, a direct
-  // writeFile with exclusive flag is sufficient).
-  try {
-    await writeFile(filePath, optimized.data);
-  } catch (error) {
-    console.error("[upload.service] write failed", error);
-    throw new ServiceError(
-      500,
-      "Failed to save the image. Please try again.",
-    );
+    try {
+      await writeFile(filePath, optimized.data);
+    } catch (error) {
+      console.error("[upload.service] write failed", error);
+      throw new ServiceError(
+        500,
+        "Failed to save the image. Please try again.",
+      );
+    }
   }
 
   // Build the public URL
-  const publicUrl = `${getUploadPublicUrl()}/${category}/${filename}`;
+  const publicUrl = `${publicBase}/${category}/${filename}`;
 
   return {
     url: publicUrl,
@@ -372,7 +382,7 @@ export function resolveUploadPath(url: string): string | null {
     return null;
   }
 
-  if (!url.startsWith(publicBase)) return null;
+  if (!url.startsWith(`${publicBase}/`)) return null;
 
   const relativePath = url.slice(publicBase.length).replace(/^\/+/, "");
   if (!relativePath || relativePath.includes("..")) return null;
@@ -402,6 +412,14 @@ export async function deleteUploadedFile(url: string): Promise<boolean> {
   if (!isInsideUploadDir(filePath)) return false;
 
   try {
+    if (usesSSHUploadStorage()) {
+      const root = resolve(getUploadDir());
+      const parts = relative(root, filePath).split("/");
+      if (parts.length !== 2 || !VALID_CATEGORIES.has(parts[0] as UploadCategory)) {
+        return false;
+      }
+      return await deleteUploadFileViaSSH(root, parts[0], parts[1]);
+    }
     const fileStat = await stat(filePath);
     if (!fileStat.isFile()) return false; // Don't delete directories
     await unlink(filePath);

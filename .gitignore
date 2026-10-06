@@ -13,6 +13,9 @@
 # testing
 /coverage
 
+# Python upload-helper test caches
+__pycache__/
+
 # next.js
 /.next/
 /out/

@@ -16,6 +16,14 @@ const mockMkdir = vi.fn().mockResolvedValue(undefined);
 const mockWriteFile = vi.fn().mockResolvedValue(undefined);
 const mockUnlink = vi.fn().mockResolvedValue(undefined);
 const mockStat = vi.fn().mockResolvedValue({ isFile: () => true });
+const mockWriteSSH = vi.fn().mockResolvedValue(undefined);
+const mockDeleteSSH = vi.fn().mockResolvedValue(true);
+
+vi.mock("@/lib/services/upload-ssh.storage", () => ({
+  usesSSHUploadStorage: () => process.env.UPLOAD_STORAGE === "ssh",
+  writeUploadFileViaSSH: (...args: unknown[]) => mockWriteSSH(...args),
+  deleteUploadFileViaSSH: (...args: unknown[]) => mockDeleteSSH(...args),
+}));
 
 vi.mock("node:fs/promises", () => ({
   mkdir: (...args: unknown[]) => mockMkdir(...args),
@@ -73,6 +81,14 @@ function makeNonImageFile(): File {
 }
 
 // ---- Test suite ------------------------------------------------------------
+
+beforeEach(() => {
+  vi.stubEnv("UPLOAD_STORAGE", undefined);
+  mockWriteSSH.mockReset().mockResolvedValue(undefined);
+  mockDeleteSSH.mockReset().mockResolvedValue(true);
+});
+
+afterEach(() => vi.unstubAllEnvs());
 
 describe("upload.service", () => {
   const UPLOAD_DIR = "/var/www/uploads/bangbuy";
@@ -132,6 +148,34 @@ describe("upload.service", () => {
 
     expect(result.url).toContain("/categories/");
     expect(result.url).toMatch(/\.webp$/);
+  });
+
+  it("uploads optimized images to the VPS instead of creating local directories in SSH mode", async () => {
+    vi.stubEnv("UPLOAD_STORAGE", "ssh");
+    const { uploadImageToVPS } = await importService();
+    const result = await uploadImageToVPS(makeImageFile(JPEG_MAGIC, "photo.jpg", "image/jpeg"), "products");
+
+    expect(mockWriteSSH).toHaveBeenCalledWith(
+      UPLOAD_DIR,
+      "products",
+      expect.stringMatching(/^[a-z0-9]+-[a-f0-9]{24}\.webp$/),
+      Buffer.from("fake-webp-data"),
+    );
+    expect(result.url).toBe(`${UPLOAD_PUBLIC_URL}/products/${mockWriteSSH.mock.calls[0][2]}`);
+    expect(mockMkdir).not.toHaveBeenCalled();
+    expect(mockWriteFile).not.toHaveBeenCalled();
+  });
+
+  it("preserves SSH storage errors instead of falling back to the local filesystem", async () => {
+    vi.stubEnv("UPLOAD_STORAGE", "ssh");
+    const { uploadImageToVPS } = await importService();
+    const { ServiceError } = await import("@/lib/services/service-error");
+    mockWriteSSH.mockRejectedValueOnce(new ServiceError(500, "Upload storage is unavailable. Please try again later."));
+
+    await expect(uploadImageToVPS(makeImageFile(JPEG_MAGIC, "photo.jpg", "image/jpeg")))
+      .rejects.toMatchObject({ status: 500, message: "Upload storage is unavailable. Please try again later." });
+    expect(mockMkdir).not.toHaveBeenCalled();
+    expect(mockWriteFile).not.toHaveBeenCalled();
   });
 
   it("should default to 'other' category when none specified", async () => {
@@ -255,6 +299,8 @@ describe("upload.service", () => {
     await expect(uploadImageToVPS(file)).rejects.toThrow(
       "upload public URL is not configured",
     );
+    expect(mockWriteFile).not.toHaveBeenCalled();
+    expect(mockWriteSSH).not.toHaveBeenCalled();
   });
 
   // -- Filesystem write failure ----------------------------------------------
@@ -314,6 +360,27 @@ describe("upload.service deletion", () => {
     expect(mockUnlink).toHaveBeenCalledWith(
       resolve(UPLOAD_DIR, "products/abc123.webp"),
     );
+  });
+
+  it("deletes SSH-hosted images on the VPS without probing the local filesystem", async () => {
+    vi.stubEnv("UPLOAD_STORAGE", "ssh");
+    const { deleteUploadedFile } = await importService();
+    const filename = "mgoe4ftp-0123456789abcdef01234567.webp";
+
+    await expect(deleteUploadedFile(`${UPLOAD_PUBLIC_URL}/products/${filename}`)).resolves.toBe(true);
+    expect(mockDeleteSSH).toHaveBeenCalledWith(UPLOAD_DIR, "products", filename);
+    expect(mockStat).not.toHaveBeenCalled();
+    expect(mockUnlink).not.toHaveBeenCalled();
+  });
+
+  it("preserves missing-file deletion results from the VPS", async () => {
+    vi.stubEnv("UPLOAD_STORAGE", "ssh");
+    mockDeleteSSH.mockResolvedValueOnce(false);
+    const { deleteUploadedFile } = await importService();
+
+    await expect(deleteUploadedFile(`${UPLOAD_PUBLIC_URL}/other/mgoe4ftp-0123456789abcdef01234567.webp`))
+      .resolves.toBe(false);
+    expect(mockUnlink).not.toHaveBeenCalled();
   });
 
   it("should NOT attempt to delete ImgBB URLs", async () => {
@@ -397,6 +464,11 @@ describe("upload.service path resolution", () => {
     const { resolveUploadPath } = await importService();
     const path = resolveUploadPath("https://i.ibb.co/abc/image.jpg");
     expect(path).toBeNull();
+  });
+
+  it("rejects URLs whose path only begins with the public upload prefix", async () => {
+    const { resolveUploadPath } = await importService();
+    expect(resolveUploadPath("https://example.com/uploads-other/products/test.webp")).toBeNull();
   });
 
   it("should return null for path traversal attempts", async () => {
