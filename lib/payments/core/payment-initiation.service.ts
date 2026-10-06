@@ -33,13 +33,18 @@ import type {
 } from "@/lib/payments/gateways/sslcommerz/sslcommerz.types";
 import { absoluteUrl } from "@/lib/seo/site";
 import {
+  checkoutCustomerOwnsOrder,
+  checkoutPrincipal,
+  type CheckoutCustomer,
+} from "@/lib/orders/checkout-customer";
+import {
   CheckoutError,
   presentPersistedOrderSummary,
   reserveOrderForSslCommerz,
 } from "@/lib/services/checkout.service";
 import type { CurrencyContext } from "@/lib/currency/config";
 import { getBaseCurrencyContext } from "@/lib/currency/request-currency";
-import { getOrderForUser } from "@/lib/services/order.service";
+import { getOrderForCheckoutCustomer } from "@/lib/services/order.service";
 import type { CheckoutInput } from "@/lib/validations/checkout.validation";
 
 import {
@@ -116,7 +121,7 @@ function buildSessionInput(
   if (!order.customerEmail || order.customerEmail.length > 50) {
     throw new PaymentError(
       400,
-      "Your account email is not compatible with online payment. Please update it or choose Cash on Delivery.",
+      "Your email is not compatible with online payment. Please update it or choose Cash on Delivery.",
     );
   }
 
@@ -187,17 +192,18 @@ function buildSessionInput(
 // ── Idempotency ────────────────────────────────────────────────────────
 
 async function findOwnedAttemptByIdempotency(
-  userId: string,
+  customer: CheckoutCustomer,
   idempotencyKey: string,
 ) {
-  return prisma.paymentTransaction.findFirst({
+  const attempt = await prisma.paymentTransaction.findFirst({
     where: {
       provider: PROVIDER,
       idempotencyKey,
-      order: { userId },
+      ...(typeof customer === "string" ? { order: { userId: customer } } : {}),
     },
     include: existingAttemptInclude,
   });
+  return attempt && checkoutCustomerOwnsOrder(customer, attempt.order) ? attempt : null;
 }
 
 function replaySummary(
@@ -208,7 +214,7 @@ function replaySummary(
 }
 
 async function replayExistingAttempt(
-  userId: string,
+  customer: CheckoutCustomer,
   attempt: NonNullable<
     Awaited<ReturnType<typeof findOwnedAttemptByIdempotency>>
   >,
@@ -230,7 +236,7 @@ async function replayExistingAttempt(
     );
   }
 
-  const order = await getOrderForUser(attempt.orderId, userId);
+  const order = await getOrderForCheckoutCustomer(attempt.orderId, customer);
   if (!order) throw new PaymentError(404, "Order not found.");
 
   return {
@@ -355,7 +361,7 @@ async function failInitializedReservation(
  * hosted gateway outside the database transaction.
  */
 export async function initiateSslCommerzCheckout(
-  userId: string,
+  customer: CheckoutCustomer,
   input: CheckoutInput,
   currencyContext: CurrencyContext = getBaseCurrencyContext(),
 ) {
@@ -364,8 +370,8 @@ export async function initiateSslCommerzCheckout(
     throw new PaymentError(400, "Valid SSLCommerz payment metadata is required.");
   }
 
-  const idempotencyKey = paymentRequestDigest(userId, input.idempotencyKey);
-  const existing = await findOwnedAttemptByIdempotency(userId, idempotencyKey);
+  const idempotencyKey = paymentRequestDigest(checkoutPrincipal(customer), input.idempotencyKey);
+  const existing = await findOwnedAttemptByIdempotency(customer, idempotencyKey);
   if (existing) {
     if (existing.status === "PENDING" && !existing.gatewayUrl) {
       let reconciliation: ReconciledAttempt;
@@ -384,12 +390,12 @@ export async function initiateSslCommerzCheckout(
         );
       }
       const refreshed = await findOwnedAttemptByIdempotency(
-        userId,
+        customer,
         idempotencyKey,
       );
-      if (refreshed) return replayExistingAttempt(userId, refreshed);
+      if (refreshed) return replayExistingAttempt(customer, refreshed);
     }
-    return replayExistingAttempt(userId, existing);
+    return replayExistingAttempt(customer, existing);
   }
 
   const attemptSeed = {
@@ -402,7 +408,7 @@ export async function initiateSslCommerzCheckout(
   let reserved: Awaited<ReturnType<typeof reserveOrderForSslCommerz>>;
   try {
     reserved = await reserveOrderForSslCommerz(
-      userId,
+      customer,
       input,
       attemptSeed,
       currencyContext,
@@ -412,10 +418,16 @@ export async function initiateSslCommerzCheckout(
       error instanceof CheckoutError &&
       error.details?.code === "PAYMENT_IDEMPOTENCY_CONFLICT"
     ) {
-      const raced = await findOwnedAttemptByIdempotency(userId, idempotencyKey);
-      if (raced) return replayExistingAttempt(userId, raced);
+      const raced = await findOwnedAttemptByIdempotency(customer, idempotencyKey);
+      if (raced) return replayExistingAttempt(customer, raced);
     }
     throw error;
+  }
+
+  if (reserved.idempotentReplay) {
+    const replayed = await findOwnedAttemptByIdempotency(customer, idempotencyKey);
+    if (!replayed) throw new PaymentError(404, "Payment attempt not found.");
+    return replayExistingAttempt(customer, replayed);
   }
 
   const productIds = reserved.order.items.flatMap((item) =>
@@ -519,7 +531,7 @@ export async function initiateSslCommerzCheckout(
     );
   }
 
-  const order = await getOrderForUser(reserved.order.id, userId);
+  const order = await getOrderForCheckoutCustomer(reserved.order.id, customer);
   if (!order) {
     throw new CommittedPaymentError(
       500,

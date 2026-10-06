@@ -282,10 +282,7 @@ const ProductActions = ({
     const target = `/checkout?buy=${encodeURIComponent(
       `${productId}:${quantity}:${selectedVariant.id}`,
     )}`;
-    const nextHref =
-      status !== "authenticated"
-        ? `/login?callbackUrl=${encodeURIComponent(target)}`
-        : target;
+    const nextHref = target;
     startBuyNowTransition(() => {
       router.push(nextHref);
     });

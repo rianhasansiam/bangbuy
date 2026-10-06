@@ -50,6 +50,16 @@ import {
 } from "@/lib/currency/pricing.service";
 import { getBaseCurrencyContext } from "@/lib/currency/request-currency";
 import { formatMoney } from "@/lib/currency/format-money";
+import {
+  checkoutPrincipal,
+  checkoutRequestKey,
+  checkoutCustomerOwnsOrder,
+  guestOrderToken,
+  hashGuestToken,
+  type CheckoutCustomer,
+} from "@/lib/orders/checkout-customer";
+
+export type { CheckoutCustomer } from "@/lib/orders/checkout-customer";
 
 /**
  * Single home for checkout pricing + order creation.
@@ -139,6 +149,9 @@ async function resolveItems(
     for (const item of bodyItems) {
       const key = item.variantId ?? `product:${item.productId}`;
       const current = merged.get(key);
+      if ((current?.quantity ?? 0) + item.quantity > 1000) {
+        throw new CheckoutError(400, "Quantity is too large.");
+      }
       merged.set(key, {
         productId: item.productId,
         variantId: item.variantId,
@@ -782,11 +795,22 @@ async function lockCheckoutCatalogRows(
 }
 
 async function placeOrderInternal(
-  userId: string | null,
+  customer: CheckoutCustomer | null,
   input: CheckoutInput,
   options: OrderPaymentOptions = {},
   currencyContext: CurrencyContext = getBaseCurrencyContext(),
 ) {
+  const userId = typeof customer === "string" ? customer : null;
+  const guestKey = customer && typeof customer !== "string" ? customer.guestKey : null;
+  const checkoutKey = customer && input.idempotencyKey
+    ? checkoutRequestKey(customer, input.idempotencyKey)
+    : null;
+  // Quote signatures may refresh between retries. Bind the attempt to the
+  // customer's actual choices, not a transient provider quote token.
+  const choices = Object.fromEntries(Object.entries(input).filter(([key]) => !["idempotencyKey", "airwallexQuoteToken"].includes(key)));
+  const checkoutFingerprint = checkoutKey
+    ? hashGuestToken(JSON.stringify({ ...choices, customerEmail: userId ? undefined : input.customerEmail, displayCurrency: currencyContext.currency }))
+    : null;
   const isOnlinePayment =
     input.paymentMethod === "SSLCOMMERZ" ||
     input.paymentMethod === "AIRWALLEX";
@@ -817,10 +841,6 @@ async function placeOrderInternal(
     );
   }
 
-  const { items: resolved, fromCart } = await resolveItems(
-    userId,
-    input.items,
-  );
   const settings = settingsToSnapshot(await getStoreSettings());
 
   // Account-backed orders always use the account email, never a client
@@ -849,6 +869,11 @@ async function placeOrderInternal(
   } else {
     customerEmail = input.customerEmail?.trim().toLowerCase() || null;
   }
+  if (input.paymentMethod === "SSLCOMMERZ" && (!customerEmail || customerEmail.length > 50)) {
+    throw new CheckoutError(400, "Enter an email address of at most 50 characters for SSLCommerz, or choose Cash on Delivery.", {
+      fieldErrors: { customerEmail: ["An email address of at most 50 characters is required for this payment method."] },
+    });
+  }
 
   const orderNumber = generateOrderNumber();
   const trimmedCity = input.customerCity?.trim();
@@ -860,6 +885,32 @@ async function placeOrderInternal(
 
   try {
     return await prisma.$transaction(async (tx) => {
+      if (checkoutKey) {
+        // Serialize identical attempts across processes before inventory or
+        // promotion writes. Failed transactions release the lock and record.
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(${BigInt.asIntN(64, BigInt(`0x${checkoutKey.slice(0, 16)}`))})::text`;
+        const replay = await tx.order.findUnique({
+          where: { checkoutKey },
+          include: { ...orderInclude, payments: true },
+        });
+        if (replay) {
+          if (replay.checkoutFingerprint !== checkoutFingerprint || !customer || !checkoutCustomerOwnsOrder(customer, replay)) {
+            throw new CheckoutError(409, "This checkout request was already used. Start a new checkout attempt.");
+          }
+          const { payments, ...order } = replay;
+          const summary = presentPersistedOrderSummary(order);
+          return {
+            order,
+            summary,
+            promo: order.promoCode ? { ok: true as const, code: order.promoCode, description: null, discount: summary.discount, baseDiscount: summary.baseDiscount } : null,
+            paymentAttempt: options.paymentAttempt
+              ? payments.find((payment) => payment.provider === options.paymentAttempt!.provider && payment.idempotencyKey === options.paymentAttempt!.idempotencyKey) ?? null
+              : null,
+            idempotentReplay: true,
+          };
+        }
+      }
+      const { items: resolved, fromCart } = await resolveItems(userId, input.items);
       await lockCheckoutCatalogRows(tx, resolved);
       const lines = await priceLines(resolved, tx);
       const subtotal = sumDecimals(lines.map((line) => line.lineTotal));
@@ -963,10 +1014,23 @@ async function placeOrderInternal(
         });
       }
 
+      const guestCustomer = !userId ? await tx.guestCustomer.create({
+        data: {
+          fullName: input.customerName,
+          phone: input.customerPhone,
+          email: customerEmail,
+          address: input.customerAddress,
+          city: customerCity,
+          postalCode: customerPostalCode,
+        },
+      }) : null;
       const order = await tx.order.create({
         data: {
           orderNumber,
           userId,
+          checkoutKey,
+          checkoutFingerprint,
+          guestCustomerId: guestCustomer?.id ?? null,
           subtotal: baseSummary.subtotal,
           deliveryCharge: baseSummary.shipping,
           discountAmount: baseSummary.discount,
@@ -1043,6 +1107,14 @@ async function placeOrderInternal(
         },
         include: orderInclude,
       });
+
+      if (guestKey) {
+        order.guestAccessTokenHash = hashGuestToken(guestOrderToken(guestKey, order.id));
+        await tx.order.update({
+          where: { id: order.id },
+          data: { guestAccessTokenHash: order.guestAccessTokenHash },
+        });
+      }
 
       await tx.orderStatusHistory.create({
         data: {
@@ -1131,6 +1203,7 @@ async function placeOrderInternal(
         summary,
         promo: promoToJson(promo, currencyContext),
         paymentAttempt,
+        idempotentReplay: false,
       };
     });
   } catch (error) {
@@ -1156,7 +1229,7 @@ async function placeOrderInternal(
 
 /** Place an account-backed customer checkout order. */
 export async function placeOrder(
-  userId: string,
+  customer: CheckoutCustomer,
   input: CheckoutInput,
   currencyContext: CurrencyContext = getBaseCurrencyContext(),
 ) {
@@ -1166,7 +1239,7 @@ export async function placeOrder(
       "Online payment must be initiated through the checkout payment service.",
     );
   }
-  const result = await placeOrderInternal(userId, input, {}, currencyContext);
+  const result = await placeOrderInternal(customer, input, {}, currencyContext);
   return {
     order: result.order,
     summary: result.summary,
@@ -1176,7 +1249,7 @@ export async function placeOrder(
 
 /** Reserve inventory/promo and persist an SSLCommerz attempt atomically. */
 export async function reserveOrderForSslCommerz(
-  userId: string,
+  customer: CheckoutCustomer,
   input: CheckoutInput,
   paymentAttempt: SslCommerzPaymentAttempt,
   currencyContext: CurrencyContext = getBaseCurrencyContext(),
@@ -1186,7 +1259,7 @@ export async function reserveOrderForSslCommerz(
   }
 
   const result = await placeOrderInternal(
-    userId,
+    customer,
     input,
     { paymentAttempt },
     currencyContext,
@@ -1199,20 +1272,20 @@ export async function reserveOrderForSslCommerz(
 }
 
 async function findAirwallexReservationReplay(
-  userId: string,
+  customer: CheckoutCustomer,
   idempotencyKey: string,
 ) {
   const persisted = await prisma.paymentTransaction.findFirst({
     where: {
       provider: "AIRWALLEX",
       idempotencyKey,
-      order: { userId },
+      ...(typeof customer === "string" ? { order: { userId: customer } } : {}),
     },
     include: {
       order: { include: orderInclude },
     },
   });
-  if (!persisted) return null;
+  if (!persisted || !checkoutCustomerOwnsOrder(customer, persisted.order)) return null;
 
   const { order, ...paymentAttempt } = persisted;
   const summary = presentPersistedOrderSummary(order);
@@ -1235,7 +1308,7 @@ async function findAirwallexReservationReplay(
 
 /** Reserve inventory/promo and persist an Airwallex attempt atomically. */
 export async function reserveOrderForAirwallex(
-  userId: string,
+  customer: CheckoutCustomer,
   input: CheckoutInput,
   paymentAttempt: AirwallexPaymentAttempt,
   currencyContext: CurrencyContext = getBaseCurrencyContext(),
@@ -1245,7 +1318,7 @@ export async function reserveOrderForAirwallex(
   }
 
   const existing = await findAirwallexReservationReplay(
-    userId,
+    customer,
     paymentAttempt.idempotencyKey,
   );
   if (existing) return existing;
@@ -1258,14 +1331,14 @@ export async function reserveOrderForAirwallex(
   }
   const airwallexPaymentQuote = verifyAirwallexPaymentQuoteToken({
     token: input.airwallexQuoteToken,
-    userId,
+    userId: checkoutPrincipal(customer),
     displayCurrency: currencyContext.currency,
   });
 
   let result: Awaited<ReturnType<typeof placeOrderInternal>>;
   try {
     result = await placeOrderInternal(
-      userId,
+      customer,
       input,
       { paymentAttempt, airwallexPaymentQuote },
       currencyContext,
@@ -1276,7 +1349,7 @@ export async function reserveOrderForAirwallex(
       error.details?.code === "PAYMENT_IDEMPOTENCY_CONFLICT"
     ) {
       const replay = await findAirwallexReservationReplay(
-        userId,
+        customer,
         paymentAttempt.idempotencyKey,
       );
       if (replay) return replay;
@@ -1290,7 +1363,7 @@ export async function reserveOrderForAirwallex(
   return {
     ...result,
     paymentAttempt: persistedAttempt,
-    idempotentReplay: false as const,
+    idempotentReplay: result.idempotentReplay,
   };
 }
 

@@ -45,20 +45,28 @@ function SummaryCard({
 export default function UserSummaryCards({
   totalCustomers,
   admins,
+  guests,
   withOrders,
   lifetimeRevenue,
 }: {
   totalCustomers: number;
   admins: number;
+  guests: number;
   withOrders: number;
   lifetimeRevenue: number;
 }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <SummaryCard
         icon={<Users className="h-4 w-4" />}
         label="Total customers"
         value={totalCustomers.toLocaleString()}
+        accent="violet"
+      />
+      <SummaryCard
+        icon={<UserRound className="h-4 w-4" />}
+        label="Guest customers"
+        value={guests.toLocaleString()}
         accent="violet"
       />
       <SummaryCard

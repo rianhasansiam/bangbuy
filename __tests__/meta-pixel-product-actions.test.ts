@@ -143,6 +143,7 @@ beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_META_PIXEL_ID", "1234567890");
   harness.states = [];
   harness.authStatus = "authenticated";
+  harness.router.push.mockClear();
 });
 
 afterEach(() => {
@@ -287,5 +288,16 @@ describe("product action business guards and responsive entry points", () => {
     expect(harness.router.push).toHaveBeenCalledWith("/checkout?buy=product-shirt%3A1%3Avariant-blue-small");
     expect(fetchMock).not.toHaveBeenCalled();
     expect(events(browser)).toEqual([]);
+  });
+
+  it("lets a guest use both Buy Now entry points without signing in", async () => {
+    createBrowser();
+    harness.authStatus = "unauthenticated";
+    const fetchMock = mockSuccessfulFetch();
+    const buttons = await renderActions([variants[0]]);
+    const buyButtons = buttons.filter((button) => textContent(button.children).includes("Buy now"));
+    buyButtons[0].onClick();
+    expect(harness.router.push).toHaveBeenCalledWith("/checkout?buy=product-shirt%3A1%3Avariant-blue-small");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

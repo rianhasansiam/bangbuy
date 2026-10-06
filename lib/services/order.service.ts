@@ -35,6 +35,7 @@ import type {
 import { BASE_CURRENCY, parseCurrencyCode } from "@/lib/currency/config";
 import { createPricingContext } from "@/lib/currency/pricing.service";
 import { buildVerifiedPurchaseSnapshot } from "@/lib/analytics/order-purchase";
+import { checkoutCustomerOwnsOrder, publicOrderFields, type CheckoutCustomer } from "@/lib/orders/checkout-customer";
 
 /**
  * The single home for Order DB logic.
@@ -162,7 +163,7 @@ function serializeOrderItem(item: OrderWithItems["items"][number]) {
 }
 
 export function serializeOrder<T extends OrderWithItems>(order: T) {
-  const { payments, ...rest } = order;
+  const { payments, ...rest } = publicOrderFields(order);
   return {
     ...rest,
     subtotal: toNumber(rest.subtotal),
@@ -210,7 +211,7 @@ function serializeCustomerOrderItem(
  * today's exchange-rate table is never consulted for historical orders.
  */
 export function serializeCustomerOrder<T extends OrderWithItems>(order: T) {
-  const { payments, ...rest } = order;
+  const { payments, ...rest } = publicOrderFields(order);
   const requestedCurrency = parseCurrencyCode(rest.displayCurrency);
   const context = createPricingContext({
     currency: requestedCurrency,
@@ -365,6 +366,20 @@ export function getOrderForUser(orderId: string, userId: string) {
     .then(serializeCustomerOrderOrNull);
 }
 
+/** An order-specific bearer cookie is required; contact matching is never used. */
+export function getOrderForGuest(orderId: string, tokenHash: string) {
+  return prisma.order.findFirst({
+    where: { id: orderId, userId: null, guestAccessTokenHash: tokenHash },
+    include: orderInclude,
+  }).then(serializeCustomerOrderOrNull);
+}
+
+/** Internal checkout/payment replay read, scoped to the server identity. */
+export async function getOrderForCheckoutCustomer(orderId: string, customer: CheckoutCustomer) {
+  const order = await prisma.order.findUnique({ where: { id: orderId }, include: orderInclude });
+  return order && checkoutCustomerOwnsOrder(customer, order) ? serializeCustomerOrder(order) : null;
+}
+
 /**
  * Admin-authorized read for the customer-facing order page/API.
  *
@@ -491,12 +506,19 @@ function buildAdminWhere(query: AdminOrderQueryInput): Prisma.OrderWhereInput {
 
   if (query.status) where.status = query.status;
   if (query.paymentStatus) where.paymentStatus = query.paymentStatus;
+  if (query.customerType === "GUEST") {
+    where.guestCustomerId = { not: null };
+  } else if (query.customerType === "REGISTERED") {
+    where.userId = { not: null };
+    where.guestCustomerId = null;
+  }
 
   if (query.search) {
     where.OR = [
       { orderNumber: { contains: query.search, mode: "insensitive" } },
       { customerName: { contains: query.search, mode: "insensitive" } },
       { customerPhone: { contains: query.search, mode: "insensitive" } },
+      { customerEmail: { contains: query.search, mode: "insensitive" } },
     ];
   }
 
@@ -516,6 +538,8 @@ export async function listOrdersForAdmin(query: AdminOrderQueryInput) {
       select: {
         id: true,
         orderNumber: true,
+        userId: true,
+        guestCustomerId: true,
         subtotal: true,
         deliveryCharge: true,
         discountAmount: true,
@@ -532,7 +556,12 @@ export async function listOrdersForAdmin(query: AdminOrderQueryInput) {
         },
         customerName: true,
         customerPhone: true,
+        customerEmail: true,
         customerAddress: true,
+        customerCity: true,
+        customerArea: true,
+        customerPostalCode: true,
+        customerNote: true,
         createdAt: true,
         updatedAt: true,
         user: { select: { id: true, name: true, email: true, phone: true } },

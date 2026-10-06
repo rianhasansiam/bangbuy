@@ -109,7 +109,7 @@ export type PreviewRequest = {
   promoCode?: string | null;
 };
 
-export async function fetchCheckoutPreview(
+async function requestCheckoutPreview(
   body: PreviewRequest,
 ): Promise<CheckoutPreview> {
   const response = await fetch("/api/checkout/preview", {
@@ -125,13 +125,45 @@ export async function fetchCheckoutPreview(
   );
 }
 
+let previewBootstrapRequest: Promise<CheckoutPreview> | null = null;
+let previewCookiesEstablished = false;
+
+/**
+ * The first successful preview installs the browser's HttpOnly guest identity.
+ * Queue initial requests so overlapping cart/checkout previews cannot each
+ * issue a different identity. Subsequent pricing previews may run in parallel.
+ */
+export async function fetchCheckoutPreview(
+  body: PreviewRequest,
+): Promise<CheckoutPreview> {
+  if (!previewCookiesEstablished && previewBootstrapRequest) {
+    try {
+      await previewBootstrapRequest;
+    } catch {
+      // A failed bootstrap releases the next caller to retry its own choices.
+    }
+    return fetchCheckoutPreview(body);
+  }
+
+  const request = requestCheckoutPreview(body);
+  if (previewCookiesEstablished) return request;
+
+  previewBootstrapRequest = request;
+  try {
+    const preview = await request;
+    previewCookiesEstablished = true;
+    return preview;
+  } finally {
+    previewBootstrapRequest = null;
+  }
+}
+
 export type PlaceOrderRequest = {
   items?: CheckoutItemInput[];
   customerName: string;
   customerPhone: string;
-  // Email is intentionally omitted: for authenticated checkout the server
-  // always stamps the order with the account's DB email, so the client
-  // never sends (or can override) it.
+  /** Optional guest contact email. Signed-in checkout uses the account email. */
+  customerEmail?: string;
   customerAddress: string;
   customerCity?: string;
   deliveryZone: DeliveryZone;
@@ -141,7 +173,7 @@ export type PlaceOrderRequest = {
   promoCode?: string | null;
   clearCart?: boolean;
   /**
-   * Stable key for retrying the same online-payment checkout submission.
+   * Stable key for retrying the same checkout submission, including COD.
    * It identifies the attempt only; prices and totals remain server-owned.
    */
   idempotencyKey?: string;
@@ -165,15 +197,21 @@ export type PlacedOrderResult = {
 export class CheckoutSubmissionError extends Error {
   readonly orderId: string | null;
   readonly paymentState: string | null;
+  readonly fieldErrors: Record<string, string>;
 
   constructor(
     message: string,
-    details: { orderId: string | null; paymentState: string | null },
+    details: {
+      orderId: string | null;
+      paymentState: string | null;
+      fieldErrors?: Record<string, string>;
+    },
   ) {
     super(message);
     this.name = "CheckoutSubmissionError";
     this.orderId = details.orderId;
     this.paymentState = details.paymentState;
+    this.fieldErrors = details.fieldErrors ?? {};
   }
 }
 
@@ -199,6 +237,18 @@ export async function placeCheckoutOrder(
       });
     }
     const details = asRecord(asRecord(payload)?.details);
+    const rawFieldErrors = asRecord(
+      asRecord(payload)?.fieldErrors ?? details?.fieldErrors,
+    );
+    const fieldErrors: Record<string, string> = {};
+    for (const [field, value] of Object.entries(rawFieldErrors ?? {})) {
+      const message = Array.isArray(value)
+        ? value.find((entry) => typeof entry === "string" && entry.trim())
+        : value;
+      if (typeof message === "string" && message.trim()) {
+        fieldErrors[field] = message;
+      }
+    }
     throw new CheckoutSubmissionError(
       readApiError(payload, "Failed to place the order."),
       {
@@ -208,6 +258,7 @@ export async function placeCheckoutOrder(
           typeof details?.paymentState === "string"
             ? details.paymentState
             : null,
+        fieldErrors,
       },
     );
   }

@@ -69,6 +69,7 @@ export type OrderDetail = {
   id: string;
   orderNumber: string;
   userId: string | null;
+  guestCustomerId: string | null;
 
   customerName: string;
   customerPhone: string;
@@ -113,10 +114,8 @@ export type OrderDetail = {
 };
 
 /**
- * Fetch a single order. Backed by `/api/orders/[id]`, which only lets
- * the order's owner (or an admin) read it. Anonymous requests get
- * 401 — checkout is auth-only so the summary page can rely on the
- * session for every read.
+ * Fetch a single order. `/api/orders/[id]` enforces account ownership or
+ * the narrowly scoped HttpOnly cookie issued for a guest's own order.
  */
 export async function fetchOrderDetail(orderId: string): Promise<OrderDetail> {
   const response = await fetch(`/api/orders/${orderId}`, {

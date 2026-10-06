@@ -34,6 +34,9 @@ export const adminUserQuerySchema = z.object({
   role: z.enum(ROLE).optional(),
 });
 
+/** Guest profiles have no authentication role or account-management actions. */
+export const adminGuestQuerySchema = adminUserQuerySchema.omit({ role: true });
+
 /** Body for `PATCH /api/admin/users/[id]/role`. */
 export const updateUserRoleSchema = z.object({
   role: z.enum(ROLE),
@@ -88,6 +91,7 @@ export const changePasswordSchema = z
   });
 
 export type AdminUserQueryInput = z.infer<typeof adminUserQuerySchema>;
+export type AdminGuestQueryInput = z.infer<typeof adminGuestQuerySchema>;
 export type UpdateUserRoleInput = z.infer<typeof updateUserRoleSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

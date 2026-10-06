@@ -19,9 +19,8 @@ export const metadata: Metadata = {
  * The page itself is a thin server wrapper that just unwraps the
  * `params` promise (Next 16 convention) and hands the id to the
  * client component. All data fetching happens client-side because
- * logged-in owners and admins call `/api/orders/[id]` directly,
- * which already enforces ownership at the SQL layer. Anonymous
- * visitors are bounced to /login by the client component.
+ * account owners and guests call `/api/orders/[id]` directly. That endpoint
+ * enforces account ownership or the scoped guest-order access cookie.
  */
 export default async function OrderSummaryPage({ params }: Props) {
   const { id } = await params;

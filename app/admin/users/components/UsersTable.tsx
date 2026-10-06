@@ -8,7 +8,7 @@ import {
   formatCurrency,
   formatDate,
   getInitials,
-  type AdminUserRow,
+  type AdminCustomerRow,
   type Role,
 } from "@/features/admin-users/api";
 import { LoadingSpinner, TableSkeleton } from "@/components/ui/loading";
@@ -27,12 +27,12 @@ export default function UsersTable({
   currentUserId,
   onToggleRole,
 }: {
-  users: AdminUserRow[];
+  users: AdminCustomerRow[];
   isLoading: boolean;
   totalCount: number;
   busyUserId: string | null;
   currentUserId: string | null;
-  onToggleRole: (user: AdminUserRow) => void;
+  onToggleRole: (user: AdminCustomerRow) => void;
 }) {
   if (isLoading && totalCount === 0) {
     return <TableSkeleton rows={6} columns={7} ariaLabel="Loading customers" />;
@@ -55,22 +55,23 @@ export default function UsersTable({
             <tr>
               <th className="px-4 py-3">Customer</th>
               <th className="px-4 py-3">Contact</th>
-              <th className="px-4 py-3">Role</th>
+              <th className="px-4 py-3">Type / Role</th>
               <th className="px-4 py-3">Orders</th>
               <th className="px-4 py-3">Spend</th>
-              <th className="px-4 py-3">Joined</th>
+              <th className="px-4 py-3">Added</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {users.map((user) => {
-              const isBusy = busyUserId === user.id;
-              const isSelf = user.id === currentUserId;
+              const isGuest = user.customerType === "GUEST";
+              const isBusy = !isGuest && busyUserId === user.id;
+              const isSelf = !isGuest && user.id === currentUserId;
               const nextRole: Role = user.role === "ADMIN" ? "USER" : "ADMIN";
 
               return (
                 <tr
-                  key={user.id}
+                  key={`${user.customerType}:${user.id}`}
                   className="border-t border-brand-border align-top"
                 >
                   <td className="px-4 py-3">
@@ -97,19 +98,29 @@ export default function UsersTable({
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="truncate text-gray-700">{user.email}</p>
+                    <p className="truncate text-gray-700">
+                      {user.email || "No email provided"}
+                    </p>
                     <p className="truncate text-xs text-gray-500">
                       {user.phone || "No phone"}
                     </p>
+                    {user.customerType === "GUEST" && (
+                      <p className="mt-1 max-w-xs whitespace-normal text-xs text-gray-500">
+                        {user.address}
+                        {user.postalCode ? ` · ${user.postalCode}` : ""}
+                      </p>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span
                       className={cn(
                         "inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold ring-1 ring-inset",
-                        ROLE_BADGE[user.role],
+                        user.customerType === "GUEST"
+                          ? "bg-amber-50 text-amber-700 ring-amber-200"
+                          : ROLE_BADGE[user.role],
                       )}
                     >
-                      {user.role}
+                      {user.customerType === "GUEST" ? "Guest" : user.role}
                     </span>
                     {isSelf && (
                       <p className="mt-1 text-[11px] uppercase tracking-wide text-brand-text-muted">
@@ -139,27 +150,31 @@ export default function UsersTable({
                     {formatDate(user.createdAt)}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center justify-end">
-                      <button
-                        type="button"
-                        onClick={() => onToggleRole(user)}
-                        disabled={isBusy || isSelf}
-                        aria-busy={isBusy}
-                        className={cn(
-                          "inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60",
-                          user.role === "ADMIN"
-                            ? "border-amber-200 text-amber-700 hover:bg-amber-50"
-                            : "border-emerald-200 text-emerald-700 hover:bg-emerald-50",
-                        )}
-                      >
-                        {isBusy ? (
-                          <LoadingSpinner decorative size="sm" />
-                        ) : (
-                          <ShieldCheck className="h-3.5 w-3.5" />
-                        )}
-                        Make {nextRole}
-                      </button>
-                    </div>
+                    {user.customerType === "GUEST" ? (
+                      <p className="text-right text-xs text-gray-500">Guest checkout</p>
+                    ) : (
+                      <div className="flex items-center justify-end">
+                        <button
+                          type="button"
+                          onClick={() => onToggleRole(user)}
+                          disabled={isBusy || isSelf}
+                          aria-busy={isBusy}
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60",
+                            user.role === "ADMIN"
+                              ? "border-amber-200 text-amber-700 hover:bg-amber-50"
+                              : "border-emerald-200 text-emerald-700 hover:bg-emerald-50",
+                          )}
+                        >
+                          {isBusy ? (
+                            <LoadingSpinner decorative size="sm" />
+                          ) : (
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                          )}
+                          Make {nextRole}
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               );

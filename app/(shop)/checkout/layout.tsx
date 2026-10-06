@@ -4,7 +4,7 @@ import { noIndexMetadata } from "@/lib/seo/metadata";
 import { siteConfig } from "@/lib/seo/site";
 
 /**
- * Checkout is an authenticated, transactional client page. This server
+ * Checkout is a transactional client page for guests and account holders. This server
  * layout supplies a noindex robots tag so it's never indexed, matching
  * the robots.txt disallow rule.
  */

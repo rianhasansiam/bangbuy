@@ -18,13 +18,14 @@
 import "server-only";
 
 import type { Session } from "next-auth";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/lib/auth/auth";
 import { toAppSession } from "@/lib/auth/session";
 import { invalidateProductsById } from "@/lib/cache/catalog-invalidation";
 import { revalidateCacheTags } from "@/lib/cache/revalidation";
 import { prisma } from "@/lib/db/prisma";
+import { canAccessOrder } from "@/lib/orders/guest-access";
 import { absoluteUrl } from "@/lib/seo/site";
 
 import { logPaymentEvent } from "../core/payment-logger";
@@ -181,8 +182,8 @@ async function attemptCallbackVerification(
 /**
  * Browser callbacks handle UX routing and, for success callbacks,
  * trigger server-side payment verification. A callback may reveal
- * an order route only after an owner-scoped lookup against the
- * authenticated session.
+ * an order route only after verifying the authenticated owner or an
+ * order-scoped guest cookie.
  *
  * The callback itself is NEVER treated as proof of payment.
  */
@@ -205,43 +206,42 @@ export async function handleSslCommerzBrowserCallback(
 
   const session = toAppSession((await auth()) as Session | null);
 
-  if (!session) {
-    if (payload.transactionId && request.method === "POST") {
-      // SSLCommerz POSTs cross-site, so the browser strips SameSite=Lax
-      // session cookies. 303-redirect to a GET on our own origin so the
-      // browser re-attaches the auth cookie on the follow-up request.
-      const selfUrl = new URL(request.url);
-      selfUrl.searchParams.set("tran_id", payload.transactionId);
-      if (payload.validationId) {
-        selfUrl.searchParams.set("val_id", payload.validationId);
-      }
-      if (payload.status) {
-        selfUrl.searchParams.set("status", payload.status);
-      }
-      return NextResponse.redirect(selfUrl, 303);
+  if (!session && payload.transactionId && request.method === "POST") {
+    // SSLCommerz POSTs cross-site, so the browser strips SameSite=Lax
+    // session and guest cookies. Redirect to a GET on our own origin so
+    // the browser re-attaches them on the follow-up request.
+    const selfUrl = new URL(request.url);
+    selfUrl.searchParams.set("tran_id", payload.transactionId);
+    if (payload.validationId) {
+      selfUrl.searchParams.set("val_id", payload.validationId);
     }
-    const callbackUrl = `/profile?tab=orders&payment=${outcome}`;
-    return redirectTo(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+    if (payload.status) {
+      selfUrl.searchParams.set("status", payload.status);
+    }
+    return NextResponse.redirect(selfUrl, 303);
   }
 
   if (!payload.transactionId) {
-    return redirectTo(`/profile?tab=orders&payment=${outcome}`);
+    return redirectTo(session ? `/profile?tab=orders&payment=${outcome}` : `/checkout?payment=${outcome}`);
   }
 
   const payment = await prisma.paymentTransaction.findFirst({
     where: {
       provider: "SSLCOMMERZ",
       transactionId: payload.transactionId,
-      order: { userId: session.user.id },
     },
-    select: { orderId: true },
+    select: {
+      orderId: true,
+      order: { select: { id: true, userId: true, guestAccessTokenHash: true } },
+    },
   });
 
-  if (!payment) {
-    return redirectTo("/profile?tab=orders&payment=unknown");
+  const nextRequest = new NextRequest(request.url, { headers: request.headers });
+  if (!payment || !canAccessOrder(payment.order, session, nextRequest)) {
+    return redirectTo(session ? "/profile?tab=orders&payment=unknown" : "/checkout?payment=unknown");
   }
 
-  // Only the authenticated owner can use a browser callback to trigger
+  // Only an authenticated owner or a guest with the scoped cookie can trigger
   // verification. The callback is still not payment proof: the shared
   // pipeline must independently confirm the transaction with SSLCommerz.
   if (outcome === "processing") {

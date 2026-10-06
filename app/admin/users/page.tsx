@@ -12,9 +12,10 @@ import {
 } from "@/store/slices/admin-users.slice";
 import type { AppDispatch, RootState } from "@/store";
 import {
-  fetchAllAdminUsersSnapshot,
+  fetchAllAdminCustomersSnapshot,
   patchUserRole,
-  type AdminUserRow,
+  type AdminCustomerRow,
+  type CustomerTypeFilter,
   type Role,
 } from "@/features/admin-users/api";
 import { notifyActionError, notifyActionSuccess } from "@/lib/admin-feedback";
@@ -41,6 +42,8 @@ export default function AdminCustomersPage() {
 
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("ALL");
+  const [customerTypeFilter, setCustomerTypeFilter] =
+    useState<CustomerTypeFilter>("ALL");
 
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
@@ -50,7 +53,7 @@ export default function AdminCustomersPage() {
     dispatch(setAdminUsersLoading(true));
     dispatch(setAdminUsersError(null));
     try {
-      const items = await fetchAllAdminUsersSnapshot();
+      const items = await fetchAllAdminCustomersSnapshot();
       dispatch(setAdminUsers(items));
     } catch (loadError) {
       const message =
@@ -74,28 +77,34 @@ export default function AdminCustomersPage() {
       const matchQuery =
         !q ||
         user.name.toLowerCase().includes(q) ||
-        user.email.toLowerCase().includes(q) ||
+        (user.email ?? "").toLowerCase().includes(q) ||
         (user.phone ?? "").toLowerCase().includes(q) ||
-        (user.city ?? "").toLowerCase().includes(q);
+        (user.city ?? "").toLowerCase().includes(q) ||
+        (user.customerType === "GUEST" && user.address.toLowerCase().includes(q));
 
       const matchRole = roleFilter === "ALL" || user.role === roleFilter;
-      return matchQuery && matchRole;
+      const matchCustomerType =
+        customerTypeFilter === "ALL" || user.customerType === customerTypeFilter;
+      return matchQuery && matchRole && matchCustomerType;
     });
-  }, [query, roleFilter, users]);
+  }, [query, roleFilter, customerTypeFilter, users]);
 
   const totals = useMemo(() => {
     let admins = 0;
+    let guests = 0;
     let withOrders = 0;
     let lifetimeRevenue = 0;
     for (const user of users) {
       if (user.role === "ADMIN") admins += 1;
+      if (user.customerType === "GUEST") guests += 1;
       if (user.ordersCount > 0) withOrders += 1;
       lifetimeRevenue += user.totalSpend;
     }
-    return { admins, withOrders, lifetimeRevenue };
+    return { admins, guests, withOrders, lifetimeRevenue };
   }, [users]);
 
-  const handleToggleRole = async (user: AdminUserRow) => {
+  const handleToggleRole = async (user: AdminCustomerRow) => {
+    if (user.customerType === "GUEST") return;
     if (user.id === currentUserId) {
       const message = "You can't change your own role.";
       setMutationError(message);
@@ -134,6 +143,7 @@ export default function AdminCustomersPage() {
       <UserSummaryCards
         totalCustomers={users.length}
         admins={totals.admins}
+        guests={totals.guests}
         withOrders={totals.withOrders}
         lifetimeRevenue={totals.lifetimeRevenue}
       />
@@ -141,11 +151,16 @@ export default function AdminCustomersPage() {
       <UsersToolbar
         query={query}
         roleFilter={roleFilter}
+        customerTypeFilter={customerTypeFilter}
         visibleCount={visibleUsers.length}
         totalCount={users.length}
         isLoading={isLoading}
         onQueryChange={setQuery}
         onRoleChange={setRoleFilter}
+        onCustomerTypeChange={(value) => {
+          setCustomerTypeFilter(value);
+          if (value === "GUEST") setRoleFilter("ALL");
+        }}
         onRefresh={() => {
           void refreshUsers();
         }}

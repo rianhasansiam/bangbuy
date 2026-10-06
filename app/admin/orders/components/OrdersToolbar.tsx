@@ -6,6 +6,7 @@ import { LoadingSpinner } from "@/components/ui/loading";
 import {
   ORDER_STATUS_VALUES,
   PAYMENT_STATUS_VALUES,
+  type AdminOrderCustomerType,
   type OrderStatus,
   type PaymentStatus,
 } from "@/features/admin-orders/api";
@@ -14,36 +15,41 @@ import { ORDER_STATUS_META } from "@/lib/orders/status";
 
 type StatusFilter = "ALL" | OrderStatus;
 type PaymentFilter = "ALL" | PaymentStatus;
+type CustomerFilter = "ALL" | AdminOrderCustomerType;
 
 export default function OrdersToolbar({
   query,
   statusFilter,
   paymentFilter,
+  customerFilter,
   visibleCount,
   totalCount,
   isLoading,
   onQueryChange,
   onStatusChange,
   onPaymentChange,
+  onCustomerChange,
   onRefresh,
   onCreate,
 }: {
   query: string;
   statusFilter: StatusFilter;
   paymentFilter: PaymentFilter;
+  customerFilter: CustomerFilter;
   visibleCount: number;
   totalCount: number;
   isLoading: boolean;
   onQueryChange: (value: string) => void;
   onStatusChange: (value: StatusFilter) => void;
   onPaymentChange: (value: PaymentFilter) => void;
+  onCustomerChange: (value: CustomerFilter) => void;
   onRefresh: () => void;
   onCreate: () => void;
 }) {
   return (
     <div className="rounded-2xl border border-brand-border bg-brand-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <label className="relative flex flex-1 items-center">
             <Search className="pointer-events-none absolute left-3 h-4 w-4 text-brand-text-muted" />
             <input
@@ -79,6 +85,17 @@ export default function OrdersToolbar({
                 {PAYMENT_STATUS_META[status].label}
               </option>
             ))}
+          </select>
+
+          <select
+            aria-label="Customer type"
+            value={customerFilter}
+            onChange={(event) => onCustomerChange(event.target.value as CustomerFilter)}
+            className="h-10 rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
+          >
+            <option value="ALL">All customers</option>
+            <option value="GUEST">Guest</option>
+            <option value="REGISTERED">Registered</option>
           </select>
         </div>
 

@@ -5,6 +5,11 @@ import { z } from "zod";
 import { requireUser } from "@/lib/api/guards";
 import { jsonError, ok, tooManyRequests } from "@/lib/api/response";
 import { getClientIp, rateLimitPersistent } from "@/lib/auth/rate-limit";
+import {
+  getPaymentCustomerForOrder,
+  hasGuestPaymentCookie,
+} from "@/lib/payments/core/payment-order-access";
+import { paymentCustomerPrincipal } from "@/lib/payments/core/payment-order-customer";
 
 import {
   AirwallexValidationError,
@@ -18,14 +23,14 @@ const MAX_INITIATION_BYTES = 16 * 1024;
 
 export async function POST(request: Request) {
   const guard = await requireUser();
-  if (!guard.ok) return guard.response;
+  if (!guard.ok && !hasGuestPaymentCookie(request)) return guard.response;
 
   try {
     assertAirwallexInitiationOrigin(request);
-    const userId = guard.session.user.id;
     const ip = getClientIp(request);
+    const caller = guard.ok ? guard.session.user.id : `guest-ip:${ip}`;
     const baseLimits = await Promise.all([
-      rateLimitPersistent(`airwallex-initiate-user:${userId}`, 10, 5 * 60_000),
+      rateLimitPersistent(`airwallex-initiate-user:${caller}`, 10, 5 * 60_000),
       rateLimitPersistent(`airwallex-initiate-ip:${ip}`, 30, 5 * 60_000),
     ]);
     const blockedBaseLimit = baseLimits.find((limit) => !limit.allowed);
@@ -63,15 +68,17 @@ export async function POST(request: Request) {
       });
     }
 
+    const customer = await getPaymentCustomerForOrder(request, parsed.data.orderId, guard);
+    if (!customer) return jsonError(404, "Order not found.");
     const orderLimit = await rateLimitPersistent(
-      `airwallex-initiate-order:${userId}:${parsed.data.orderId}`,
+      `airwallex-initiate-order:${paymentCustomerPrincipal(customer)}:${parsed.data.orderId}`,
       8,
       5 * 60_000,
     );
     if (!orderLimit.allowed) return tooManyRequests(orderLimit.resetMs);
 
     return ok(
-      await initiateAirwallexPayment(userId, parsed.data.orderId),
+      await initiateAirwallexPayment(customer, parsed.data.orderId),
     );
   } catch (error) {
     return handleAirwallexApiError("initiate", error);

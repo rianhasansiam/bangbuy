@@ -19,6 +19,33 @@ export type AdminUserRow = {
   lastOrderAt: string | null;
 };
 
+export type AdminGuestRow = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string;
+  city: string | null;
+  address: string;
+  postalCode: string | null;
+  image: null;
+  role: null;
+  customerType: "GUEST";
+  termsAcceptedAt: null;
+  createdAt: string;
+  updatedAt: string;
+  ordersCount: number;
+  liveOrdersCount: number;
+  totalSpend: number;
+  lastOrderAt: string | null;
+};
+
+export type AdminRegisteredCustomerRow = AdminUserRow & {
+  customerType: "REGISTERED";
+};
+
+export type AdminCustomerRow = AdminRegisteredCustomerRow | AdminGuestRow;
+export type CustomerTypeFilter = "ALL" | AdminCustomerRow["customerType"];
+
 export type ApiMeta = {
   page: number;
   pageSize: number;
@@ -83,6 +110,34 @@ export function parseUsersPayload(payload: unknown): {
   };
 }
 
+export function parseGuestsPayload(payload: unknown): {
+  items: AdminGuestRow[];
+  meta: ApiMeta | null;
+} {
+  const envelope = payload as ApiEnvelope<unknown>;
+  if (!envelope?.success || !Array.isArray(envelope.data)) {
+    throw new Error("Guest customers API returned an invalid response.");
+  }
+
+  return {
+    items: envelope.data.map((entry) => {
+      const item = (entry ?? {}) as Partial<AdminGuestRow>;
+      return {
+        ...parseRow(entry),
+        email: asNullableString(item.email),
+        phone: asString(item.phone),
+        address: asString(item.address),
+        postalCode: asNullableString(item.postalCode),
+        image: null,
+        role: null,
+        customerType: "GUEST" as const,
+        termsAcceptedAt: null,
+      };
+    }),
+    meta: envelope.meta ?? null,
+  };
+}
+
 /**
  * Walk every page of `/api/admin/users` and return the full list.
  * Same trade-off as orders: small enough payloads to keep in memory
@@ -122,6 +177,53 @@ export async function fetchAllAdminUsersSnapshot(): Promise<AdminUserRow[]> {
   }
 
   return merged;
+}
+
+export async function fetchAllAdminGuestsSnapshot(): Promise<AdminGuestRow[]> {
+  let page = 1;
+  let totalPages = 1;
+  const merged: AdminGuestRow[] = [];
+
+  while (page <= totalPages) {
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(API_PAGE_SIZE),
+    });
+    const response = await fetch(`/api/admin/guests?${params.toString()}`, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    let payload: unknown;
+    try {
+      payload = (await response.json()) as unknown;
+    } catch {
+      throw new Error("Failed to parse guest customers response.");
+    }
+    if (!response.ok) {
+      throw new Error(readApiError(payload, "Failed to load guest customers."));
+    }
+
+    const { items, meta } = parseGuestsPayload(payload);
+    merged.push(...items);
+    totalPages = meta?.totalPages ?? 1;
+    page += 1;
+  }
+
+  return merged;
+}
+
+/** Keep registered-only snapshots available to account-specific controls. */
+export async function fetchAllAdminCustomersSnapshot(): Promise<AdminCustomerRow[]> {
+  const [users, guests] = await Promise.all([
+    fetchAllAdminUsersSnapshot(),
+    fetchAllAdminGuestsSnapshot(),
+  ]);
+  const customers: AdminCustomerRow[] = [
+    ...users.map((user) => ({ ...user, customerType: "REGISTERED" as const })),
+    ...guests,
+  ];
+  return customers.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export async function patchUserRole(
@@ -172,8 +274,8 @@ export function formatDate(value: string | null): string {
   });
 }
 
-export function getInitials(name: string, email: string): string {
-  const source = name.trim() || email.trim();
+export function getInitials(name: string, email: string | null): string {
+  const source = name.trim() || (email ?? "").trim();
   if (!source) return "?";
   const parts = source.split(/\s+/).filter(Boolean);
   if (parts.length >= 2) {

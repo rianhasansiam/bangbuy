@@ -6,6 +6,7 @@ import { ChevronDown, Package2 } from "lucide-react";
 import {
   formatCurrency,
   formatDateTime,
+  getAdminOrderCustomerType,
   STATUS_TRANSITIONS,
   type AdminOrderRow,
   type OrderStatus,
@@ -107,6 +108,7 @@ export default function OrdersTable({
             {orders.map((order) => {
               const isBusy = busyOrderId === order.id;
               const isExpanded = expandedId === order.id;
+              const customerType = getAdminOrderCustomerType(order);
               const isGatewayManaged =
                 order.paymentMethod === "SSLCOMMERZ" ||
                 order.paymentMethod === "AIRWALLEX";
@@ -148,12 +150,17 @@ export default function OrdersTable({
                       <p className="font-semibold text-gray-900">
                         {order.customerName}
                       </p>
+                      {customerType && (
+                        <span className="my-1 inline-flex rounded-full bg-brand-light-bg px-2 py-0.5 text-[11px] font-semibold text-brand-text-muted ring-1 ring-inset ring-brand-border">
+                          {customerType === "GUEST" ? "Guest" : "Registered"}
+                        </span>
+                      )}
                       <p className="text-xs text-gray-500">
                         {order.customerPhone}
                       </p>
-                      {order.user?.email && (
+                      {(order.customerEmail || order.user?.email) && (
                         <p className="text-xs text-gray-400">
-                          {order.user.email}
+                          {order.customerEmail || order.user?.email}
                         </p>
                       )}
                     </td>
@@ -337,9 +344,24 @@ export default function OrdersTable({
                     <tr className="border-t border-brand-border bg-brand-light-bg">
                       <td colSpan={8} className="px-4 py-3">
                         <div className="grid gap-3 sm:grid-cols-3">
+                          <DetailBlock label="Customer">
+                            {order.customerName}
+                            {customerType && <> · {customerType === "GUEST" ? "Guest" : "Registered"}</>}
+                            <br />
+                            {order.customerPhone}
+                            {order.customerEmail && <><br />{order.customerEmail}</>}
+                          </DetailBlock>
                           <DetailBlock label="Shipping address">
                             {order.customerAddress || "-"}
+                            {[order.customerArea, order.customerCity, order.customerPostalCode].filter(Boolean).length > 0 && (
+                              <><br />{[order.customerArea, order.customerCity, order.customerPostalCode].filter(Boolean).join(", ")}</>
+                            )}
                           </DetailBlock>
+                          {order.customerNote && (
+                            <DetailBlock label="Order note">
+                              <span className="whitespace-pre-wrap">{order.customerNote}</span>
+                            </DetailBlock>
+                          )}
                           <DetailBlock label="Subtotal / delivery">
                             {formatCurrency(order.subtotal)} +{" "}
                             {formatCurrency(order.deliveryCharge)} delivery

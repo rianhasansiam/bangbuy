@@ -3,6 +3,10 @@ import "server-only";
 import type { PaymentTransactionStatus } from "@/app/generated/prisma/client";
 
 import { prisma } from "@/lib/db/prisma";
+import {
+  paymentCustomerOrderWhere,
+  type PaymentOrderCustomer,
+} from "@/lib/payments/core/payment-order-customer";
 
 import {
   AIRWALLEX_KNOWN_PAYMENT_INTENT_STATUSES,
@@ -229,11 +233,11 @@ async function fallbackAirwallexStatusCheck(
 }
 
 export async function getOwnerScopedAirwallexPaymentStatus(
-  userId: string,
+  customer: PaymentOrderCustomer,
   orderId: string,
 ) {
   const order = await prisma.order.findFirst({
-    where: { id: orderId, userId, paymentMethod: "AIRWALLEX" },
+    where: { id: orderId, ...paymentCustomerOrderWhere(customer), paymentMethod: "AIRWALLEX" },
     select: {
       id: true,
       paymentStatus: true,
@@ -296,7 +300,7 @@ export async function getOwnerScopedAirwallexPaymentStatus(
     // updated paymentStatus and timestamps.
     if (["SUCCEEDED", "FAILED", "CANCELLED", "REFUNDED"].includes(derivedStatus)) {
       const refreshed = await prisma.order.findFirst({
-        where: { id: orderId, userId },
+        where: { id: orderId, ...paymentCustomerOrderWhere(customer) },
         select: {
           paymentStatus: true,
           updatedAt: true,

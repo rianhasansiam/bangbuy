@@ -99,6 +99,17 @@ describe("Airwallex payment quote tokens", () => {
     ).toThrow(AirwallexValidationError);
   });
 
+  it("binds a guest quote to its opaque checkout identity", () => {
+    vi.stubEnv("AUTH_SECRET", SECRET);
+    const guestPrincipal = `guest:${"a".repeat(64)}`;
+    const token = createAirwallexPaymentQuoteToken({ userId: guestPrincipal, quote: makeQuote(), now: NOW });
+
+    expect(verifyAirwallexPaymentQuoteToken({ token, userId: guestPrincipal, displayCurrency: "EUR", now: NOW }).paymentAmount.toFixed(2)).toBe("10.63");
+    for (const otherPrincipal of [`guest:${"b".repeat(64)}`, "user_123"]) {
+      expect(() => verifyAirwallexPaymentQuoteToken({ token, userId: otherPrincipal, displayCurrency: "EUR", now: NOW })).toThrow(AirwallexValidationError);
+    }
+  });
+
   it("rejects a token under another storefront currency", () => {
     const token = createToken();
 

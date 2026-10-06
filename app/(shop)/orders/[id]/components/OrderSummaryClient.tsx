@@ -98,7 +98,6 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
   // must never paint another customer's or a forged receipt.
   useEffect(() => {
     if (authStatus === "loading") return;
-    if (authStatus !== "authenticated") return;
 
     let ignore = false;
     clearOrderSnapshot();
@@ -127,7 +126,7 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
   // existing owner-scoped, no-store order endpoint for up to one minute so the
   // page reflects the server-authoritative IPN/validation result.
   useEffect(() => {
-    if (authStatus !== "authenticated" || !paymentReturnOutcome) return;
+    if (authStatus === "loading" || !paymentReturnOutcome) return;
 
     let ignore = false;
     let timer: number | undefined;
@@ -221,18 +220,16 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
 
   if (
     authStatus === "loading" ||
-    (authStatus === "authenticated" && state.status === "loading")
+    state.status === "loading"
   ) {
     return <OrderDetailsPageSkeleton />;
   }
 
-  if (authStatus !== "authenticated" || state.status === "error" || !order) {
+  if (state.status === "error" || !order) {
     const message =
-      authStatus !== "authenticated"
-        ? "Sign in to view this order."
-        : state.status === "error"
+      state.status === "error"
           ? state.message
-          : "Sign in or open the original checkout link to view this order.";
+          : "Sign in or use the browser you checked out with to view this order.";
     return (
       <main className="min-h-screen bg-brand-light-bg">
         <div className="mx-auto w-full max-w-2xl px-4 py-16 sm:px-6">

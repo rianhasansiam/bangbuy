@@ -15,12 +15,14 @@ import {
   EMPTY_ADMIN_ORDER_DRAFT,
   fetchAllAdminOrderCustomers,
   fetchAllAdminOrdersSnapshot,
+  getAdminOrderCustomerType,
   placeAdminOrder,
   patchOrderStatus,
   patchPaymentStatus,
   previewAdminOrder,
   recordPaymentRefundAndCancel,
   type AdminOrderCustomer,
+  type AdminOrderCustomerType,
   type AdminOrderDraft,
   type AdminOrderRow,
   type OrderStatus,
@@ -46,6 +48,7 @@ import OrdersTable from "./components/OrdersTable";
 
 type StatusFilter = "ALL" | OrderStatus;
 type PaymentFilter = "ALL" | PaymentStatus;
+type CustomerFilter = "ALL" | AdminOrderCustomerType;
 
 function freshOrderDraft(): AdminOrderDraft {
   return { ...EMPTY_ADMIN_ORDER_DRAFT, items: [] };
@@ -65,6 +68,7 @@ export default function AdminOrdersPage() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("ALL");
+  const [customerFilter, setCustomerFilter] = useState<CustomerFilter>("ALL");
 
   const [busyOrderId, setBusyOrderId] = useState<string | null>(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
@@ -133,6 +137,7 @@ export default function AdminOrdersPage() {
         order.orderNumber.toLowerCase().includes(q) ||
         order.customerName.toLowerCase().includes(q) ||
         order.customerPhone.toLowerCase().includes(q) ||
+        (order.customerEmail ?? "").toLowerCase().includes(q) ||
         (order.user?.email ?? "").toLowerCase().includes(q) ||
         (order.user?.name ?? "").toLowerCase().includes(q);
 
@@ -140,10 +145,13 @@ export default function AdminOrdersPage() {
         statusFilter === "ALL" || order.status === statusFilter;
       const matchPayment =
         paymentFilter === "ALL" || order.paymentStatus === paymentFilter;
+      const matchCustomer =
+        customerFilter === "ALL" ||
+        getAdminOrderCustomerType(order) === customerFilter;
 
-      return matchQuery && matchStatus && matchPayment;
+      return matchQuery && matchStatus && matchPayment && matchCustomer;
     });
-  }, [orders, paymentFilter, query, statusFilter]);
+  }, [customerFilter, orders, paymentFilter, query, statusFilter]);
 
   const totals = useMemo(() => {
     let revenue = 0;
@@ -492,12 +500,14 @@ export default function AdminOrdersPage() {
         query={query}
         statusFilter={statusFilter}
         paymentFilter={paymentFilter}
+        customerFilter={customerFilter}
         visibleCount={visibleOrders.length}
         totalCount={orders.length}
         isLoading={isLoading}
         onQueryChange={setQuery}
         onStatusChange={setStatusFilter}
         onPaymentChange={setPaymentFilter}
+        onCustomerChange={setCustomerFilter}
         onRefresh={() => {
           void refreshOrders();
         }}

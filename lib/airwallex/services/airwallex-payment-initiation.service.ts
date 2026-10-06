@@ -8,6 +8,10 @@ import {
 import { prisma } from "@/lib/db/prisma";
 import { toDecimal } from "@/lib/money";
 import {
+  paymentCustomerOrderWhere,
+  type PaymentOrderCustomer,
+} from "@/lib/payments/core/payment-order-customer";
+import {
   lockOrderForStatusChange,
   lockPaymentAttempt,
 } from "@/lib/orders/mutations";
@@ -271,12 +275,12 @@ async function recordDefinitiveCreateRejection(
 }
 
 async function prepareAttempt(
-  userId: string,
+  customer: PaymentOrderCustomer,
   orderId: string,
 ): Promise<PrepareResult> {
   return prisma.$transaction(async (tx) => {
     await lockOrderForStatusChange(tx, orderId);
-    const order = await findOwnerScopedAirwallexOrder(tx, orderId, userId);
+    const order = await findOwnerScopedAirwallexOrder(tx, orderId, customer);
     if (!order) throw orderNotFound();
     if (order.paymentMethod !== "AIRWALLEX") {
       throw new AirwallexValidationError(
@@ -452,7 +456,7 @@ function creationMismatch(
 }
 
 async function persistCreatedIntent(
-  userId: string,
+  customer: PaymentOrderCustomer,
   prepared: PreparedAttempt,
   intent: AirwallexPaymentIntentRetrieveResponse,
 ): Promise<{ status: PaymentTransactionStatus; requiresReview: boolean }> {
@@ -460,7 +464,7 @@ async function persistCreatedIntent(
     await lockOrderForStatusChange(tx, prepared.orderId);
     await lockPaymentAttempt(tx, prepared.attemptId);
     const order = await tx.order.findFirst({
-      where: { id: prepared.orderId, userId },
+      where: { id: prepared.orderId, ...paymentCustomerOrderWhere(customer) },
       include: airwallexInitiationOrderInclude,
     });
     const attempt = order?.payments.find(
@@ -602,12 +606,12 @@ async function cancelUnusableIntent(
  * response; it is never persisted or logged.
  */
 export async function initiateAirwallexPayment(
-  userId: string,
+  customer: PaymentOrderCustomer,
   orderId: string,
 ): Promise<AirwallexHostedPaymentPageConfig> {
   requireAirwallexConfig();
 
-  let preparedResult = await prepareAttempt(userId, orderId);
+  let preparedResult = await prepareAttempt(customer, orderId);
   if (!preparedResult.ok) throw new AirwallexStateTransitionError();
   let prepared = preparedResult.value;
 
@@ -623,7 +627,7 @@ export async function initiateAirwallexPayment(
       if (existing.status !== "CANCELLED") {
         await cancelUnusableIntent(existing);
       }
-      preparedResult = await prepareAttempt(userId, orderId);
+      preparedResult = await prepareAttempt(customer, orderId);
       if (!preparedResult.ok) throw new AirwallexStateTransitionError();
       prepared = preparedResult.value;
     } else if (
@@ -654,12 +658,12 @@ export async function initiateAirwallexPayment(
     }
 
     if (!replacingTerminalAttempt && ["CANCELLED", "FAILED", "EXPIRED"].includes(status)) {
-      preparedResult = await prepareAttempt(userId, orderId);
+      preparedResult = await prepareAttempt(customer, orderId);
       if (!preparedResult.ok) throw new AirwallexStateTransitionError();
       prepared = preparedResult.value;
     } else if (!replacingTerminalAttempt) {
       await cancelUnusableIntent(existing);
-      preparedResult = await prepareAttempt(userId, orderId);
+      preparedResult = await prepareAttempt(customer, orderId);
       if (!preparedResult.ok) throw new AirwallexStateTransitionError();
       prepared = preparedResult.value;
     }
@@ -703,7 +707,7 @@ export async function initiateAirwallexPayment(
     }
     throw error;
   }
-  const persisted = await persistCreatedIntent(userId, prepared, created);
+  const persisted = await persistCreatedIntent(customer, prepared, created);
   if (persisted.requiresReview) throw new AirwallexStateTransitionError();
   if (persisted.status === "SUCCESS") {
     await applyRetrievedIntent(created);

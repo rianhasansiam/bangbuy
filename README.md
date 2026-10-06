@@ -242,4 +242,8 @@ bangbuy/
 
 
 npm run db:tunnel
+npx prisma migrate status
+npx prisma migrate deploy
+npx prisma generate
+
 npm run dev

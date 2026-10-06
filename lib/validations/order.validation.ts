@@ -39,6 +39,7 @@ export const adminOrderQuerySchema = z.object({
   search: z.string().trim().min(1).max(120).optional(),
   status: z.enum(ORDER_STATUS).optional(),
   paymentStatus: z.enum(PAYMENT_STATUS_FILTER).optional(),
+  customerType: z.enum(["GUEST", "REGISTERED"]).optional(),
 });
 
 /** Body for `PATCH /api/admin/orders/[id]/status`. */

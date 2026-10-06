@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PHONE_REGEX } from "@/lib/auth/policy";
 
 /**
  * Zod schemas for the Checkout API.
@@ -51,9 +52,8 @@ export const checkoutPreviewSchema = z.object({
 /**
  * Body for `POST /api/checkout`.
  *
- * Authenticated users only. The route guard rejects anonymous requests
- * with 401 before the body is even parsed. The order is always
- * attached to the session userId.
+ * Customers may be signed in or guests. Ownership is established on the
+ * server, and guests must provide explicit items instead of a saved cart.
  */
 const checkoutBaseSchema = z.object({
   items: z.array(checkoutItem).max(100).optional(),
@@ -66,7 +66,10 @@ const checkoutBaseSchema = z.object({
     .string()
     .trim()
     .min(7, "Phone number is too short.")
-    .max(20, "Phone number is too long."),
+    .max(20, "Phone number is too long.")
+    .regex(PHONE_REGEX, "Enter a valid phone number.")
+    .transform((value) => value.replace(/[\s\-()]/g, ""))
+    .refine((value) => value.replace(/^\+/, "").length >= 7, "Phone number is too short."),
   customerEmail: z
     .string()
     .trim()
@@ -122,15 +125,11 @@ const checkoutBaseSchema = z.object({
 });
 
 export const checkoutSchema = checkoutBaseSchema.superRefine((value, context) => {
-  if (
-    (value.paymentMethod === "SSLCOMMERZ" ||
-      value.paymentMethod === "AIRWALLEX") &&
-    !value.idempotencyKey
-  ) {
+  if (!value.idempotencyKey) {
     context.addIssue({
       code: "custom",
       path: ["idempotencyKey"],
-      message: "A payment request ID is required for online payment.",
+      message: value.paymentMethod === "CASH_ON_DELIVERY" ? "A checkout request ID is required." : "A payment request ID is required for online payment.",
     });
   }
   if (value.paymentMethod === "AIRWALLEX" && !value.airwallexQuoteToken) {

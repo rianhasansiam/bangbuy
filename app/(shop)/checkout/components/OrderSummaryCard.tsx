@@ -115,6 +115,7 @@ export default function OrderSummaryCard({
               type="button"
               onClick={onRemovePromo}
               aria-label="Remove promo"
+              disabled={isPlacing}
               className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-emerald-700 transition-colors hover:bg-emerald-100"
             >
               <X className="h-4 w-4" />
@@ -136,6 +137,7 @@ export default function OrderSummaryCard({
                 type="text"
                 value={promoCode}
                 onChange={(e) => onPromoCodeChange(e.target.value)}
+                disabled={isPlacing}
                 maxLength={40}
                 placeholder="Promo code"
                 className="h-11 rounded-xl border-brand-border bg-white pl-10 pr-3 text-sm font-medium uppercase tracking-wide focus-visible:border-brand-red focus-visible:ring-brand-red/30"
@@ -143,7 +145,7 @@ export default function OrderSummaryCard({
             </div>
             <button
               type="submit"
-              disabled={!promoCode.trim() || isLoading}
+              disabled={!promoCode.trim() || isLoading || isPlacing}
               aria-busy={isApplyingPromo}
               className="rounded-xl bg-brand-red px-4 text-sm font-semibold text-brand-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-sm"
             >
@@ -270,7 +272,7 @@ export default function OrderSummaryCard({
       <button
         type="button"
         onClick={onPlaceOrder}
-        disabled={isPlacing || !summary}
+        disabled={isPlacing || isLoading || !summary}
         aria-busy={isPlacing}
         className="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-brand-red px-5 text-base font-bold text-brand-white shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none disabled:hover:translate-y-0"
       >

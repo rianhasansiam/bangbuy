@@ -36,6 +36,7 @@ type CustomerFormProps = {
   ) => void;
   errors: Partial<Record<keyof CustomerFormState, string>>;
   isAuthenticated: boolean;
+  emailRequired?: boolean;
   profileStatus: "idle" | "loading" | "loaded" | "error";
   onRetryProfile: () => void;
 };
@@ -45,10 +46,11 @@ export default function CustomerForm({
   onChange,
   errors,
   isAuthenticated,
+  emailRequired = false,
   profileStatus,
   onRetryProfile,
 }: CustomerFormProps) {
-  const isProfileLoading = profileStatus === "loading";
+  const isProfileLoading = isAuthenticated && profileStatus === "loading";
 
   return (
     <section className="rounded-3xl border border-brand-border bg-brand-white p-5 shadow-sm sm:p-6">
@@ -75,7 +77,7 @@ export default function CustomerForm({
         )}
       </header>
 
-      {profileStatus === "error" && (
+      {isAuthenticated && profileStatus === "error" && (
         <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
           <span className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 shrink-0" />
@@ -115,7 +117,21 @@ export default function CustomerForm({
           required
         />
         <div className="sm:col-span-2">
-          <EmailField email={form.customerEmail} loading={isProfileLoading} />
+          {isAuthenticated ? (
+            <EmailField email={form.customerEmail} loading={isProfileLoading} />
+          ) : (
+            <Field
+              icon={<Mail className="h-4 w-4" />}
+              label={emailRequired ? "Email" : "Email (optional)"}
+              value={form.customerEmail}
+              onChange={(value) => onChange("customerEmail", value)}
+              error={errors.customerEmail}
+              autoComplete="email"
+              inputMode="email"
+              type="email"
+              required={emailRequired}
+            />
+          )}
         </div>
         <div className="sm:col-span-2">
           <FieldTextarea

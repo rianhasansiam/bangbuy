@@ -3,27 +3,35 @@
 import { RotateCcw, Search } from "lucide-react";
 
 import { LoadingSpinner } from "@/components/ui/loading";
-import { ROLE_VALUES, type Role } from "@/features/admin-users/api";
+import {
+  ROLE_VALUES,
+  type CustomerTypeFilter,
+  type Role,
+} from "@/features/admin-users/api";
 
 type RoleFilter = "ALL" | Role;
 
 export default function UsersToolbar({
   query,
   roleFilter,
+  customerTypeFilter,
   visibleCount,
   totalCount,
   isLoading,
   onQueryChange,
   onRoleChange,
+  onCustomerTypeChange,
   onRefresh,
 }: {
   query: string;
   roleFilter: RoleFilter;
+  customerTypeFilter: CustomerTypeFilter;
   visibleCount: number;
   totalCount: number;
   isLoading: boolean;
   onQueryChange: (value: string) => void;
   onRoleChange: (value: RoleFilter) => void;
+  onCustomerTypeChange: (value: CustomerTypeFilter) => void;
   onRefresh: () => void;
 }) {
   return (
@@ -36,15 +44,31 @@ export default function UsersToolbar({
               type="text"
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
-              placeholder="Search by name, email, phone, or city..."
+              aria-label="Search customers"
+              placeholder="Search by name, email, phone, city, or address..."
               className="h-10 w-full rounded-xl border border-brand-border pl-9 pr-3 text-sm outline-none transition focus:border-brand-red"
             />
           </label>
 
           <select
-            value={roleFilter}
-            onChange={(event) => onRoleChange(event.target.value as RoleFilter)}
+            aria-label="Customer type"
+            value={customerTypeFilter}
+            onChange={(event) =>
+              onCustomerTypeChange(event.target.value as CustomerTypeFilter)
+            }
             className="h-10 rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
+          >
+            <option value="ALL">All customers</option>
+            <option value="REGISTERED">Registered</option>
+            <option value="GUEST">Guests</option>
+          </select>
+
+          <select
+            aria-label="Account role"
+            value={roleFilter}
+            disabled={customerTypeFilter === "GUEST"}
+            onChange={(event) => onRoleChange(event.target.value as RoleFilter)}
+            className="h-10 rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red disabled:opacity-60"
           >
             <option value="ALL">All roles</option>
             {ROLE_VALUES.map((role) => (

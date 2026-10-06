@@ -236,6 +236,7 @@ describe("checkout input authority", () => {
         },
       ],
       paymentMethod: "CASH_ON_DELIVERY",
+      idempotencyKey: "8d2414af-e2cb-4a19-a6d8-16d0168ee775",
       ...injectedMoney,
     });
 
@@ -244,6 +245,7 @@ describe("checkout input authority", () => {
       items: [{ productId: "product-1", quantity: 1 }],
       deliveryZone: "INSIDE_DHAKA",
       paymentMethod: "CASH_ON_DELIVERY",
+      idempotencyKey: "8d2414af-e2cb-4a19-a6d8-16d0168ee775",
       clearCart: true,
     });
   });

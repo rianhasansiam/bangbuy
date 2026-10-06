@@ -7,6 +7,7 @@ import { LoadingSpinner } from "@/components/ui/loading";
 import type { AdminProduct } from "@/features/admin-products/api";
 import {
   formatCurrency,
+  getAdminOrderCustomerType,
   type AdminOrderCustomer,
   type AdminOrderDraft,
 } from "@/features/admin-orders/api";
@@ -184,6 +185,11 @@ export default function AdminOrderDrawer({
             <div className="mx-auto w-full max-w-md rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
               <ReceiptText className="mx-auto h-10 w-10 text-emerald-700" />
               <h3 className="mt-3 text-lg font-bold text-emerald-950">Order placed</h3>
+              {getAdminOrderCustomerType(placedOrder) && (
+                <span className="mt-2 inline-flex rounded-full bg-white/80 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-200">
+                  {getAdminOrderCustomerType(placedOrder) === "GUEST" ? "Guest" : "Registered"}
+                </span>
+              )}
               <p className="mt-1 text-sm text-emerald-800">
                 {placedOrder.orderNumber} for {placedOrder.customerName} is now included in sales, revenue, and profit.
               </p>

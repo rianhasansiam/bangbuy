@@ -10,6 +10,10 @@ import {
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 
 import { prisma } from "@/lib/db/prisma";
+import {
+  paymentCustomerOrderWhere,
+  type PaymentOrderCustomer,
+} from "@/lib/payments/core/payment-order-customer";
 
 import { AIRWALLEX_PROVIDER } from "../constants/airwallex.constants";
 
@@ -39,10 +43,10 @@ export type AirwallexInitiationOrder = Prisma.OrderGetPayload<{
 export async function findOwnerScopedAirwallexOrder(
   tx: AirwallexTransactionClient,
   orderId: string,
-  userId: string,
+  customer: PaymentOrderCustomer,
 ): Promise<AirwallexInitiationOrder | null> {
   return tx.order.findFirst({
-    where: { id: orderId, userId },
+    where: { id: orderId, ...paymentCustomerOrderWhere(customer) },
     include: airwallexInitiationOrderInclude,
   });
 }

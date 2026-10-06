@@ -5,12 +5,14 @@ type CheckoutHeaderProps = {
   isAuthenticated: boolean;
   itemCount: number;
   source: "cart" | "cart-selection" | "buy-now";
+  loginHref: string;
 };
 
 export default function CheckoutHeader({
   isAuthenticated,
   itemCount,
   source,
+  loginHref,
 }: CheckoutHeaderProps) {
   const backHref = source === "buy-now" ? "/products" : "/cart";
   const backLabel = source === "buy-now" ? "Continue shopping" : "Back to cart";
@@ -51,8 +53,19 @@ export default function CheckoutHeader({
           <p className="mt-2 max-w-md text-sm text-white/85">
             {isAuthenticated
               ? "We've prefilled your details. Review, pick a payment method, and place the order."
-              : "Fill in your delivery details below. We'll send a receipt to the email you provide."}
+              : "Checkout as a guest. Fill in your delivery details to place your order."}
           </p>
+          {!isAuthenticated && (
+            <p className="mt-3 text-xs text-white/85">
+              Already have an account?{" "}
+              <Link
+                href={loginHref}
+                className="font-semibold text-white underline underline-offset-2 hover:text-white/80"
+              >
+                Sign in (optional)
+              </Link>
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:max-w-md sm:grid-cols-2">

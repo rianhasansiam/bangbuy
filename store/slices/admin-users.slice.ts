@@ -1,9 +1,9 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-import type { AdminUserRow } from "@/features/admin-users/api";
+import type { AdminCustomerRow, AdminUserRow } from "@/features/admin-users/api";
 
 type AdminUsersState = {
-  items: AdminUserRow[];
+  items: AdminCustomerRow[];
   isHydrated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -20,7 +20,7 @@ const adminUsersSlice = createSlice({
   name: "adminUsers",
   initialState,
   reducers: {
-    setAdminUsers(state, action: PayloadAction<AdminUserRow[]>) {
+    setAdminUsers(state, action: PayloadAction<AdminCustomerRow[]>) {
       state.items = action.payload;
       state.isHydrated = true;
       state.error = null;
@@ -30,10 +30,14 @@ const adminUsersSlice = createSlice({
       action: PayloadAction<{ id: string; changes: Partial<AdminUserRow> }>,
     ) {
       const index = state.items.findIndex(
-        (item) => item.id === action.payload.id,
+        (item) =>
+          item.customerType === "REGISTERED" && item.id === action.payload.id,
       );
       if (index >= 0) {
-        state.items[index] = { ...state.items[index], ...action.payload.changes };
+        const user = state.items[index];
+        if (user.customerType === "REGISTERED") {
+          state.items[index] = { ...user, ...action.payload.changes };
+        }
       }
     },
     setAdminUsersLoading(state, action: PayloadAction<boolean>) {

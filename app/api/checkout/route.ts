@@ -2,9 +2,10 @@ import type { NextRequest } from "next/server";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
-import { requireUser } from "@/lib/api/guards";
 import { created, jsonError, tooManyRequests } from "@/lib/api/response";
-import { rateLimitPersistent } from "@/lib/auth/rate-limit";
+import { getClientIp, rateLimitPersistent } from "@/lib/auth/rate-limit";
+import { checkoutPrincipal, publicCheckoutOrder } from "@/lib/orders/checkout-customer";
+import { getCheckoutCustomer, isCheckoutOriginAllowed, setGuestCheckoutCookies } from "@/lib/orders/guest-access";
 import { invalidateProductsById } from "@/lib/cache/catalog-invalidation";
 import { revalidateCacheTags } from "@/lib/cache/revalidation";
 import {
@@ -16,7 +17,7 @@ import {
   placeOrder,
   reserveOrderForAirwallex,
 } from "@/lib/services/checkout.service";
-import { handleServiceError } from "@/lib/services/service-error";
+import { handleServiceError, ServiceError } from "@/lib/services/service-error";
 import { checkoutSchema } from "@/lib/validations/checkout.validation";
 import { airwallexConfig } from "@/lib/airwallex/config/airwallex.config";
 import { deriveAirwallexRequestId } from "@/lib/airwallex/security/airwallex-idempotency";
@@ -25,23 +26,28 @@ import { getCurrencyContextFromRequest } from "@/lib/currency/request-currency";
 /**
  * POST /api/checkout
  *
- * Authenticated users only. Totals are recomputed from the DB so
+ * Guests and authenticated customers. Totals are recomputed from the DB so
  * nothing in the body can shift the price. Customers can omit `items`
  * to have their persisted cart used, or pass `items` directly for the
  * Buy Now or selected-cart flow. The order is always attached to the session
- * userId.
+ * userId or a new non-login guest profile. Guest order access uses a scoped
+ * HttpOnly browser cookie.
  */
 export async function POST(request: NextRequest) {
-  const guard = await requireUser();
-  if (!guard.ok) return guard.response;
+  if (!isCheckoutOriginAllowed(request)) return jsonError(403, "Request origin is not allowed.");
+  const identity = await getCheckoutCustomer(request);
 
   try {
     const limit = await rateLimitPersistent(
-      `checkout-submit:${guard.session.user.id}`,
+      `checkout-submit:${checkoutPrincipal(identity.customer)}`,
       6,
       5 * 60_000,
     );
     if (!limit.allowed) return tooManyRequests(limit.resetMs);
+    if (!identity.userId) {
+      const ipLimit = await rateLimitPersistent(`checkout-submit-ip:${getClientIp(request)}`, 12, 5 * 60_000);
+      if (!ipLimit.allowed) return tooManyRequests(ipLimit.resetMs);
+    }
   } catch (error) {
     return handleServiceError("checkout.POST.rateLimit", error);
   }
@@ -53,7 +59,9 @@ export async function POST(request: NextRequest) {
 
   let body: unknown;
   try {
-    body = await request.json();
+    const bytes = await request.arrayBuffer();
+    if (bytes.byteLength > 64 * 1024) return jsonError(413, "Checkout request is too large.");
+    body = JSON.parse(new TextDecoder().decode(bytes));
   } catch {
     return jsonError(400, "Invalid JSON payload.");
   }
@@ -64,14 +72,18 @@ export async function POST(request: NextRequest) {
       fieldErrors: z.flattenError(parsed.error).fieldErrors,
     });
   }
+  if (identity.isNewGuest) {
+    return setGuestCheckoutCookies(jsonError(409, "Refresh checkout before placing your order so your order can be safely retried."), identity);
+  }
 
+  let committedOrderId: string | undefined;
   try {
-    const userId = guard.session.user.id;
+    const customer = identity.customer;
     const currencyContext = await getCurrencyContextFromRequest(request);
     let result;
     if (parsed.data.paymentMethod === "SSLCOMMERZ") {
       result = await initiateSslCommerzCheckout(
-        userId,
+        customer,
         parsed.data,
         currencyContext,
       );
@@ -86,13 +98,13 @@ export async function POST(request: NextRequest) {
         throw new CheckoutError(400, "A payment request ID is required.");
       }
       const reserved = await reserveOrderForAirwallex(
-        userId,
+        customer,
         parsed.data,
         {
           id: randomUUID(),
           provider: "AIRWALLEX",
           idempotencyKey: deriveAirwallexRequestId(
-            userId,
+            checkoutPrincipal(customer),
             parsed.data.idempotencyKey,
           ),
         },
@@ -104,8 +116,9 @@ export async function POST(request: NextRequest) {
         promo: reserved.promo,
       };
     } else {
-      result = await placeOrder(userId, parsed.data, currencyContext);
+      result = await placeOrder(customer, parsed.data, currencyContext);
     }
+    committedOrderId = result.order.id;
     // Order placement decrements stock and empties the cart. Bust the
     // cached surfaces that embed product/stock data. (The cart itself is
     // uncached and refetched fresh by the client.)
@@ -116,7 +129,7 @@ export async function POST(request: NextRequest) {
       { reason: `checkout stock decrement: ${result.order.id}` },
     );
     revalidateCacheTags(["admin-orders", "promo-codes"]);
-    return created(result);
+    return setGuestCheckoutCookies(created({ ...result, order: publicCheckoutOrder(result.order) }), identity, result.order.id);
   } catch (error) {
     if (error instanceof CommittedPaymentError) {
       try {
@@ -133,6 +146,9 @@ export async function POST(request: NextRequest) {
         });
       }
     }
-    return handleServiceError("checkout.POST", error);
+    const orderId = error instanceof ServiceError
+      ? typeof error.details?.orderId === "string" ? error.details.orderId : committedOrderId
+      : committedOrderId;
+    return setGuestCheckoutCookies(handleServiceError("checkout.POST", error), identity, orderId);
   }
 }

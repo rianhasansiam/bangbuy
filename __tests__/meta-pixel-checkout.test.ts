@@ -167,12 +167,14 @@ beforeEach(() => {
   harness.store.cart = { items: [], mode: "server", isHydrated: true, isLoading: false, error: null };
   harness.fetchPreview.mockReset().mockResolvedValue(preview);
   harness.fetchProfile.mockClear();
+  harness.router.push.mockClear();
+  harness.router.replace.mockClear();
 });
 
 describe("receipt Purchase requires verified data and matching browser checkout intent", () => {
   function verifiedOrder(): OrderDetail {
     return {
-      id: "order-1", orderNumber: "ORDER-1", userId: "owner-1",
+      id: "order-1", orderNumber: "ORDER-1", userId: "owner-1", guestCustomerId: null,
       customerName: "Test buyer", customerPhone: "", customerEmail: null, customerAddress: "",
       customerCity: null, customerPostalCode: null, customerNote: null,
       subtotal: 27, deliveryCharge: 1, discountAmount: 2, taxAmount: 2.5, totalAmount: 28.5, advancePayment: 0,
@@ -225,6 +227,16 @@ describe("receipt Purchase requires verified data and matching browser checkout 
     pixel.registerPurchaseIntent("order-1");
     await renderReceiptEffects();
     expect(events(browser)).toEqual([]);
+  });
+
+  it("loads guest confirmation using its scoped cookie without redirecting to login", async () => {
+    createBrowser();
+    harness.authStatus = "unauthenticated";
+    harness.readyOrder = { ...verifiedOrder(), userId: null, guestCustomerId: "guest-1" };
+    harness.fetchOrder.mockClear().mockResolvedValue(harness.readyOrder);
+    await renderReceiptEffects();
+    expect(harness.fetchOrder).toHaveBeenCalledWith("order-1");
+    expect(harness.router.replace).not.toHaveBeenCalled();
   });
 
   it("emits nothing for an unverified receipt even when checkout intent is present", async () => {
@@ -311,12 +323,30 @@ describe("checkout destination is the canonical InitiateCheckout point", () => {
     expect(events(browser)).toEqual([]);
   });
 
-  it("waits for authenticated, hydrated authoritative cart data", async () => {
-    const browser = createBrowser();
+  it("starts guest cart checkout with explicit local items and optional login", async () => {
+    createBrowser();
     harness.authStatus = "unauthenticated";
+    harness.store.cart.mode = "local";
+    harness.store.cart.items = [{
+      id: "local:variant-red-large", productId: "product-shirt", variantId: "variant-red-large",
+      name: "Shirt", image: null, quantity: 3, unitPrice: 900, originalPrice: 1000,
+      lineTotal: 2700, stock: 20, status: "ACTIVE",
+    }];
     await renderCheckoutEffects();
     await flushPreview();
-    expect(harness.router.replace).toHaveBeenCalled();
+    expect(harness.router.replace).not.toHaveBeenCalled();
+    expect(harness.fetchProfile).not.toHaveBeenCalled();
+    expect(harness.fetchPreview).toHaveBeenCalledWith({
+      items: [{ productId: "product-shirt", variantId: "variant-red-large", quantity: 3 }],
+      deliveryZone: "INSIDE_DHAKA", promoCode: null,
+    });
+  });
+
+  it("waits for session resolution and hydrated cart data", async () => {
+    const browser = createBrowser();
+    harness.authStatus = "loading";
+    await renderCheckoutEffects();
+    await flushPreview();
     expect(harness.fetchPreview).not.toHaveBeenCalled();
     harness.authStatus = "authenticated";
     harness.store.cart.isHydrated = false;

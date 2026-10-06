@@ -14,6 +14,7 @@ import { placeOrder } from "@/lib/services/checkout.service";
 import { handleServiceError } from "@/lib/services/service-error";
 import { checkoutSchema } from "@/lib/validations/checkout.validation";
 import { getCurrencyContextFromRequest } from "@/lib/currency/request-currency";
+import { publicCheckoutOrder } from "@/lib/orders/checkout-customer";
 
 /**
  * POST /api/orders
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
       { reason: `order stock decrement: ${result.order.id}` },
     );
     revalidateCacheTags(["admin-orders", "promo-codes"]);
-    return created(result.order);
+    return created(publicCheckoutOrder(result.order));
   } catch (error) {
     return handleServiceError("orders.POST", error);
   }

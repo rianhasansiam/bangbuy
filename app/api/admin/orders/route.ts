@@ -17,9 +17,9 @@ type AdminOrderQuery = z.infer<typeof adminOrderQuerySchema>;
 /**
  * GET /api/admin/orders
  *
- * Admin only. Pagination, search by orderNumber/customerName/phone,
- * filter by order status and payment status, newest first. Each row
- * carries the user's basic info and the count of items.
+ * Admin only. Pagination and search by order number/customer contact;
+ * filters by order status, payment status, and guest/registered association.
+ * Newest first, with contact/delivery snapshots and the count of items.
  */
 
 

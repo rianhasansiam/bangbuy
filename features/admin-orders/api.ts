@@ -34,6 +34,8 @@ export type AdminOrderUser = {
 export type AdminOrderRow = {
   id: string;
   orderNumber: string;
+  userId: string | null;
+  guestCustomerId: string | null;
   subtotal: number;
   deliveryCharge: number;
   discountAmount: number;
@@ -48,12 +50,29 @@ export type AdminOrderRow = {
   paymentReviewRefundCancellationAllowed: boolean;
   customerName: string;
   customerPhone: string;
+  customerEmail: string | null;
   customerAddress: string;
+  customerCity: string | null;
+  customerArea: string | null;
+  customerPostalCode: string | null;
+  customerNote: string | null;
   createdAt: string;
   updatedAt: string;
   itemsCount: number;
   user: AdminOrderUser;
 };
+
+export type AdminOrderCustomerType = "GUEST" | "REGISTERED";
+
+/** Do not infer a guest identity for older orders with no customer relation. */
+export function getAdminOrderCustomerType(order: {
+  userId?: string | null;
+  guestCustomerId?: string | null;
+}): AdminOrderCustomerType | null {
+  if (order.guestCustomerId) return "GUEST";
+  if (order.userId) return "REGISTERED";
+  return null;
+}
 
 export type ApiMeta = {
   page: number;
@@ -133,6 +152,9 @@ function parseRow(entry: unknown): AdminOrderRow {
   return {
     id: typeof item.id === "string" ? item.id : "",
     orderNumber: typeof item.orderNumber === "string" ? item.orderNumber : "",
+    userId: typeof item.userId === "string" ? item.userId : null,
+    guestCustomerId:
+      typeof item.guestCustomerId === "string" ? item.guestCustomerId : null,
     subtotal: Number(item.subtotal ?? 0),
     deliveryCharge: Number(item.deliveryCharge ?? 0),
     discountAmount: Number(item.discountAmount ?? 0),
@@ -153,8 +175,18 @@ function parseRow(entry: unknown): AdminOrderRow {
     customerName: typeof item.customerName === "string" ? item.customerName : "",
     customerPhone:
       typeof item.customerPhone === "string" ? item.customerPhone : "",
+    customerEmail:
+      typeof item.customerEmail === "string" ? item.customerEmail : null,
     customerAddress:
       typeof item.customerAddress === "string" ? item.customerAddress : "",
+    customerCity:
+      typeof item.customerCity === "string" ? item.customerCity : null,
+    customerArea:
+      typeof item.customerArea === "string" ? item.customerArea : null,
+    customerPostalCode:
+      typeof item.customerPostalCode === "string" ? item.customerPostalCode : null,
+    customerNote:
+      typeof item.customerNote === "string" ? item.customerNote : null,
     createdAt: typeof item.createdAt === "string" ? item.createdAt : "",
     updatedAt: typeof item.updatedAt === "string" ? item.updatedAt : "",
     itemsCount: Number(item.itemsCount ?? 0),

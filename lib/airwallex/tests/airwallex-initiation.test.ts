@@ -2,6 +2,7 @@ import { Decimal } from "@prisma/client/runtime/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PaymentTransactionStatus } from "@/app/generated/prisma/client";
+import type { PaymentOrderCustomer } from "@/lib/payments/core/payment-order-customer";
 
 const mocks = vi.hoisted(() => ({
   appendTransition: vi.fn(),
@@ -130,7 +131,8 @@ type TestPayment = {
 
 type TestOrder = {
   id: string;
-  userId: string;
+  userId: string | null;
+  guestAccessTokenHash?: string;
   paymentMethod: string;
   paymentStatus: string;
   status: string;
@@ -165,7 +167,7 @@ let state: HarnessState;
 let transactionClient: {
   order: {
     findFirst: (input: {
-      where: { id: string; userId: string };
+      where: { id: string; userId: string | null; guestAccessTokenHash?: string };
     }) => Promise<TestOrder | null>;
     update: (input: {
       where: { id: string };
@@ -288,7 +290,8 @@ function configureTransactionHarness(): void {
   transactionClient = {
     order: {
       findFirst: async ({ where }) =>
-        state.order.id === where.id && state.order.userId === where.userId
+        state.order.id === where.id && state.order.userId === where.userId &&
+        (where.userId !== null || state.order.guestAccessTokenHash === where.guestAccessTokenHash)
           ? state.order
           : null,
       update: async ({ where, data }) => {
@@ -360,8 +363,10 @@ beforeEach(() => {
   }));
   mocks.createRequestId.mockReturnValue(REQUEST_ID);
   mocks.findOrder.mockImplementation(
-    async (_client: unknown, orderId: string, userId: string) =>
-      state.order.id === orderId && state.order.userId === userId
+    async (_client: unknown, orderId: string, customer: PaymentOrderCustomer) =>
+      state.order.id === orderId && (typeof customer === "string"
+        ? state.order.userId === customer
+        : state.order.userId === null && state.order.guestAccessTokenHash === customer.guestAccessTokenHash)
         ? state.order
         : null,
   );
@@ -446,6 +451,33 @@ afterEach(() => {
 });
 
 describe("initiateAirwallexPayment", () => {
+  it("initializes a guest payment using its frozen quote and order-scoped hash", async () => {
+    const customer = { guestAccessTokenHash: "a".repeat(64) };
+    state.order.userId = null;
+    state.order.guestAccessTokenHash = customer.guestAccessTokenHash;
+
+    const result = await initiateAirwallexPayment(customer, ORDER_ID);
+
+    expect(result.intentId).toBe("int_created123");
+    expect(mocks.createIntent).toHaveBeenCalledWith(expect.objectContaining({ amount: 1.05, currency: "USD", merchant_order_id: ORDER_ID }));
+    expect(state.order.payments[0].transactionId).toBe("int_created123");
+  });
+
+  it("rejects a different guest hash before contacting Airwallex", async () => {
+    state.order.userId = null;
+    state.order.guestAccessTokenHash = "a".repeat(64);
+
+    await expect(initiateAirwallexPayment({ guestAccessTokenHash: "b".repeat(64) }, ORDER_ID)).rejects.toMatchObject({ status: 404 });
+    expect(mocks.createIntent).not.toHaveBeenCalled();
+  });
+
+  it("does not authorize a registered order through a matching guest hash", async () => {
+    state.order.guestAccessTokenHash = "a".repeat(64);
+
+    await expect(initiateAirwallexPayment({ guestAccessTokenHash: "a".repeat(64) }, ORDER_ID)).rejects.toMatchObject({ status: 404 });
+    expect(mocks.createIntent).not.toHaveBeenCalled();
+  });
+
   it("returns owner-scoped not-found without contacting Airwallex", async () => {
     state.order.userId = "different-owner";
 

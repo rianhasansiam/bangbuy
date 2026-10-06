@@ -110,7 +110,7 @@ function CheckoutPageInner() {
   const cartError = useSelector((state: RootState) => state.cart.error);
 
   // Source: explicit Buy Now items, an explicit cart selection, or the full
-  // persisted cart when no item payload is present.
+  // saved cart when no item payload is present.
   const buyNowItems = useMemo(
     () => parseBuyNowParam(searchParams.get("buy")),
     [searchParams],
@@ -151,7 +151,7 @@ function CheckoutPageInner() {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const submitInFlightRef = useRef(false);
-  const onlineIdempotencyAttemptRef =
+  const checkoutIdempotencyAttemptRef =
     useRef<CheckoutIdempotencyAttempt | null>(null);
 
   const [fieldErrors, setFieldErrors] = useState<
@@ -165,16 +165,6 @@ function CheckoutPageInner() {
     "idle" | "loading" | "loaded" | "error"
   >("idle");
   const [profileToken, setProfileToken] = useState(0);
-
-  // Anonymous visitors can't reach checkout. Bounce them to /login
-  // with a callback URL that preserves any "Buy now" intent so the
-  // post-login redirect lands them right back here.
-  useEffect(() => {
-    if (authStatus !== "unauthenticated") return;
-    const query = searchParams.toString();
-    const target = query ? `/checkout?${query}` : "/checkout";
-    router.replace(`/login?callbackUrl=${encodeURIComponent(target)}`);
-  }, [authStatus, router, searchParams]);
 
   // Hydrate the form from the authenticated user's saved profile. The
   // database profile is the source of truth (not Redux/localStorage), so
@@ -229,15 +219,25 @@ function CheckoutPageInner() {
 
   // Build the items payload sent to /api/checkout/preview.
   // Buy Now and selected-cart flows forward explicit items. Full-cart
-  // checkout omits `items` so the server reads the persisted cart.
+  // signed-in checkout omits `items` so the server reads the persisted cart.
+  // Guests send their local cart choices; pricing always comes from the server.
   const buildItemsPayload = useCallback((): CheckoutItemInput[] | undefined => {
     if (source.kind !== "cart") return source.items;
+    if (authStatus === "unauthenticated") {
+      return items.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        ...(item.variantId ? { variantId: item.variantId } : {}),
+      }));
+    }
     return undefined;
-  }, [source]);
+  }, [source, authStatus, items]);
 
   const cartSourceReady =
     source.kind !== "cart" ||
-    (cartIsHydrated && cartMode === "server" && !cartIsLoading);
+    (cartIsHydrated &&
+      !cartIsLoading &&
+      (authStatus === "unauthenticated" || cartMode === "server"));
 
   // Single source of truth for "fetch the preview". Triggered by:
   //   - auth status becoming known
@@ -246,7 +246,7 @@ function CheckoutPageInner() {
   //   - the manual reload token bumping
   // Anything that should refresh totals just updates one of those inputs.
   useEffect(() => {
-    if (authStatus !== "authenticated") return;
+    if (authStatus === "loading") return;
     if (!cartSourceReady) {
       if (
         source.kind === "cart" &&
@@ -371,6 +371,25 @@ function CheckoutPageInner() {
     if (form.customerPhone.trim().length < 7) {
       errors.customerPhone = "Enter a valid phone number.";
     }
+    if (
+      authStatus === "unauthenticated" &&
+      paymentMethod === "SSLCOMMERZ" &&
+      !form.customerEmail.trim()
+    ) {
+      errors.customerEmail = "Enter your email address for online payment.";
+    } else if (
+      authStatus === "unauthenticated" &&
+      form.customerEmail.trim() &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customerEmail.trim())
+    ) {
+      errors.customerEmail = "Enter a valid email address.";
+    } else if (
+      authStatus === "unauthenticated" &&
+      paymentMethod === "SSLCOMMERZ" &&
+      form.customerEmail.trim().length > 50
+    ) {
+      errors.customerEmail = "Online payment accepts an email address up to 50 characters.";
+    }
     if (form.customerAddress.trim().length < 5) {
       errors.customerAddress = "Enter your delivery address.";
     }
@@ -393,11 +412,7 @@ function CheckoutPageInner() {
   const syncCartAfterOrder = async () => {
     if (source.kind === "buy-now") return;
 
-    try {
-      const snapshot = await fetchServerCartSnapshot();
-      writeLocalCart(snapshot.items);
-      dispatch(setCartData(snapshot));
-    } catch {
+    const removePurchasedLocalItems = () => {
       const remainingItems =
         source.kind === "cart"
           ? []
@@ -416,12 +431,33 @@ function CheckoutPageInner() {
           summary: computeCartSummary(remainingItems),
         }),
       );
+    };
+
+    if (authStatus === "unauthenticated") {
+      removePurchasedLocalItems();
+      dispatch(setCartError(null));
+      return;
+    }
+
+    try {
+      const snapshot = await fetchServerCartSnapshot();
+      writeLocalCart(snapshot.items);
+      dispatch(setCartData(snapshot));
+    } catch {
+      removePurchasedLocalItems();
     }
     dispatch(setCartError(null));
   };
 
   const handlePlaceOrder = async () => {
-    if (isPlacingOrder || submitInFlightRef.current) return;
+    if (
+      isPlacingOrder ||
+      submitInFlightRef.current ||
+      previewLoading ||
+      !cartSourceReady
+    ) {
+      return;
+    }
     setSubmitError(null);
 
     if (!preview || preview.items.length === 0) {
@@ -447,7 +483,7 @@ function CheckoutPageInner() {
 
     submitInFlightRef.current = true;
     setIsPlacingOrder(true);
-    let handingOffToGateway = false;
+    let leavingCheckout = false;
     let reservedAirwallexOrderId: string | null = null;
 
     try {
@@ -455,8 +491,11 @@ function CheckoutPageInner() {
         items: buildItemsPayload(),
         customerName: form.customerName.trim(),
         customerPhone: form.customerPhone.trim(),
-        // Email is intentionally not sent: the server stamps the order
-        // with the authenticated account's email.
+        // Signed-in email remains account-bound on the server. Guests may
+        // provide a contact email without creating or claiming an account.
+        ...(authStatus === "unauthenticated"
+          ? { customerEmail: form.customerEmail.trim() || undefined }
+          : {}),
         customerAddress: form.customerAddress.trim(),
         customerCity: form.customerCity.trim() || undefined,
         deliveryZone: form.deliveryZone,
@@ -473,18 +512,17 @@ function CheckoutPageInner() {
           : {}),
       };
 
-      if (
-        paymentMethod === "SSLCOMMERZ" ||
-        paymentMethod === "AIRWALLEX"
-      ) {
-        const attempt = resolveCheckoutIdempotencyAttempt(
-          onlineIdempotencyAttemptRef.current,
-          JSON.stringify(checkoutRequest),
-          () => window.crypto.randomUUID(),
-        );
-        onlineIdempotencyAttemptRef.current = attempt;
-        checkoutRequest.idempotencyKey = attempt.key;
-      }
+      // A refreshed signed quote authenticates the same choices. It must not
+      // rotate a request key after an uncertain payment-initiation response.
+      const fingerprintRequest = { ...checkoutRequest };
+      delete fingerprintRequest.airwallexQuoteToken;
+      const attempt = resolveCheckoutIdempotencyAttempt(
+        checkoutIdempotencyAttemptRef.current,
+        JSON.stringify(fingerprintRequest),
+        () => window.crypto.randomUUID(),
+      );
+      checkoutIdempotencyAttemptRef.current = attempt;
+      checkoutRequest.idempotencyKey = attempt.key;
 
       const result = await placeCheckoutOrder(checkoutRequest);
       const paymentUrl =
@@ -502,7 +540,7 @@ function CheckoutPageInner() {
       if (paymentMethod === "SSLCOMMERZ" && paymentUrl) {
         toast.info("Redirecting to secure payment...");
         window.location.assign(paymentUrl);
-        handingOffToGateway = true;
+        leavingCheckout = true;
         return;
       }
 
@@ -510,17 +548,19 @@ function CheckoutPageInner() {
         reservedAirwallexOrderId = result.order.id;
         toast.info("Opening Airwallex secure checkout...");
         await startAirwallexHostedCheckout(result.order.id);
-        handingOffToGateway = true;
+        leavingCheckout = true;
         return;
       }
 
       toast.success("Order placed successfully!");
+      leavingCheckout = true;
       router.push(`/orders/${result.order.id}?just-placed=1`);
     } catch (error) {
       if (reservedAirwallexOrderId) {
         toast.info(
           "Your order is reserved. Open it to retry the secure payment.",
         );
+        leavingCheckout = true;
         router.push(
           `/orders/${reservedAirwallexOrderId}?payment=failed`,
         );
@@ -542,15 +582,25 @@ function CheckoutPageInner() {
             ? "Your order is safe while payment status is checked."
             : "The payment attempt ended. Review the order for details.",
         );
+        leavingCheckout = true;
         router.push(`/orders/${error.orderId}?payment=${outcome}`);
         return;
       }
       const message =
         error instanceof Error ? error.message : "Failed to place the order.";
+      if (error instanceof CheckoutSubmissionError) {
+        setFieldErrors(
+          Object.fromEntries(
+            Object.entries(error.fieldErrors).filter(([field]) =>
+              Object.prototype.hasOwnProperty.call(EMPTY_FORM, field),
+            ),
+          ),
+        );
+      }
       setSubmitError(message);
       toast.error(message);
     } finally {
-      if (!handingOffToGateway) {
+      if (!leavingCheckout) {
         submitInFlightRef.current = false;
         setIsPlacingOrder(false);
       }
@@ -560,22 +610,12 @@ function CheckoutPageInner() {
   const isEmpty = !previewLoading && (!preview || preview.items.length === 0);
   const isAuthenticated = authStatus === "authenticated";
 
-  // Show a friendly gate while auth resolves or while we bounce
-  // unauthenticated visitors to /login. Without this the customer
-  // sees an empty form for a flash before the redirect kicks in.
-  if (authStatus !== "authenticated") {
+  // Resolve the session before deciding whether to load a saved profile/cart.
+  if (authStatus === "loading") {
     return (
       <FullPageLoader
-        title={
-          authStatus === "loading"
-            ? "Loading checkout..."
-            : "Redirecting to sign in..."
-        }
-        message={
-          authStatus === "loading"
-            ? "One moment while we load your account."
-            : "Please wait while we attach checkout to your account."
-        }
+        title="Loading checkout..."
+        message="One moment while we prepare your checkout."
       />
     );
   }
@@ -587,6 +627,11 @@ function CheckoutPageInner() {
           isAuthenticated={isAuthenticated}
           itemCount={preview?.items.reduce((sum, x) => sum + x.quantity, 0) ?? 0}
           source={source.kind}
+          loginHref={`/login?callbackUrl=${encodeURIComponent(
+            searchParams.toString()
+              ? `/checkout?${searchParams.toString()}`
+              : "/checkout",
+          )}`}
         />
 
         {previewError && (
@@ -619,7 +664,10 @@ function CheckoutPageInner() {
           </div>
         ) : (
           <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-8">
-            <div className="flex min-w-0 flex-col gap-5">
+            <fieldset
+              disabled={isPlacingOrder}
+              className="flex min-w-0 flex-col gap-5"
+            >
               <CustomerForm
                 form={form}
                 onChange={(field, value) => {
@@ -630,6 +678,7 @@ function CheckoutPageInner() {
                 }}
                 errors={fieldErrors}
                 isAuthenticated={isAuthenticated}
+                emailRequired={paymentMethod === "SSLCOMMERZ"}
                 profileStatus={profileStatus}
                 onRetryProfile={handleRetryProfile}
               />
@@ -648,12 +697,12 @@ function CheckoutPageInner() {
                 currency={preview?.summary.currency ?? BASE_CURRENCY}
                 isLoading={previewLoading && !preview}
               />
-            </div>
+            </fieldset>
 
             <div className="lg:sticky lg:top-[88px] lg:self-start">
               <OrderSummaryCard
                 summary={preview?.summary ?? null}
-                isLoading={previewLoading && !preview}
+                isLoading={previewLoading || !cartSourceReady}
                 items={items}
                 promoCode={promoCode}
                 appliedPromo={appliedPromo}

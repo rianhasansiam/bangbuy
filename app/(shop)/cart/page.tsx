@@ -744,16 +744,6 @@ export default function CartPage() {
     }
 
     const target = buildCartSelectionCheckoutHref(selectedItems, promo?.code);
-    // Checkout requires authentication so the order can be attached
-    // to a real user record. Bounce unauthenticated visitors to the
-    // sign-in page first, with a callbackUrl that lands them right
-    // back on /checkout.
-    if (status !== "authenticated") {
-      startCheckoutTransition(() => {
-        router.push(`/login?callbackUrl=${encodeURIComponent(target)}`);
-      });
-      return;
-    }
     startCheckoutTransition(() => {
       router.push(target);
     });
