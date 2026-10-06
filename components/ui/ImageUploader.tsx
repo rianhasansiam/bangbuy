@@ -22,7 +22,7 @@ type ImageUploaderProps = {
 };
 
 /**
- * Single image picker that uploads straight to ImgBB via `/api/upload`.
+ * Single image picker that uploads via `/api/upload`.
  *
  * There is intentionally no URL text box — the admin drops or selects a
  * file, we upload it, and the resulting hosted URL is pushed up through
@@ -130,7 +130,7 @@ export default function ImageUploader({
             </span>
             <span className="flex items-center gap-1 text-[11px] text-gray-500">
               <UploadCloud className="h-3 w-3" />
-              or drag &amp; drop an image (max 32MB)
+              or drag &amp; drop an image (max 5MB)
             </span>
           </>
         )}
@@ -161,7 +161,7 @@ export default function ImageUploader({
       {isUploading && (
         <p className="flex items-center gap-1 text-xs text-brand-red">
           <LoadingSpinner decorative size="xs" />
-          Uploading to image host...
+          Uploading image...
         </p>
       )}
 

@@ -55,7 +55,7 @@ export default function ImageTextBlockForm({ block, onChange, disabled }: Props)
         />
       </div>
 
-      {/* Image upload — uses existing ImgBB upload pipeline. 
+      {/* Image upload — uses the /api/upload pipeline. 
            Only persists the hosted URL, never base64 or blob URLs. */}
       <div>
         <ImageUploader

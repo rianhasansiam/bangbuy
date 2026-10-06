@@ -1,5 +1,29 @@
 import type { NextConfig } from "next";
 
+/**
+ * Parse UPLOAD_PUBLIC_URL at build/startup time so `next/image` can
+ * optimise VPS-hosted uploads. Falls back gracefully when the env var
+ * is not set (e.g. in CI).
+ */
+function uploadRemotePattern():
+  | { protocol: "https"; hostname: string; port: string; pathname: string }
+  | undefined {
+  const raw = process.env.UPLOAD_PUBLIC_URL;
+  if (!raw) return undefined;
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== "https:") return undefined;
+    return {
+      protocol: "https",
+      hostname: parsed.hostname,
+      port: "",
+      pathname: `${parsed.pathname.replace(/\/+$/, "")}/**`,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
@@ -18,8 +42,7 @@ const nextConfig: NextConfig = {
               value: "https://i\\.ibb\\.co/.*",
             },
           ],
-          // ImgBB originals can exceed the local optimizer's fetch timeout.
-          // Reuse the storefront's resized cache for public images in dev.
+          // Legacy ImgBB images: reuse the storefront's resized cache in dev.
           destination: "https://bangbuy.net/_next/image",
         },
       ],
@@ -47,6 +70,7 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/seed/**",
       },
+      // Legacy ImgBB images — must remain for existing database records
       {
         protocol: "https",
         hostname: "i.ibb.co",
@@ -59,6 +83,8 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/photo-1542838132-92c53300491e",
       },
+      // VPS-hosted uploads — added dynamically from UPLOAD_PUBLIC_URL
+      ...(uploadRemotePattern() ? [uploadRemotePattern()!] : []),
     ],
   },
 };

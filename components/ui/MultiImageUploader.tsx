@@ -23,8 +23,8 @@ type MultiImageUploaderProps = {
 
 /**
  * Gallery uploader for "extra images". Supports multi-select and
- * drag-and-drop; each file is uploaded to ImgBB and appended to the
- * list. No URL text inputs — images are managed purely as thumbnails.
+ * drag-and-drop; each file is uploaded via `/api/upload` and appended to
+ * the list. No URL text inputs — images are managed purely as thumbnails.
  */
 export default function MultiImageUploader({
   value,

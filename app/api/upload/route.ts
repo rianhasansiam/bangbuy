@@ -8,18 +8,30 @@ import {
 } from "@/lib/services/service-error";
 import {
   MAX_UPLOAD_BYTES,
-  uploadImageToImgBB,
+  uploadImageToVPS,
+  type UploadCategory,
 } from "@/lib/services/upload.service";
+
+const VALID_CATEGORIES = new Set([
+  "products",
+  "categories",
+  "users",
+  "banners",
+  "other",
+]);
 
 /**
  * POST /api/upload
  *
  * Accepts a `multipart/form-data` body with a single `image` file field
- * and forwards it to ImgBB. Returns the hosted URL inside the standard
- * `{ success, data }` envelope.
+ * and stores it on the VPS filesystem. Returns the public URL inside the
+ * standard `{ success, data }` envelope.
  *
- * Auth-gated to logged-in users so anonymous visitors can't burn our
- * ImgBB quota, plus a per-IP rate limit as a second line of defence.
+ * An optional `category` form field selects the subdirectory
+ * (products | categories | users | banners | other). Defaults to "other".
+ *
+ * Auth-gated to logged-in users. Per-IP rate limit as a second line of
+ * defence.
  */
 export async function POST(request: NextRequest) {
   const guard = await requireUser();
@@ -48,11 +60,19 @@ export async function POST(request: NextRequest) {
     return jsonError(400, "An image file is required.");
   }
   if (file.size > MAX_UPLOAD_BYTES) {
-    return jsonError(413, "Image exceeds the 32MB upload limit.");
+    const limitMB = Math.round(MAX_UPLOAD_BYTES / (1024 * 1024));
+    return jsonError(413, `Image exceeds the ${limitMB}MB upload limit.`);
+  }
+
+  // Optional category for subdirectory organization
+  const rawCategory = formData.get("category");
+  let category: UploadCategory = "other";
+  if (typeof rawCategory === "string" && VALID_CATEGORIES.has(rawCategory)) {
+    category = rawCategory as UploadCategory;
   }
 
   try {
-    const result = await uploadImageToImgBB(file);
+    const result = await uploadImageToVPS(file, category);
     return ok(result);
   } catch (error) {
     return handleServiceError("upload.POST", error);
