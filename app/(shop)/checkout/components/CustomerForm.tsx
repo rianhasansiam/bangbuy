@@ -23,7 +23,7 @@ export type CustomerFormState = {
   customerEmail: string;
   customerAddress: string;
   customerCity: string;
-  deliveryZone: DeliveryZone;
+  deliveryZone: DeliveryZone | "";
   customerPostalCode: string;
   customerNote: string;
 };
@@ -166,14 +166,24 @@ export default function CustomerForm({
           <select
             value={form.deliveryZone}
             onChange={(event) =>
-              onChange("deliveryZone", event.target.value as DeliveryZone)
+              onChange("deliveryZone", event.target.value as CustomerFormState["deliveryZone"])
             }
             disabled={isProfileLoading}
-            className="h-11 w-full rounded-xl border border-brand-border bg-white px-3 text-sm text-gray-900 outline-none transition-all duration-200 focus-visible:border-brand-red focus-visible:ring-4 focus-visible:ring-brand-red/30 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
+            required
+            aria-invalid={Boolean(errors.deliveryZone)}
+            aria-describedby={errors.deliveryZone ? "delivery-area-error" : undefined}
+            className={cn(
+              "h-11 w-full rounded-xl border border-brand-border bg-white px-3 text-sm text-gray-900 outline-none transition-all duration-200 focus-visible:border-brand-red focus-visible:ring-4 focus-visible:ring-brand-red/30 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400",
+              errors.deliveryZone && "border-red-400 bg-red-50/30",
+            )}
           >
+            <option value="" disabled>Select delivery area</option>
             <option value="INSIDE_DHAKA">Delivery inside Dhaka</option>
             <option value="OUTSIDE_DHAKA">Delivery outside Dhaka</option>
           </select>
+          {errors.deliveryZone && (
+            <p id="delivery-area-error" className="mt-1.5 text-xs font-medium text-red-500">{errors.deliveryZone}</p>
+          )}
         </label>
         <Field
           icon={<Hash className="h-4 w-4" />}

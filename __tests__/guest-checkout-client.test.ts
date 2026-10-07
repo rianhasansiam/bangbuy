@@ -129,14 +129,26 @@ async function renderCheckout(runEffects = false) {
   return tree;
 }
 
-async function fillDeliveryDetails(email = "guest@example.test") {
+async function chooseDeliveryArea(deliveryZone: CustomerFormState["deliveryZone"] = "INSIDE_DHAKA") {
+  const tree = await renderCheckout();
+  const onChange = findProps(tree, "form").onChange as (key: keyof CustomerFormState, value: string) => void;
+  onChange("deliveryZone", deliveryZone);
   await renderCheckout(true);
+  return renderCheckout();
+}
+
+async function fillDeliveryDetails(
+  email = "guest@example.test",
+  deliveryZone: CustomerFormState["deliveryZone"] = "INSIDE_DHAKA",
+) {
   let tree = await renderCheckout();
   const onChange = findProps(tree, "form").onChange as (key: keyof CustomerFormState, value: string) => void;
   onChange("customerName", " Guest Buyer ");
   onChange("customerPhone", " 01700000000 ");
   onChange("customerAddress", " 12 Main Road ");
   onChange("customerEmail", email);
+  onChange("deliveryZone", deliveryZone);
+  await renderCheckout(true);
   tree = await renderCheckout();
   return findProps(tree, "onPlaceOrder").onPlaceOrder as () => Promise<void>;
 }
@@ -161,6 +173,83 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("guest checkout event handlers", () => {
+  it("keeps the guest delivery form available without pricing an assumed delivery area", async () => {
+    await renderCheckout(true);
+    const tree = await renderCheckout();
+
+    expect(findProps(tree, "form").form).toMatchObject({ deliveryZone: "" });
+    expect(findProps(tree, "summary").summary).toBeNull();
+    expect(findProps(tree, "summary").deliveryAreaSelected).toBe(false);
+    expect(findProps(tree, "summary").isLoading).toBe(false);
+    expect(harness.fetchPreview).not.toHaveBeenCalled();
+    expect(harness.fetchProfile).not.toHaveBeenCalled();
+  });
+
+  it("requires an explicit delivery area before submission rather than reporting an empty cart", async () => {
+    const submit = await fillDeliveryDetails("guest@example.test", "");
+    await submit();
+    const tree = await renderCheckout();
+
+    expect(harness.fetchPreview).not.toHaveBeenCalled();
+    expect(harness.placeOrder).not.toHaveBeenCalled();
+    expect(findProps(tree, "form").errors).toMatchObject({
+      deliveryZone: expect.stringMatching(/select.*delivery area/i),
+    });
+    expect(findProps(tree, "onPlaceOrder").submitError ?? "").not.toContain("Your cart is empty");
+  });
+
+  it("waits for explicit selection even when the signed-in profile contains a Dhaka address", async () => {
+    harness.authStatus = "authenticated";
+    harness.cart.mode = "server";
+    harness.fetchProfile.mockResolvedValue({
+      name: "Account Buyer", email: "account@example.test", phone: "01700000000",
+      address: "12 Main Road", city: "Dhaka", deliveryZone: "INSIDE_DHAKA",
+    });
+    await renderCheckout(true);
+    const tree = await renderCheckout();
+
+    expect(harness.fetchProfile).toHaveBeenCalledTimes(1);
+    expect(findProps(tree, "form").form).toMatchObject({
+      customerName: "Account Buyer", customerAddress: "12 Main Road", customerCity: "Dhaka", deliveryZone: "",
+    });
+    expect(harness.fetchPreview).not.toHaveBeenCalled();
+    const submit = findProps(tree, "onPlaceOrder").onPlaceOrder as () => Promise<void>;
+    await submit();
+    expect(harness.placeOrder).not.toHaveBeenCalled();
+  });
+
+  it("forwards the explicitly selected outside-Dhaka area to both pricing and order placement", async () => {
+    const submit = await fillDeliveryDetails("guest@example.test", "OUTSIDE_DHAKA");
+
+    expect(harness.fetchPreview).toHaveBeenCalledWith(expect.objectContaining({ deliveryZone: "OUTSIDE_DHAKA" }));
+    await submit();
+    expect(harness.placeOrder).toHaveBeenCalledWith(expect.objectContaining({ deliveryZone: "OUTSIDE_DHAKA" }));
+  });
+
+  it("clears the prior quote and blocks payment while a newly chosen delivery area is being priced", async () => {
+    await fillDeliveryDetails();
+    let finishPreview!: (result: CheckoutPreview) => void;
+    harness.fetchPreview.mockImplementation(() => new Promise((resolve) => { finishPreview = resolve; }));
+    const onChange = findProps(await renderCheckout(), "form").onChange as (key: keyof CustomerFormState, value: string) => void;
+    onChange("deliveryZone", "OUTSIDE_DHAKA");
+    await renderCheckout(true);
+    let tree = await renderCheckout();
+
+    expect(findProps(tree, "summary").summary).toBeNull();
+    expect(findProps(tree, "summary").isLoading).toBe(true);
+    const submit = findProps(tree, "onPlaceOrder").onPlaceOrder as () => Promise<void>;
+    await submit();
+    expect(harness.placeOrder).not.toHaveBeenCalled();
+
+    finishPreview({ ...preview, summary: { ...preview.summary, isOutsideDhaka: true, shipping: 120, total: 320 } });
+    await Promise.resolve();
+    await Promise.resolve();
+    tree = await renderCheckout();
+    const submitWithNewQuote = findProps(tree, "onPlaceOrder").onPlaceOrder as () => Promise<void>;
+    await submitWithNewQuote();
+    expect(harness.placeOrder).toHaveBeenCalledWith(expect.objectContaining({ deliveryZone: "OUTSIDE_DHAKA" }));
+  });
+
   it("submits normalized guest choices with a COD attempt key and opens confirmation", async () => {
     const submit = await fillDeliveryDetails();
     await submit();
@@ -190,8 +279,7 @@ describe("guest checkout event handlers", () => {
   });
 
   it("rejects missing required delivery details before creating an order", async () => {
-    await renderCheckout(true);
-    const submit = findProps(await renderCheckout(), "onPlaceOrder").onPlaceOrder as () => Promise<void>;
+    const submit = findProps(await chooseDeliveryArea(), "onPlaceOrder").onPlaceOrder as () => Promise<void>;
     await submit();
     expect(harness.placeOrder).not.toHaveBeenCalled();
     expect(findProps(await renderCheckout(), "form").errors).toMatchObject({

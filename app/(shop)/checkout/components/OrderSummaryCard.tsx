@@ -28,6 +28,7 @@ type CartItemBrief = {
 };
 
 type OrderSummaryCardProps = {
+  deliveryAreaSelected: boolean;
   summary: CheckoutSummary | null;
   items: CartItemBrief[];
   isLoading: boolean;
@@ -45,6 +46,7 @@ type OrderSummaryCardProps = {
 };
 
 export default function OrderSummaryCard({
+  deliveryAreaSelected,
   summary,
   isLoading,
   promoCode,
@@ -145,7 +147,7 @@ export default function OrderSummaryCard({
             </div>
             <button
               type="submit"
-              disabled={!promoCode.trim() || isLoading || isPlacing}
+              disabled={!deliveryAreaSelected || !promoCode.trim() || isLoading || isPlacing}
               aria-busy={isApplyingPromo}
               className="rounded-xl bg-brand-red px-4 text-sm font-semibold text-brand-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-sm"
             >
@@ -169,7 +171,9 @@ export default function OrderSummaryCard({
 
       {/* Totals */}
       <div className="space-y-2.5 border-t border-dashed border-brand-border pt-4 text-sm">
-        {isLoading || !summary ? (
+        {!deliveryAreaSelected ? (
+          <p className="text-gray-600">Select a delivery area to calculate your total.</p>
+        ) : isLoading || !summary ? (
           <div className="space-y-2.5" aria-label="Calculating totals">
             {Array.from({ length: 4 }).map((_, index) => (
               <div key={index} className="flex items-center justify-between gap-3">
@@ -212,7 +216,7 @@ export default function OrderSummaryCard({
         )}
       </div>
 
-      {summary ? (
+      {deliveryAreaSelected && summary ? (
         <div className="rounded-2xl border border-brand-border bg-brand-light-bg p-4">
           <div className="flex items-baseline justify-between">
             <span className="text-sm font-semibold text-gray-700">
@@ -252,7 +256,7 @@ export default function OrderSummaryCard({
             </p>
           )}
         </div>
-      ) : (
+      ) : deliveryAreaSelected ? (
         <div className="rounded-2xl border border-brand-border bg-brand-light-bg p-4">
           <div className="flex items-baseline justify-between gap-3">
             <Skeleton className="h-4 w-16" />
@@ -260,7 +264,7 @@ export default function OrderSummaryCard({
           </div>
           <Skeleton className="mt-3 h-4 w-48" />
         </div>
-      )}
+      ) : null}
 
       {submitError && (
         <p className="flex items-start gap-1.5 rounded-xl border border-red-200 bg-red-50 p-2.5 text-xs font-medium text-red-700">
@@ -272,7 +276,7 @@ export default function OrderSummaryCard({
       <button
         type="button"
         onClick={onPlaceOrder}
-        disabled={isPlacing || isLoading || !summary}
+        disabled={!deliveryAreaSelected || isPlacing || isLoading || !summary}
         aria-busy={isPlacing}
         className="group inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-brand-red px-5 text-base font-bold text-brand-white shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none disabled:hover:translate-y-0"
       >

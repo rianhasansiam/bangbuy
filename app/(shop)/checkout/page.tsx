@@ -62,7 +62,7 @@ const EMPTY_FORM: CustomerFormState = {
   customerEmail: "",
   customerAddress: "",
   customerCity: "",
-  deliveryZone: "INSIDE_DHAKA",
+  deliveryZone: "",
   customerPostalCode: "",
   customerNote: "",
 };
@@ -142,7 +142,7 @@ function CheckoutPageInner() {
   } | null>(null);
 
   const [preview, setPreview] = useState<CheckoutPreview | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(true);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   // Bumping this token forces the preview effect to re-fetch even when
   // none of its other deps changed (e.g. after a manual retry).
@@ -240,6 +240,7 @@ function CheckoutPageInner() {
       (authStatus === "unauthenticated" || cartMode === "server"));
 
   // Single source of truth for "fetch the preview". Triggered by:
+  //   - a delivery area being selected
   //   - auth status becoming known
   //   - the items source changing (cart -> buy-now and vice versa)
   //   - the applied promo code changing
@@ -263,6 +264,16 @@ function CheckoutPageInner() {
       return;
     }
 
+    const deliveryZone = form.deliveryZone;
+    if (!deliveryZone) {
+      void (async () => {
+        setPreview(null);
+        setPreviewLoading(false);
+        setPreviewError(null);
+      })();
+      return;
+    }
+
     let ignore = false;
 
     void (async () => {
@@ -279,7 +290,7 @@ function CheckoutPageInner() {
       try {
         const next = await fetchCheckoutPreview({
           items: buildItemsPayload(),
-          deliveryZone: form.deliveryZone,
+          deliveryZone,
           promoCode: appliedPromo,
         });
         if (ignore) return;
@@ -460,6 +471,13 @@ function CheckoutPageInner() {
     }
     setSubmitError(null);
 
+    const deliveryZone = form.deliveryZone;
+    if (!deliveryZone) {
+      setFieldErrors((current) => ({ ...current, deliveryZone: "Select a delivery area." }));
+      toast.warning("Select a delivery area.");
+      return;
+    }
+
     if (!preview || preview.items.length === 0) {
       const msg = "Your cart is empty. Add items before checking out.";
       setSubmitError(msg);
@@ -498,7 +516,7 @@ function CheckoutPageInner() {
           : {}),
         customerAddress: form.customerAddress.trim(),
         customerCity: form.customerCity.trim() || undefined,
-        deliveryZone: form.deliveryZone,
+        deliveryZone,
         customerPostalCode: form.customerPostalCode.trim() || undefined,
         customerNote: form.customerNote.trim() || undefined,
         paymentMethod,
@@ -607,7 +625,10 @@ function CheckoutPageInner() {
     }
   };
 
-  const isEmpty = !previewLoading && (!preview || preview.items.length === 0);
+  const isEmpty =
+    cartSourceReady &&
+    !previewLoading &&
+    (preview ? preview.items.length === 0 : source.kind === "cart" && items.length === 0);
   const isAuthenticated = authStatus === "authenticated";
 
   // Resolve the session before deciding whether to load a saved profile/cart.
@@ -625,7 +646,10 @@ function CheckoutPageInner() {
       <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <CheckoutHeader
           isAuthenticated={isAuthenticated}
-          itemCount={preview?.items.reduce((sum, x) => sum + x.quantity, 0) ?? 0}
+          itemCount={
+            (preview?.items ?? (source.kind === "cart" ? items : source.items))
+              .reduce((sum, item) => sum + item.quantity, 0)
+          }
           source={source.kind}
           loginHref={`/login?callbackUrl=${encodeURIComponent(
             searchParams.toString()
@@ -672,6 +696,10 @@ function CheckoutPageInner() {
                 form={form}
                 onChange={(field, value) => {
                   setForm((prev) => ({ ...prev, [field]: value }));
+                  if (field === "deliveryZone") {
+                    setPreview(null);
+                    setPreviewLoading(Boolean(value));
+                  }
                   if (fieldErrors[field]) {
                     setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
                   }
@@ -692,15 +720,18 @@ function CheckoutPageInner() {
                 }
               />
 
-              <CheckoutItemsCard
-                items={preview?.items ?? []}
-                currency={preview?.summary.currency ?? BASE_CURRENCY}
-                isLoading={previewLoading && !preview}
-              />
+              {form.deliveryZone && (
+                <CheckoutItemsCard
+                  items={preview?.items ?? []}
+                  currency={preview?.summary.currency ?? BASE_CURRENCY}
+                  isLoading={previewLoading && !preview}
+                />
+              )}
             </fieldset>
 
             <div className="lg:sticky lg:top-[88px] lg:self-start">
               <OrderSummaryCard
+                deliveryAreaSelected={Boolean(form.deliveryZone)}
                 summary={preview?.summary ?? null}
                 isLoading={previewLoading || !cartSourceReady}
                 items={items}

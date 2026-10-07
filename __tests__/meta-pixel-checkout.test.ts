@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CartItem } from "@/features/cart/api";
-import type { CheckoutPreview, PreviewRequest } from "@/features/checkout/api";
+import type { CheckoutPreview, DeliveryZone, PreviewRequest } from "@/features/checkout/api";
 import type { OrderDetail } from "@/features/orders/api";
 
 // Execute the actual preview effect in the existing node test environment.
@@ -11,6 +11,7 @@ const harness = vi.hoisted(() => ({
   effects: [] as Array<() => void | (() => void)>,
   query: "",
   authStatus: "authenticated",
+  deliveryZone: "INSIDE_DHAKA" as DeliveryZone | "",
   readyOrder: null as OrderDetail | null,
   sessionUserId: "owner-1",
   store: {
@@ -31,12 +32,15 @@ const harness = vi.hoisted(() => ({
 vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react")>()),
   useEffect: (effect: () => void | (() => void)) => { harness.effects.push(effect); },
-  useState: (initial: unknown) => [
-    harness.readyOrder && typeof initial === "object" && initial && "status" in initial && initial.status === "loading"
+  useState: (initial: unknown) => {
+    const value = typeof initial === "function" ? initial() : initial;
+    const state = harness.readyOrder && typeof value === "object" && value && "status" in value && value.status === "loading"
       ? { status: "ready", order: harness.readyOrder }
-      : typeof initial === "function" ? initial() : initial,
-    vi.fn(),
-  ],
+      : typeof value === "object" && value && "deliveryZone" in value
+        ? { ...value, deliveryZone: harness.deliveryZone }
+        : value;
+    return [state, vi.fn()];
+  },
   useRef: (initial: unknown) => ({ current: initial }),
   useMemo: (compute: () => unknown) => compute(),
   useCallback: (callback: unknown) => callback,
@@ -162,6 +166,7 @@ beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_META_PIXEL_ID", "1234567890");
   harness.query = "";
   harness.authStatus = "authenticated";
+  harness.deliveryZone = "INSIDE_DHAKA";
   harness.readyOrder = null;
   harness.sessionUserId = "owner-1";
   harness.store.cart = { items: [], mode: "server", isHydrated: true, isLoading: false, error: null };
@@ -255,6 +260,30 @@ afterEach(() => {
 });
 
 describe("checkout destination is the canonical InitiateCheckout point", () => {
+  it("does not price checkout or emit analytics until a delivery area is explicitly chosen", async () => {
+    const browser = createBrowser();
+    harness.query = "buy=product-shirt:3:variant-red-large";
+    harness.deliveryZone = "";
+    await renderCheckoutEffects();
+    await flushPreview();
+
+    expect(harness.fetchPreview).not.toHaveBeenCalled();
+    expect(events(browser)).toEqual([]);
+
+    harness.deliveryZone = "OUTSIDE_DHAKA";
+    await renderCheckoutEffects();
+    await flushPreview();
+
+    expect(harness.fetchPreview).toHaveBeenCalledWith({
+      items: [{ productId: "product-shirt", quantity: 3, variantId: "variant-red-large" }],
+      deliveryZone: "OUTSIDE_DHAKA",
+      promoCode: null,
+    });
+    expect(events(browser)).toEqual([
+      ["track", "InitiateCheckout", expect.objectContaining({ value: 28.5, currency: "USD" }), { eventID: expect.any(String) }],
+    ]);
+  });
+
   it("starts Buy Now only after a valid authoritative checkout preview arrives", async () => {
     const browser = createBrowser();
     harness.query = "buy=product-shirt:3:variant-red-large";
