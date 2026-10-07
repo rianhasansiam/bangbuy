@@ -95,38 +95,21 @@ export default function Navbar({
   useEffect(() => {
     if (!mobileMenuOpen) return;
 
-    const previousOverflow = document.body.style.overflow;
     const desktopQuery = window.matchMedia("(min-width: 1280px)");
-    document.body.style.overflow = "hidden";
 
     const focusFrame = requestAnimationFrame(() => {
       mobileMenuCloseRef.current?.focus({ preventScroll: true });
     });
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setMobileMenuOpen(false);
-        mobileMenuButtonRef.current?.focus({ preventScroll: true });
-        return;
-      }
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      if (
+        !mobileMenuPanelRef.current?.contains(event.target as Node) &&
+        !mobileMenuButtonRef.current?.contains(event.target as Node)
+      ) return;
 
-      if (event.key !== "Tab") return;
-
-      const focusable = mobileMenuPanelRef.current?.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      );
-      if (!focusable || focusable.length === 0) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
+      setMobileMenuOpen(false);
+      mobileMenuButtonRef.current?.focus({ preventScroll: true });
     };
 
     const handleDesktopChange = (event: MediaQueryListEvent) => {
@@ -138,7 +121,6 @@ export default function Navbar({
 
     return () => {
       cancelAnimationFrame(focusFrame);
-      document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleKeyDown);
       desktopQuery.removeEventListener("change", handleDesktopChange);
     };
@@ -187,9 +169,9 @@ export default function Navbar({
             ref={mobileMenuButtonRef}
             type="button"
             onClick={() => {
-              setMobileMenuOpen(true);
+              setMobileMenuOpen((open) => !open);
             }}
-            aria-label="Open menu"
+            aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileMenuOpen}
             aria-controls="mobile-navigation-drawer"
             className="shrink-0 rounded-full p-2 text-brand-black transition-colors duration-200 hover:bg-brand-white/40 hover:text-brand-red xl:hidden"
@@ -475,37 +457,19 @@ export default function Navbar({
         />
       </div>
 
-      {/* MOBILE MENU */}
-      <button
-        type="button"
-        aria-label="Close menu"
-        aria-hidden={!mobileMenuOpen}
-        inert={!mobileMenuOpen}
-        tabIndex={mobileMenuOpen ? 0 : -1}
-        onClick={() => {
-          setMobileMenuOpen(false);
-          mobileMenuButtonRef.current?.focus({ preventScroll: true });
-        }}
-        className={cn(
-          "fixed inset-0 z-60 cursor-default border-0 bg-brand-black/40 p-0 transition-opacity duration-200 ease-out motion-reduce:transition-none xl:hidden",
-          mobileMenuOpen
-            ? "pointer-events-auto opacity-100"
-            : "pointer-events-none opacity-0",
-        )}
-      />
-
+      {/* Non-modal mobile menu keeps the visible page clickable and scrollable. */}
       <aside
         id="mobile-navigation-drawer"
         ref={mobileMenuPanelRef}
         role="dialog"
-        aria-modal="true"
+        aria-modal="false"
         aria-labelledby="mobile-navigation-title"
         aria-describedby="mobile-navigation-description"
         aria-hidden={!mobileMenuOpen}
         inert={!mobileMenuOpen}
         className={cn(
-          "fixed inset-y-0 right-0 z-70 flex h-dvh w-[85%] max-w-sm transform-gpu flex-col overflow-hidden border-l border-brand-border bg-brand-light-bg shadow-xl [backface-visibility:hidden] [contain:paint] transition-transform duration-[420ms] ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform motion-reduce:transition-none xl:hidden",
-          mobileMenuOpen ? "translate-x-0" : "translate-x-full",
+          "fixed inset-y-0 left-0 z-70 flex h-dvh w-[85%] max-w-sm transform-gpu flex-col overflow-hidden border-r border-brand-border bg-brand-light-bg shadow-xl [backface-visibility:hidden] [contain:paint] transition-transform duration-[420ms] ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform motion-reduce:transition-none xl:hidden",
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="relative bg-brand-black px-4 py-3 text-brand-white">
