@@ -9,7 +9,9 @@ import type {
 } from "@/features/checkout/api";
 import type {
   OrderDetail,
+  OrderItem,
   OrderPaymentMethod,
+  OrderStatusHistoryEntry,
   PaymentStatus as OrderPaymentStatus,
 } from "@/features/orders/api";
 import {
@@ -60,6 +62,25 @@ export type AdminOrderRow = {
   updatedAt: string;
   itemsCount: number;
   user: AdminOrderUser;
+};
+
+/** Admin reads retain canonical BDT prices rather than customer display prices. */
+export type AdminOrderItem = Omit<OrderItem, "baseUnitPrice" | "baseTotalPrice"> & {
+  displayUnitPrice?: number;
+  displayTotalPrice?: number;
+};
+
+export type AdminOrderDetail = Omit<
+  AdminOrderRow,
+  | "itemsCount"
+  | "paymentReviewReasons"
+  | "paymentReviewApprovalAllowed"
+  | "paymentReviewRefundCancellationAllowed"
+> & {
+  taxAmount: number;
+  promoCode: string | null;
+  items: AdminOrderItem[];
+  statusHistory: OrderStatusHistoryEntry[];
 };
 
 export type AdminOrderCustomerType = "GUEST" | "REGISTERED";
@@ -531,11 +552,15 @@ export async function placeAdminOrder(
   );
 }
 
-export async function fetchAdminOrderDetail(orderId: string): Promise<OrderDetail> {
+export async function fetchAdminOrderDetail(
+  orderId: string,
+  signal?: AbortSignal,
+): Promise<AdminOrderDetail> {
   const response = await fetch(`/api/admin/orders/${orderId}`, {
     method: "GET",
     cache: "no-store",
+    signal,
   });
 
-  return readApiData<OrderDetail>(response, "Failed to load order details.");
+  return readApiData<AdminOrderDetail>(response, "Failed to load order details.");
 }

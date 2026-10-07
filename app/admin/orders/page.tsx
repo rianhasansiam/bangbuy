@@ -43,6 +43,7 @@ import {
 
 import OrderSummaryCards from "./components/OrderSummaryCards";
 import AdminOrderDrawer from "./components/AdminOrderDrawer";
+import AdminOrderDetailsDrawer from "./components/AdminOrderDetailsDrawer";
 import OrdersToolbar from "./components/OrdersToolbar";
 import OrdersTable from "./components/OrdersTable";
 
@@ -74,6 +75,8 @@ export default function AdminOrdersPage() {
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [successNote, setSuccessNote] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [detailsOrderId, setDetailsOrderId] = useState<string | null>(null);
+  const detailsOrder = orders.find((order) => order.id === detailsOrderId);
 
   const [orderDrawerOpen, setOrderDrawerOpen] = useState(false);
   const [orderCustomers, setOrderCustomers] = useState<AdminOrderCustomer[]>([]);
@@ -539,6 +542,7 @@ export default function AdminOrdersPage() {
         busyOrderId={busyOrderId}
         expandedId={expandedId}
         onToggleExpand={setExpandedId}
+        onViewDetails={(order) => setDetailsOrderId(order.id)}
         onChangeStatus={(order, next) => {
           void handleChangeStatus(order, next);
         }}
@@ -552,6 +556,14 @@ export default function AdminOrdersPage() {
           void handleRecordPaymentRefund(order, refundReference);
         }}
       />
+
+      {detailsOrder && (
+        <AdminOrderDetailsDrawer
+          key={detailsOrder.id}
+          order={detailsOrder}
+          onClose={() => setDetailsOrderId(null)}
+        />
+      )}
 
       <AdminOrderDrawer
         open={orderDrawerOpen}

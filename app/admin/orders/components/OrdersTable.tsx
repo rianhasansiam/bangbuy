@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { ChevronDown, Package2 } from "lucide-react";
+import { ChevronDown, Eye, Package2 } from "lucide-react";
 
 import {
   formatCurrency,
@@ -52,6 +52,7 @@ export default function OrdersTable({
   busyOrderId,
   expandedId,
   onToggleExpand,
+  onViewDetails,
   onChangeStatus,
   onTogglePayment,
   onApprovePaymentReview,
@@ -63,6 +64,7 @@ export default function OrdersTable({
   busyOrderId: string | null;
   expandedId: string | null;
   onToggleExpand: (id: string | null) => void;
+  onViewDetails: (order: AdminOrderRow) => void;
   onChangeStatus: (order: AdminOrderRow, next: OrderStatus) => void;
   onTogglePayment: (order: AdminOrderRow) => void;
   onApprovePaymentReview: (order: AdminOrderRow) => void;
@@ -132,6 +134,7 @@ export default function OrdersTable({
                       <button
                         type="button"
                         onClick={() => onToggleExpand(isExpanded ? null : order.id)}
+                        aria-expanded={isExpanded}
                         className="inline-flex items-center gap-1 text-left font-semibold text-brand-red transition hover:text-brand-red-hover"
                       >
                         <ChevronDown
@@ -227,6 +230,16 @@ export default function OrdersTable({
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col items-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onViewDetails(order)}
+                          aria-label={`View details for ${order.orderNumber}`}
+                          aria-haspopup="dialog"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border px-2.5 py-1.5 text-xs font-semibold text-brand-red transition hover:border-brand-red hover:bg-brand-light-bg"
+                        >
+                          <Eye aria-hidden="true" className="h-3.5 w-3.5" />
+                          View details
+                        </button>
                         {allowedNext.length > 0 ? (
                           <select
                             value=""

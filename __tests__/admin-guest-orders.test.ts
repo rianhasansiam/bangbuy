@@ -92,6 +92,7 @@ describe("admin guest customer identity", () => {
       busyOrderId: null,
       expandedId: "guest-order",
       onToggleExpand: vi.fn(),
+      onViewDetails: vi.fn(),
       onChangeStatus: vi.fn(),
       onTogglePayment: vi.fn(),
       onApprovePaymentReview: vi.fn(),

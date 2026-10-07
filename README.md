@@ -315,7 +315,7 @@ bangbuy/
 ├── proxy.ts                    # Catalog URL canonicalization proxy
 ├── next.config.ts              # Next.js configuration
 ├── tsconfig.json               # TypeScript configuration
-├── vitest.config.mts           # Vitest test configuration
+├── vitest.config.mts           # Vitest test configurationBang@65401@#
 ├── .env.example                # Environment variable template
 └── package.json                # Project dependencies and scripts
 ```
