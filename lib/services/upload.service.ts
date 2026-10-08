@@ -159,10 +159,14 @@ function generateUniqueFilename(extension: string): string {
 /**
  * Resolve the target directory and ensure it's inside the configured
  * upload root. Prevents path-traversal attacks from a `category` value.
+ *
+ * Turbopack also traces path.join/resolve independently of filesystem reads.
+ * These storage paths refer to persistent runtime data outside the release,
+ * so their ignore annotations keep project files out of the upload trace.
  */
 function safeCategoryDir(category: UploadCategory): string {
-  const root = resolve(getUploadDir());
-  const target = resolve(root, category);
+  const root = resolve(/* turbopackIgnore: true */ getUploadDir());
+  const target = resolve(/* turbopackIgnore: true */ root, category);
 
   if (!target.startsWith(root + "/") && target !== root) {
     throw new ServiceError(400, "Invalid upload category.");
@@ -177,8 +181,8 @@ function safeCategoryDir(category: UploadCategory): string {
  */
 export function isInsideUploadDir(filePath: string): boolean {
   try {
-    const root = resolve(getUploadDir());
-    const resolved = resolve(filePath);
+    const root = resolve(/* turbopackIgnore: true */ getUploadDir());
+    const resolved = resolve(/* turbopackIgnore: true */ filePath);
     return resolved.startsWith(root + "/");
   } catch {
     return false;
@@ -319,11 +323,11 @@ export async function uploadImageToVPS(
 
   const filename = generateUniqueFilename(extension);
   const targetDir = safeCategoryDir(category);
-  const filePath = join(targetDir, filename);
+  const filePath = join(/* turbopackIgnore: true */ targetDir, filename);
 
   // Double-check the resolved path is still inside the upload root
-  const uploadRoot = resolve(getUploadDir());
-  if (!resolve(filePath).startsWith(uploadRoot + "/")) {
+  const uploadRoot = resolve(/* turbopackIgnore: true */ getUploadDir());
+  if (!resolve(/* turbopackIgnore: true */ filePath).startsWith(uploadRoot + "/")) {
     throw new ServiceError(400, "Invalid upload path.");
   }
 
@@ -388,10 +392,10 @@ export function resolveUploadPath(url: string): string | null {
   if (!relativePath || relativePath.includes("..")) return null;
 
   const uploadDir = getUploadDir();
-  const fullPath = resolve(uploadDir, relativePath);
+  const fullPath = resolve(/* turbopackIgnore: true */ uploadDir, relativePath);
 
   // Safety: ensure the resolved path is inside the upload directory
-  if (!fullPath.startsWith(resolve(uploadDir) + "/")) return null;
+  if (!fullPath.startsWith(resolve(/* turbopackIgnore: true */ uploadDir) + "/")) return null;
 
   return fullPath;
 }
@@ -413,14 +417,16 @@ export async function deleteUploadedFile(url: string): Promise<boolean> {
 
   try {
     if (usesSSHUploadStorage()) {
-      const root = resolve(getUploadDir());
+      const root = resolve(/* turbopackIgnore: true */ getUploadDir());
       const parts = relative(root, filePath).split("/");
       if (parts.length !== 2 || !VALID_CATEGORIES.has(parts[0] as UploadCategory)) {
         return false;
       }
       return await deleteUploadFileViaSSH(root, parts[0], parts[1]);
     }
-    const fileStat = await stat(filePath);
+    // UPLOAD_DIR contains persistent runtime files outside the release tree.
+    // Tracing this dynamic path would incorrectly package the whole project.
+    const fileStat = await stat(/* turbopackIgnore: true */ filePath);
     if (!fileStat.isFile()) return false; // Don't delete directories
     await unlink(filePath);
     return true;

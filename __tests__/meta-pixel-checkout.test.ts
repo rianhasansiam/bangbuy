@@ -13,7 +13,7 @@ const harness = vi.hoisted(() => ({
   authStatus: "authenticated",
   deliveryZone: "INSIDE_DHAKA" as DeliveryZone | "",
   readyOrder: null as OrderDetail | null,
-  sessionUserId: "owner-1",
+  sessionUserId: "owner-1" as string | undefined,
   store: {
     cart: {
       items: [] as CartItem[],
@@ -137,14 +137,17 @@ const preview: CheckoutPreview = {
 };
 
 function createBrowser() {
-  const browser: { fbq?: ((...args: unknown[]) => void) & { queue?: unknown[][] } } = {};
+  const commands: unknown[][] = [];
+  const handoff = (...args: unknown[]) => { commands.push(args); };
+  const fbq = Object.assign((...args: unknown[]) => handoff(...args), { queue: commands, callMethod: handoff });
+  const browser = { fbq };
   vi.stubGlobal("window", browser);
   vi.stubGlobal("document", { createElement: () => ({}), head: { appendChild: vi.fn() } });
   return browser;
 }
 
 function events(browser: ReturnType<typeof createBrowser>): unknown[][] {
-  return (browser.fbq?.queue ?? []).filter((command) => command[0] === "track");
+  return (browser.fbq?.queue ?? []).filter((command) => ["track", "trackSingle"].includes(String(command[0])));
 }
 
 async function renderCheckoutEffects() {
@@ -189,7 +192,7 @@ describe("receipt Purchase requires verified data and matching browser checkout 
       status: "PAYMENT_CONFIRMED", paymentMethod: "AIRWALLEX", paymentStatus: "PAID", requiresPaymentReview: false,
       createdAt: "2026-10-04T00:00:00.000Z", updatedAt: "2026-10-04T00:00:00.000Z",
       items: [], statusHistory: [],
-      metaPurchase: { eventId: "purchase:order-1", items: preview.items, currency: "USD", value: 28.5 },
+      metaPurchase: { eventId: "purchase:order-1", eventTime: 1791072000, items: preview.items, currency: "USD", value: 28.5 },
     };
   }
 
@@ -217,7 +220,7 @@ describe("receipt Purchase requires verified data and matching browser checkout 
     await renderReceiptEffects();
     await renderReceiptEffects();
     expect(events(browser)).toEqual([
-      ["track", "Purchase", expect.objectContaining({
+      ["trackSingle", "1234567890", "Purchase", expect.objectContaining({
         content_ids: ["CATALOG-SHIRT"], contents: [{ id: "CATALOG-SHIRT", quantity: 3, item_price: 9 }],
         currency: "USD", value: 28.5,
       }), { eventID: "purchase:order-1" }],
@@ -241,6 +244,22 @@ describe("receipt Purchase requires verified data and matching browser checkout 
     harness.fetchOrder.mockClear().mockResolvedValue(harness.readyOrder);
     await renderReceiptEffects();
     expect(harness.fetchOrder).toHaveBeenCalledWith("order-1");
+    expect(harness.router.replace).not.toHaveBeenCalled();
+  });
+
+  it("emits the verified guest Purchase from a cookie-scoped receipt with checkout intent", async () => {
+    const browser = createBrowser();
+    harness.authStatus = "unauthenticated";
+    harness.sessionUserId = undefined;
+    harness.readyOrder = { ...verifiedOrder(), userId: null, guestCustomerId: "guest-1" };
+    const pixel = await import("@/lib/analytics/meta-pixel");
+    pixel.registerPurchaseIntent("order-1");
+    await renderReceiptEffects();
+    await renderReceiptEffects();
+    expect(events(browser)).toEqual([
+      ["trackSingle", "1234567890", "Purchase", expect.objectContaining({ value: 28.5, currency: "USD" }),
+        { eventID: "purchase:order-1" }],
+    ]);
     expect(harness.router.replace).not.toHaveBeenCalled();
   });
 

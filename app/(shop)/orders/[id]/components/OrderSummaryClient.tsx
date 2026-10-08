@@ -178,8 +178,9 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
   const order = state.status === "ready" ? state.order : null;
 
   useEffect(() => {
-    // The API derives this snapshot from verified payment records. Admin
-    // receipt views, query flags, and COD confirmation never qualify.
+    // The owner/cookie-scoped API derives this snapshot from verified payment
+    // records. A local checkout intent also protects against historical or
+    // unrelated admin receipt views; URL flags and COD confirmation never qualify.
     if (order) trackPendingOrderPurchase(order, session?.user?.id);
   }, [order, session?.user?.id]);
 

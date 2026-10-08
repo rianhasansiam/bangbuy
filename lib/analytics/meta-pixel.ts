@@ -1,7 +1,9 @@
 import { BASE_CURRENCY, type CurrencyCode } from "@/lib/currency/config";
 import { buildEcommercePayload, localCartAddedItems, type CommerceItem, type CommerceSnapshot, type EcommercePayload } from "./ecommerce";
+import { buildPurchaseEventParameters, validatePurchaseSnapshot, type PurchaseEventParameters } from "./purchase-payload";
+import { logPurchaseDiagnostic } from "./purchase-diagnostics";
 
-type MetaEvent = "PageView" | "ViewContent" | "AddToCart" | "InitiateCheckout" | "Purchase";
+type MetaEvent = "PageView" | "ViewContent" | "AddToCart" | "InitiateCheckout";
 type PixelCommand = unknown[];
 export type PixelFunction = ((...args: unknown[]) => void) & {
   callMethod?: (...args: unknown[]) => void;
@@ -19,6 +21,8 @@ type PixelState = {
   navigation: { route: string; id: string } | null;
   purchaseIntents: Set<string>;
   allowStoredPurchaseIntents: boolean;
+  pendingPurchases: Map<string, PurchaseEventParameters>;
+  purchaseHandoffs: Set<string>;
 };
 declare global {
   interface Window {
@@ -30,11 +34,16 @@ declare global {
 
 function state(): PixelState | null {
   if (typeof window === "undefined") return null;
-  return window.__bangbuyMetaPixel ??= {
+  const current = window.__bangbuyMetaPixel ??= {
     pixelId: null, initialized: false, scriptRequested: false,
     consent: true, // Preserve existing behavior: no consent control exists in the repo.
     sent: new Set(), navigation: null, purchaseIntents: new Set(), allowStoredPurchaseIntents: true,
+    pendingPurchases: new Map(), purchaseHandoffs: new Set(),
   };
+  // Development module replacement may retain the document's existing state.
+  current.pendingPurchases ??= new Map();
+  current.purchaseHandoffs ??= new Set();
+  return current;
 }
 
 export function createEventId(): string {
@@ -50,7 +59,7 @@ export function initializeMetaPixel(pixelId = process.env.NEXT_PUBLIC_META_PIXEL
     if (!current || !current.consent) return false;
     const configuredId = pixelId.trim();
     if (!/^\d+$/.test(configuredId)) return false;
-    if (current.initialized) return current.pixelId === configuredId;
+    if (current.initialized && current.pixelId !== configuredId) return false;
     current.pixelId = configuredId;
     if (!window.fbq) {
       const queue: PixelCommand[] = [];
@@ -66,16 +75,45 @@ export function initializeMetaPixel(pixelId = process.env.NEXT_PUBLIC_META_PIXEL
       window._fbq ??= fbq;
     }
     // Once per document, including remounts and development effect replay.
-    window.fbq("init", configuredId);
-    current.initialized = true;
+    if (!current.initialized) {
+      window.fbq("init", configuredId);
+      current.initialized = true;
+    }
     if (!current.scriptRequested && !window.fbq.callMethod) {
-      current.scriptRequested = true;
       const script = document.createElement("script");
       script.async = true;
       script.src = "https://connect.facebook.net/en_US/fbevents.js";
       script.id = "meta-pixel";
-      document.head.appendChild(script);
+      script.onload = () => {
+        try {
+          if (window.fbq?.callMethod) flushPendingPurchases(current);
+          else {
+            current.scriptRequested = false;
+            script.remove?.();
+            for (const eventId of current.pendingPurchases.keys()) {
+              logPurchaseDiagnostic({ eventId, source: "browser", validation: "valid", status: "unavailable" });
+            }
+          }
+        } catch { /* A third-party script must not affect checkout or receipts. */ }
+      };
+      script.onerror = () => {
+        try {
+          current.scriptRequested = false;
+          script.remove?.();
+          for (const eventId of current.pendingPurchases.keys()) {
+            logPurchaseDiagnostic({ eventId, source: "browser", validation: "valid", status: "script_failed" });
+          }
+        } catch { /* Keep pending identities available for a later attempt. */ }
+      };
+      current.scriptRequested = true;
+      try { document.head.appendChild(script); }
+      catch {
+        current.scriptRequested = false;
+        try { script.remove?.(); } catch { /* Removal is optional after a blocked append. */ }
+        throw new Error("Meta script unavailable");
+      }
     }
+    flushPendingPurchases(current);
     return true;
   } catch { return false; }
 }
@@ -87,6 +125,11 @@ export function setMetaPixelConsent(granted: boolean): void {
     if (!current) return;
     current.consent = granted;
     if (!granted) {
+      for (const eventId of current.pendingPurchases.keys()) {
+        current.sent.add(`Purchase:${eventId}`);
+        logPurchaseDiagnostic({ eventId, source: "browser", validation: "valid", status: "consent_denied" });
+      }
+      current.pendingPurchases.clear();
       const prefix = `enterfly:meta-checkout:${current.pixelId ?? process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim()}:`;
       // Pending payment attribution is also analytics activity. Discard it on
       // revocation, including intents from an earlier document in this browser.
@@ -149,17 +192,8 @@ function deliver(name: MetaEvent, payload: EcommercePayload | Record<string, nev
     if (current.sent.has(key)) return;
     if (!current.consent) { current.sent.add(key); return; }
     if (!initializeMetaPixel(current.pixelId ?? undefined)) return;
-    const purchaseKey = `enterfly:meta-purchase:${current.pixelId}:${eventId}`;
-    if (name === "Purchase") {
-      try {
-        if (window.localStorage.getItem(purchaseKey)) { current.sent.add(key); return; }
-      } catch { /* Memory/eventID dedup still works without storage. */ }
-    }
     window.fbq?.("track", name, payload, { eventID: eventId });
     current.sent.add(key);
-    if (name === "Purchase") {
-      try { window.localStorage.setItem(purchaseKey, "1"); } catch { /* Optional persistence. */ }
-    }
   } catch { /* Never propagate SDK/storage failures into commerce. */ }
 }
 
@@ -184,7 +218,79 @@ export function trackLocalCartAddition(before: readonly CommerceItem[], after: r
 export function trackInitiateCheckout(snapshot: CommerceSnapshot, eventId: string): void {
   trackItems("InitiateCheckout", snapshot.items, snapshot.currency, eventId, snapshot.value);
 }
-/** Only server-verified, immutable online-payment order snapshots are eligible. */
-export function trackPurchase(snapshot: CommerceSnapshot, eventId: string): void {
-  trackItems("Purchase", snapshot.items, snapshot.currency, eventId, snapshot.value);
+/**
+ * Purchase stays in our consent-aware pending map until the SDK can receive it.
+ * A successful synchronous handoff is not a receipt or acceptance from Meta.
+ */
+function flushPendingPurchases(current: PixelState): void {
+  if (!current.consent || !current.initialized || !current.pixelId || !window.fbq?.callMethod) return;
+  for (const [eventId, payload] of current.pendingPurchases) {
+    const key = `Purchase:${eventId}`;
+    if (current.sent.has(key)) { current.pendingPurchases.delete(eventId); continue; }
+    if (current.purchaseHandoffs.has(eventId)) continue;
+    const storageKey = `enterfly:meta-purchase:${current.pixelId}:${eventId}`;
+    try {
+      // Keep historical markers suppressed: their former queue/handoff status
+      // cannot be recovered safely. New attempts persist only SDK handoffs.
+      if (window.localStorage.getItem(storageKey)) {
+        current.sent.add(key);
+        current.pendingPurchases.delete(eventId);
+        logPurchaseDiagnostic({ eventId, source: "browser", validation: "valid", status: "duplicate" });
+        continue;
+      }
+    } catch { /* Memory and the shared eventID still provide deduplication. */ }
+    current.purchaseHandoffs.add(eventId);
+    try {
+      // The third-party SDK cannot mutate the saved retry snapshot, including
+      // catalog arrays, if it changes parameters before a failed handoff.
+      const handoffPayload: PurchaseEventParameters = {
+        ...payload,
+        ...(payload.content_ids ? { content_ids: [...payload.content_ids] } : {}),
+        ...(payload.variant_ids ? { variant_ids: [...payload.variant_ids] } : {}),
+        ...(payload.contents ? { contents: payload.contents.map((item) => ({ ...item })) } : {}),
+      };
+      // Scope Purchase to our configured data source, even if another integration initializes a Pixel.
+      window.fbq("trackSingle", current.pixelId, "Purchase", handoffPayload, { eventID: eventId });
+      current.sent.add(key);
+      current.pendingPurchases.delete(eventId);
+      try { window.localStorage.setItem(storageKey, "sdk_handoff"); } catch { /* Optional browser persistence. */ }
+      logPurchaseDiagnostic({ eventId, source: "browser", validation: "valid", status: "sdk_handoff" });
+    } catch {
+      logPurchaseDiagnostic({ eventId, source: "browser", validation: "valid", status: "delivery_failed" });
+    } finally { current.purchaseHandoffs.delete(eventId); }
+  }
+}
+
+/** Only a complete server-verified purchase snapshot may enter the final boundary. */
+export function trackPurchase(snapshot: unknown, eventId: string): void {
+  try {
+    const result = validatePurchaseSnapshot(snapshot);
+    if (!result.valid) {
+      logPurchaseDiagnostic({ eventId, source: "browser", validation: "invalid", status: "suppressed", reason: result.reason });
+      return;
+    }
+    if (result.payload.eventId !== eventId) {
+      logPurchaseDiagnostic({ eventId, source: "browser", validation: "invalid", status: "suppressed", reason: "event_id_mismatch" });
+      return;
+    }
+    const current = state();
+    if (!current) return;
+    const key = `Purchase:${eventId}`;
+    if (current.sent.has(key)) return;
+    if (!current.consent) {
+      current.sent.add(key);
+      logPurchaseDiagnostic({ eventId, source: "browser", validation: "valid", status: "consent_denied" });
+      return;
+    }
+    // Capture once: retries and cart clearing cannot replace this order's amount.
+    if (!current.pendingPurchases.has(eventId)) {
+      const payload = buildPurchaseEventParameters(result.payload);
+      if (!payload) return;
+      current.pendingPurchases.set(eventId, payload);
+      logPurchaseDiagnostic({ eventId, source: "browser", validation: "valid", status: "queued" });
+    }
+    if (!initializeMetaPixel(current.pixelId ?? undefined)) {
+      logPurchaseDiagnostic({ eventId, source: "browser", validation: "valid", status: "unavailable" });
+    }
+  } catch { /* Payload, SDK, and storage failures must not change successful orders. */ }
 }

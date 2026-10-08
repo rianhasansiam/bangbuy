@@ -57,6 +57,24 @@ function queuedCommands(browser: ReturnType<typeof fakeBrowser>["browser"]): Pix
   return (browser.fbq?.queue ?? []).map((command) => Array.from(command));
 }
 
+/** Simulate SDK readiness without loading or sending anything to Meta. */
+function loadSdk(browser: ReturnType<typeof fakeBrowser>["browser"], scripts: ReturnType<typeof fakeBrowser>["scripts"]) {
+  const handoff = vi.fn();
+  if (!browser.fbq) throw new Error("Initialize the Pixel before simulating its SDK");
+  browser.fbq.callMethod = handoff;
+  const latestScript = scripts.at(-1);
+  (latestScript?.onload as (() => void) | undefined)?.();
+  return handoff;
+}
+
+function purchaseSnapshot(overrides: Record<string, unknown> = {}) {
+  return {
+    eventId: "purchase:order-confirmed-1", eventTime: 1791072000,
+    items: [{ ...commerceItem }], currency: "BDT" as const, value: 980,
+    ...overrides,
+  };
+}
+
 const commerceItem: CommerceItem = {
   productId: "product-shirt",
   productCode: "CATALOG-SHIRT",
@@ -219,21 +237,203 @@ describe("Meta Pixel delivery", () => {
     ]);
   });
 
-  it("persists a Purchase identity across a document refresh", async () => {
-    const { browser, storage } = fakeBrowser();
+  it("persists Purchase deduplication only after SDK handoff across a document refresh", async () => {
+    const { browser, storage, scripts } = fakeBrowser();
     const pixel = await import("@/lib/analytics/meta-pixel");
-    const snapshot = { items: [commerceItem], currency: "BDT" as const, value: 980 };
-    pixel.trackPurchase(snapshot, "order-confirmed-1");
-    pixel.trackPurchase(snapshot, "order-confirmed-1");
-    expect(queuedCommands(browser).filter((command) => command[1] === "Purchase")).toHaveLength(1);
+    const snapshot = purchaseSnapshot();
+    pixel.trackPurchase(snapshot, snapshot.eventId);
+    pixel.trackPurchase(snapshot, snapshot.eventId);
+    expect(queuedCommands(browser).some((command) => command.includes("Purchase"))).toBe(false);
+    expect(storage.size).toBe(0);
+    const handoff = loadSdk(browser, scripts);
+    expect(handoff).toHaveBeenCalledExactlyOnceWith(
+      "trackSingle", "1234567890", "Purchase", expect.objectContaining({ value: 980, currency: "BDT" }),
+      { eventID: snapshot.eventId },
+    );
+    expect(storage.get(`enterfly:meta-purchase:1234567890:${snapshot.eventId}`)).toBe("sdk_handoff");
+    pixel.trackPurchase(snapshot, snapshot.eventId);
+    expect(handoff).toHaveBeenCalledTimes(1);
 
     vi.resetModules();
     const refreshed = fakeBrowser(storage);
     const reloadedPixel = await import("@/lib/analytics/meta-pixel");
-    reloadedPixel.trackPurchase(snapshot, "order-confirmed-1");
-    expect(queuedCommands(refreshed.browser).filter((command) => command[1] === "Purchase")).toEqual([]);
-    reloadedPixel.trackPurchase(snapshot, "order-confirmed-2");
-    expect(queuedCommands(refreshed.browser).filter((command) => command[1] === "Purchase")).toHaveLength(1);
+    reloadedPixel.trackPurchase(snapshot, snapshot.eventId);
+    const refreshedHandoff = loadSdk(refreshed.browser, refreshed.scripts);
+    expect(refreshedHandoff).not.toHaveBeenCalled();
+    const next = purchaseSnapshot({ eventId: "purchase:order-confirmed-2" });
+    reloadedPixel.trackPurchase(next, next.eventId);
+    expect(refreshedHandoff).toHaveBeenCalledExactlyOnceWith(
+      "trackSingle", "1234567890", "Purchase", expect.any(Object), { eventID: next.eventId },
+    );
+  });
+
+  it("retries a delayed Purchase with the same identity after refresh, without a queued sent marker", async () => {
+    const initial = fakeBrowser();
+    const pixel = await import("@/lib/analytics/meta-pixel");
+    const snapshot = purchaseSnapshot();
+    pixel.trackPurchase(snapshot, snapshot.eventId);
+    expect(initial.storage.size).toBe(0);
+    vi.resetModules();
+    const refreshed = fakeBrowser(initial.storage);
+    const reloadedPixel = await import("@/lib/analytics/meta-pixel");
+    reloadedPixel.trackPurchase(snapshot, snapshot.eventId);
+    const handoff = loadSdk(refreshed.browser, refreshed.scripts);
+    expect(handoff).toHaveBeenCalledExactlyOnceWith(
+      "trackSingle", "1234567890", "Purchase", expect.objectContaining({ value: 980, currency: "BDT" }),
+      { eventID: snapshot.eventId },
+    );
+  });
+
+  it("captures an immutable purchase before cart clearing and suppresses repeated loading effects", async () => {
+    const { browser, scripts } = fakeBrowser();
+    const pixel = await import("@/lib/analytics/meta-pixel");
+    const snapshot = purchaseSnapshot();
+    pixel.trackPurchase(snapshot, snapshot.eventId);
+    snapshot.value = 1500;
+    snapshot.items[0].unitPrice = 999;
+    snapshot.items.splice(0);
+    pixel.trackPurchase(snapshot, snapshot.eventId);
+    const handoff = loadSdk(browser, scripts);
+    expect(handoff).toHaveBeenCalledExactlyOnceWith(
+      "trackSingle", "1234567890", "Purchase", expect.objectContaining({
+        value: 980, currency: "BDT", contents: [{ id: "CATALOG-SHIRT", quantity: 2, item_price: 450 }],
+      }), { eventID: snapshot.eventId },
+    );
+  });
+
+  it.each([undefined, null, "", "980", "৳980", "980 BDT", "1,500", NaN, Infinity, -1, 0, 980.123])(
+    "rejects an invalid purchase value %s without using the product sum", async (value) => {
+      const { browser, scripts, storage } = fakeBrowser();
+      const pixel = await import("@/lib/analytics/meta-pixel");
+      const snapshot = purchaseSnapshot({ value });
+      pixel.initializeMetaPixel();
+      const handoff = loadSdk(browser, scripts);
+      pixel.trackPurchase(snapshot, snapshot.eventId);
+      expect(handoff).not.toHaveBeenCalled();
+      expect(storage.size).toBe(0);
+    },
+  );
+
+  it.each([undefined, null, "", "XYZ", "bdt"])('rejects unsupported purchase currency %s', async (currency) => {
+    const { browser, scripts } = fakeBrowser();
+    const pixel = await import("@/lib/analytics/meta-pixel");
+    pixel.initializeMetaPixel();
+    const handoff = loadSdk(browser, scripts);
+    const snapshot = purchaseSnapshot({ currency });
+    pixel.trackPurchase(snapshot, snapshot.eventId);
+    expect(handoff).not.toHaveBeenCalled();
+  });
+
+  it("emits valid required parameters even when optional catalog metadata is missing", async () => {
+    const { browser, scripts } = fakeBrowser();
+    const pixel = await import("@/lib/analytics/meta-pixel");
+    const snapshot = purchaseSnapshot({ items: [], value: 1500.25 });
+    pixel.trackPurchase(snapshot, snapshot.eventId);
+    const handoff = loadSdk(browser, scripts);
+    expect(handoff).toHaveBeenCalledExactlyOnceWith(
+      "trackSingle", "1234567890", "Purchase", { value: 1500.25, currency: "BDT" }, { eventID: snapshot.eventId },
+    );
+  });
+
+  it("rejects mismatched IDs and missing original conversion timestamps", async () => {
+    const { browser, scripts } = fakeBrowser();
+    const pixel = await import("@/lib/analytics/meta-pixel");
+    pixel.initializeMetaPixel();
+    const handoff = loadSdk(browser, scripts);
+    const snapshot = purchaseSnapshot();
+    pixel.trackPurchase(snapshot, "purchase:another-order");
+    pixel.trackPurchase({ ...snapshot, eventTime: undefined }, snapshot.eventId);
+    expect(handoff).not.toHaveBeenCalled();
+  });
+
+  it("retains a failed script attempt for a later load and retries the same immutable Purchase", async () => {
+    const { browser, scripts, storage } = fakeBrowser();
+    const pixel = await import("@/lib/analytics/meta-pixel");
+    const snapshot = purchaseSnapshot();
+    pixel.trackPurchase(snapshot, snapshot.eventId);
+    (scripts[0].onerror as () => void)();
+    expect(storage.size).toBe(0);
+    pixel.trackPurchase(snapshot, snapshot.eventId);
+    expect(scripts).toHaveLength(2);
+    const handoff = loadSdk(browser, scripts);
+    expect(handoff).toHaveBeenCalledTimes(1);
+    expect(handoff.mock.calls[0].at(-1)).toEqual({ eventID: snapshot.eventId });
+  });
+
+  it("does not persist a throwing SDK attempt and allows a later handoff", async () => {
+    const { browser, scripts, storage } = fakeBrowser();
+    const pixel = await import("@/lib/analytics/meta-pixel");
+    const snapshot = purchaseSnapshot();
+    pixel.trackPurchase(snapshot, snapshot.eventId);
+    browser.fbq!.callMethod = vi.fn(() => { throw new Error("blocked SDK"); });
+    expect(() => (scripts[0].onload as () => void)()).not.toThrow();
+    expect(storage.size).toBe(0);
+    const successfulHandoff = vi.fn();
+    browser.fbq!.callMethod = successfulHandoff;
+    pixel.trackPurchase(snapshot, snapshot.eventId);
+    expect(successfulHandoff).toHaveBeenCalledTimes(1);
+    expect(storage.size).toBe(1);
+  });
+
+  it("preserves the saved amount and metadata when a failed SDK handoff mutates its parameters", async () => {
+    const { browser, scripts, storage } = fakeBrowser();
+    const pixel = await import("@/lib/analytics/meta-pixel");
+    const snapshot = purchaseSnapshot();
+    pixel.trackPurchase(snapshot, snapshot.eventId);
+    browser.fbq!.callMethod = vi.fn((...args: unknown[]) => {
+      const payload = args[3] as {
+        value: number; currency: string; content_ids: string[]; variant_ids: string[];
+        contents: { id: string; quantity: number; item_price: number }[];
+      };
+      payload.value = 1;
+      payload.currency = "USD";
+      payload.content_ids[0] = "mutated-product";
+      payload.variant_ids[0] = "mutated-variant";
+      payload.contents[0].item_price = 1;
+      payload.contents[0].quantity = 99;
+      throw new Error("SDK failed after mutation");
+    });
+    (scripts[0].onload as () => void)();
+    expect(storage.size).toBe(0);
+    const successfulHandoff = vi.fn();
+    browser.fbq!.callMethod = successfulHandoff;
+    pixel.trackPurchase(snapshot, snapshot.eventId);
+    expect(successfulHandoff).toHaveBeenCalledExactlyOnceWith(
+      "trackSingle", "1234567890", "Purchase", expect.objectContaining({
+        value: 980, currency: "BDT", content_ids: ["CATALOG-SHIRT"], variant_ids: ["variant-red-large"],
+        contents: [{ id: "CATALOG-SHIRT", quantity: 2, item_price: 450 }],
+      }), { eventID: snapshot.eventId },
+    );
+  });
+
+  it("discards denied and revoked Purchase attempts permanently for this document", async () => {
+    const { browser, scripts, storage } = fakeBrowser();
+    const pixel = await import("@/lib/analytics/meta-pixel");
+    const denied = purchaseSnapshot();
+    pixel.setMetaPixelConsent(false);
+    pixel.trackPurchase(denied, denied.eventId);
+    pixel.setMetaPixelConsent(true);
+    const revoked = purchaseSnapshot({ eventId: "purchase:revoked-order" });
+    pixel.trackPurchase(revoked, revoked.eventId);
+    pixel.setMetaPixelConsent(false);
+    pixel.setMetaPixelConsent(true);
+    const handoff = loadSdk(browser, scripts);
+    handoff.mockClear();
+    pixel.trackPurchase(denied, denied.eventId);
+    pixel.trackPurchase(revoked, revoked.eventId);
+    expect(handoff).not.toHaveBeenCalled();
+    expect(storage.size).toBe(0);
+  });
+
+  it("preserves historical browser markers without replaying unknown former queue attempts", async () => {
+    const { browser, scripts, storage } = fakeBrowser();
+    const snapshot = purchaseSnapshot();
+    storage.set(`enterfly:meta-purchase:1234567890:${snapshot.eventId}`, "1");
+    const pixel = await import("@/lib/analytics/meta-pixel");
+    pixel.trackPurchase(snapshot, snapshot.eventId);
+    const handoff = loadSdk(browser, scripts);
+    expect(handoff).not.toHaveBeenCalled();
+    expect(storage.size).toBe(1);
   });
 
   it("does not let a throwing analytics adapter escape into business code", async () => {

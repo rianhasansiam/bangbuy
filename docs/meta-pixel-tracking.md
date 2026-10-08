@@ -1,5 +1,14 @@
 # Meta Pixel ecommerce tracking
 
+> **Current Purchase repair — 2026-10-08:** See
+> [Meta Purchase verification](meta-purchase-verification.md) for the current
+> strict amount/timestamp contract, guest receipt support, optional catalog
+> metadata, and SDK-handoff tracking. The sections below preserve historical
+> investigations and their dated validation results; their owner-only and
+> bootstrap-queue Purchase descriptions do not describe the current repair.
+> Their historical release SHA and production-test commands are superseded by
+> the current verification document's reviewed-release and isolated-test instructions.
+
 ## Confirmed findings
 
 The repository used Next.js 16.2.12 App Router, React 19, npm, Redux Toolkit, and Vitest. Before this repair, `components/analytics/MetaPixel.tsx` was the only `fbq` caller and emitted **PageView only**. Successful cart mutations, product views, checkout preparation, and verified orders had no application-owned ecommerce event delivery. The observed ViewContent in Events Manager therefore cannot be attributed to an explicit ViewContent implementation in this checkout of the code; automatic events, Event Setup Tool rules, or a different deployed build require account/browser inspection.

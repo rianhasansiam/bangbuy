@@ -1,15 +1,12 @@
 import "server-only";
 
 import type { CommerceItem } from "@/lib/analytics/ecommerce";
-import { BASE_CURRENCY, parseCurrencyCode, type CurrencyCode } from "@/lib/currency/config";
+import { BASE_CURRENCY, parseCurrencyCode } from "@/lib/currency/config";
 import { round2, toDecimal, type DecimalInput } from "@/lib/money";
+import { validatePurchaseSnapshot, type PurchaseSnapshot } from "./purchase-payload";
+import { logPurchaseDiagnostic } from "./purchase-diagnostics";
 
-export type VerifiedPurchaseSnapshot = {
-  eventId: string;
-  items: CommerceItem[];
-  currency: CurrencyCode;
-  value: number;
-};
+export type VerifiedPurchaseSnapshot = PurchaseSnapshot;
 
 type OrderPurchaseSource = {
   id: string;
@@ -18,6 +15,8 @@ type OrderPurchaseSource = {
   paymentMethod: string;
   paymentStatus: string;
   totalAmount: DecimalInput;
+  currency: string;
+  baseCurrency: string;
   items: readonly {
     productId: string | null;
     variantId: string | null;
@@ -48,52 +47,85 @@ const CONFIRMED_ORDER_STATUSES = new Set([
   "WAREHOUSE", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED",
 ]);
 
+/** DB money is Decimal major units. Guard required inputs before null -> 0 utilities. */
+function savedDecimal(value: DecimalInput, precision = 2) {
+  if (value == null || (typeof value === "number" && !Number.isFinite(value))) return null;
+  if (typeof value === "string" && !/^-?\d+(?:\.\d+)?$/.test(value)) return null;
+  try {
+    const decimal = toDecimal(value);
+    return decimal.isFinite() && !decimal.isNegative() && decimal.decimalPlaces() <= precision
+      ? decimal : null;
+  } catch { return null; }
+}
+
 /**
  * This is derived only from persisted, provider-verified payment evidence.
  * Neither a return URL nor a manually marked COD/legacy payment is sufficient.
  * No provider identifiers, customer fields, or raw evidence cross the boundary.
+ * Revenue is the saved checkout total (effective merchandise prices minus promo
+ * discounts plus delivery and tax), in the verified transaction currency.
  */
 export function buildVerifiedPurchaseSnapshot(
   order: OrderPurchaseSource,
 ): VerifiedPurchaseSnapshot | null {
+  const eventId = `purchase:${order.id}`;
+  const reject = (reason: string, validation: "invalid" | "ineligible" = "invalid") => {
+    logPurchaseDiagnostic({ eventId, source: "server", validation, status: "suppressed", reason });
+    return null;
+  };
   try {
     if (
-      !order.id || !order.userId || order.paymentStatus !== "PAID" ||
+      !order.id || order.paymentStatus !== "PAID" ||
       !CONFIRMED_ORDER_STATUSES.has(order.status) ||
-      !["SSLCOMMERZ", "AIRWALLEX"].includes(order.paymentMethod) ||
-      order.payments.some((payment) => payment.requiresReview)
-    ) return null;
+      !["SSLCOMMERZ", "AIRWALLEX"].includes(order.paymentMethod)
+    ) return reject("ineligible_order", "ineligible");
+    if (order.payments.some((payment) => payment.requiresReview)) return reject("payment_review", "ineligible");
+    // These fields describe the canonical BDT order, not its display currency.
+    if (order.currency !== BASE_CURRENCY || order.baseCurrency !== BASE_CURRENCY) return reject("unsupported_currency");
 
     const successes = order.payments.filter((payment) => payment.status === "SUCCESS");
-    if (successes.length !== 1 || successes[0].provider !== order.paymentMethod) return null;
+    if (successes.length !== 1 || successes[0].provider !== order.paymentMethod) return reject("unverified_payment", "ineligible");
     const payment = successes[0];
-    if (!payment.transactionId || !payment.paidAt || !Number.isFinite(payment.paidAt.getTime())) return null;
-    if (order.paymentMethod === "SSLCOMMERZ" && !payment.validationId) return null;
-    if (order.paymentMethod === "AIRWALLEX" && payment.providerStatus !== "SUCCEEDED") return null;
+    if (!payment.transactionId || !payment.paidAt || !Number.isFinite(payment.paidAt.getTime())) return reject("unverified_payment", "ineligible");
+    if (order.paymentMethod === "SSLCOMMERZ" && !payment.validationId) return reject("unverified_payment", "ineligible");
+    if (order.paymentMethod === "AIRWALLEX" && payment.providerStatus !== "SUCCEEDED") return reject("unverified_payment", "ineligible");
 
-    const currency = parseCurrencyCode(payment.currency.trim().toUpperCase());
-    const amount = toDecimal(payment.amount);
-    const orderTotal = toDecimal(order.totalAmount);
-    if (!currency || !amount.isFinite() || amount.lessThanOrEqualTo(0) || !orderTotal.isFinite()) return null;
+    const currency = parseCurrencyCode(payment.currency);
+    const amount = savedDecimal(payment.amount);
+    const orderTotal = savedDecimal(order.totalAmount);
+    if (!currency) return reject("unsupported_currency");
+    if (!amount) return reject("invalid_payment_amount");
+    if (!orderTotal) return reject("invalid_order_total");
+    // The online payment integrations accept positive charges only. Free orders
+    // are explicitly excluded from paid Purchase, rather than treated as missing.
+    if (amount.isZero() || orderTotal.isZero()) return reject("zero_value_policy", "ineligible");
 
     // SSLCommerz settles in BDT. Airwallex saves a direct BDT -> payment
     // currency quote on its transaction; the display-currency quote may differ.
     let rate = toDecimal(1);
     if (order.paymentMethod === "SSLCOMMERZ") {
-      if (currency !== BASE_CURRENCY || !amount.equals(orderTotal)) return null;
+      if (currency !== BASE_CURRENCY || !amount.equals(orderTotal)) return reject("payment_mismatch");
     } else {
-      if (payment.baseCurrency !== BASE_CURRENCY || payment.baseAmount == null || payment.exchangeRate == null) return null;
-      rate = toDecimal(payment.exchangeRate);
-      if (!rate.isFinite() || rate.lessThanOrEqualTo(0) || !toDecimal(payment.baseAmount).equals(orderTotal)) return null;
-      if (round2(orderTotal.times(rate)) !== round2(amount)) return null;
+      if (payment.baseCurrency !== BASE_CURRENCY) return reject("unsupported_currency");
+      const baseAmount = savedDecimal(payment.baseAmount);
+      const savedRate = savedDecimal(payment.exchangeRate, 10);
+      if (!baseAmount || !baseAmount.equals(orderTotal)) return reject("invalid_base_amount");
+      if (!savedRate || savedRate.lessThanOrEqualTo(0)) return reject("invalid_exchange_rate");
+      rate = savedRate;
+      if (round2(orderTotal.times(rate)) !== round2(amount)) return reject("payment_mismatch");
     }
 
-    if (order.items.length === 0) return null;
     const items: CommerceItem[] = [];
     for (const item of order.items) {
       const productCode = item.product?.productCode.trim();
-      const price = toDecimal(item.unitPrice);
-      if (!item.productId || !productCode || item.unitPrice == null || !Number.isSafeInteger(item.quantity) || item.quantity < 1 || !price.isFinite() || price.isNegative()) return null;
+      const price = savedDecimal(item.unitPrice);
+      if (!item.productId || !productCode || !Number.isSafeInteger(item.quantity) || item.quantity < 1 || !price) {
+        logPurchaseDiagnostic({ eventId, source: "server", validation: "valid", status: "built", reason: "invalid_catalog_metadata" });
+        // Catalog details are optional; do not replace authoritative revenue or
+        // misrepresent a partially mapped order as a complete contents payload.
+        items.length = 0;
+        break;
+      }
       items.push({
         productId: item.productId,
         productCode,
@@ -105,9 +137,15 @@ export function buildVerifiedPurchaseSnapshot(
       });
     }
 
-    return { eventId: `purchase:${order.id}`, items, currency, value: round2(amount) };
+    const result = validatePurchaseSnapshot({
+      eventId, eventTime: Math.floor(payment.paidAt.getTime() / 1000),
+      items, currency, value: round2(amount),
+    });
+    if (!result.valid) return reject(result.reason);
+    logPurchaseDiagnostic({ eventId, source: "server", validation: "valid", status: "built" });
+    return result.payload;
   } catch {
     // Invalid legacy snapshots must never make the order endpoint fail.
-    return null;
+    return reject("invalid_snapshot");
   }
 }
