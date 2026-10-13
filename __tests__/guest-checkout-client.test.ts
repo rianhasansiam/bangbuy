@@ -1,3 +1,7 @@
+import { createTranslator as createIntlTranslator } from "next-intl";
+import coreMessages from "@/messages/core-en.json";
+import interfaceMessages from "@/messages/interface-en.json";
+import adminMessages from "@/messages/admin-en.json";
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -181,17 +185,21 @@ describe("guest checkout event handlers", () => {
     expect(findProps(tree, "summary").summary).toBeNull();
     expect(findProps(tree, "summary").deliveryAreaSelected).toBe(false);
     expect(findProps(tree, "summary").isLoading).toBe(false);
+    expect(findProps(tree, "airwallexEnabled").airwallexEnabled).toBe(true);
     expect(harness.fetchPreview).not.toHaveBeenCalled();
     expect(harness.fetchProfile).not.toHaveBeenCalled();
   });
 
   it("requires an explicit delivery area before submission rather than reporting an empty cart", async () => {
+    const choosePayment = findProps(await renderCheckout(), "airwallexEnabled").onChange as (value: string) => void;
+    choosePayment("AIRWALLEX");
     const submit = await fillDeliveryDetails("guest@example.test", "");
     await submit();
     const tree = await renderCheckout();
 
     expect(harness.fetchPreview).not.toHaveBeenCalled();
     expect(harness.placeOrder).not.toHaveBeenCalled();
+    expect(findProps(tree, "airwallexEnabled").value).toBe("AIRWALLEX");
     expect(findProps(tree, "form").errors).toMatchObject({
       deliveryZone: expect.stringMatching(/select.*delivery area/i),
     });
@@ -392,3 +400,11 @@ describe("guest checkout event handlers", () => {
     expect(harness.fetchCart).toHaveBeenCalledTimes(1);
   });
 });
+
+vi.mock("next-intl", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next-intl")>()),
+  useLocale: () => "en",
+  useTranslations: () => createIntlTranslator({ locale: "en", messages: { ...coreMessages, ...interfaceMessages, ...adminMessages } }),
+}));
+vi.mock("@/components/i18n/useLocaleDraft", () => ({ useLocaleDraft: () => undefined, useLocaleSwitchGuard: () => undefined }));
+vi.mock("@/lib/i18n/navigation", async () => ({ ...(await import("next/navigation")), default: (await import("next/link")).default }));

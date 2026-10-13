@@ -373,18 +373,18 @@ export async function recordPaymentRefundAndCancel(
   }
 }
 
-export function formatCurrency(value: number): string {
-  return `BDT ${value.toLocaleString(undefined, {
+export function formatCurrency(value: number, locale = "en"): string {
+  return `BDT ${value.toLocaleString(locale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   })}`;
 }
 
-export function formatDateTime(value: string): string {
+export function formatDateTime(value: string, locale = "en"): string {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString(undefined, {
+  return date.toLocaleString(locale, {
     year: "numeric",
     month: "short",
     day: "2-digit",

@@ -1,8 +1,12 @@
 "use client";
+import { useLocale } from "next-intl";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import Link from "@/lib/i18n/navigation";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "@/lib/i18n/navigation";
 import {
   AlertCircle,
   CheckCircle2,
@@ -57,9 +61,9 @@ type LoadState =
   | { status: "ready"; order: OrderDetail }
   | { status: "error"; message: string };
 
-function formatDateTime(value: string): string {
+function formatDateTime(value: string, locale: string): string {
   try {
-    return new Date(value).toLocaleString();
+    return new Date(value).toLocaleString(locale);
   } catch {
     return value;
   }
@@ -76,6 +80,8 @@ const STATUS_TONE: Record<
 ) as Record<OrderDetail["status"], { label: string; pill: string }>;
 
 export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("InterfaceOrdersIdComponentsOrderSummaryClient");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status: authStatus } = useSession();
@@ -239,10 +245,9 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
               <AlertCircle className="h-7 w-7" />
             </div>
             <h1 className="mt-4 text-2xl font-extrabold text-gray-900">
-              Order not available
-            </h1>
+              {i18n("Order not available")}</h1>
             <p className="mt-2 text-sm text-gray-600">
-              {message}
+              {i18n(message)}
             </p>
             <div className="mt-6 flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-3">
               <Link
@@ -250,15 +255,13 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                 className="inline-flex items-center gap-2 rounded-2xl bg-brand-red px-5 py-2.5 text-sm font-bold text-brand-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl"
               >
                 <ShoppingBag className="h-4 w-4" />
-                Browse products
-              </Link>
+                {i18n("Browse products")}</Link>
               {authStatus !== "authenticated" && (
                 <Link
                   href={`/login?callbackUrl=/orders/${orderId}`}
                   className="inline-flex items-center gap-2 rounded-2xl border border-brand-border bg-brand-white px-5 py-2.5 text-sm font-bold text-brand-black transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-red hover:bg-brand-light-bg"
                 >
-                  Sign in
-                </Link>
+                  {i18n("Sign in")}</Link>
               )}
             </div>
           </div>
@@ -323,18 +326,16 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                 {justPlaced ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
                     <CheckCircle2 className="h-3.5 w-3.5" />
-                    Order placed
-                  </span>
+                    {i18n("Order placed")}</span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-wider backdrop-blur-md">
-                    Order summary
-                  </span>
+                    {i18n("Order summary")}</span>
                 )}
                 <h1 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">
                   #{order.orderNumber}
                 </h1>
                 <p className="mt-2 text-sm text-white/85">
-                  Placed on {formatDateTime(order.createdAt)}
+                  {i18n("Placed on")}{formatDateTime(order.createdAt, locale)}
                 </p>
               </div>
               <div className="flex flex-col items-start gap-2 sm:items-end">
@@ -346,12 +347,11 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                   aria-busy={downloading}
                 >
                   {downloading ? (
-                    <ButtonLoader label="Generating PDF..." />
+                    <ButtonLoader label={i18n("Generating PDF...")} />
                   ) : (
                     <>
                       <Download className="h-4 w-4" />
-                      Download PDF
-                    </>
+                      {i18n("Download PDF")}</>
                   )}
                 </button>
                 {downloadError && (
@@ -363,21 +363,21 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
             </div>
           </div>
           <div className="grid gap-3 border-t border-brand-border p-5 sm:grid-cols-4 sm:p-6">
-            <Stat label="Order ID" value={order.id} mono />
-            <Stat label="Order date" value={formatDateTime(order.createdAt)} />
+            <Stat label={i18n("Order ID")} value={order.id} mono />
+            <Stat label={i18n("Order date")} value={formatDateTime(order.createdAt, locale)} />
             <Stat
-              label="Order status"
+              label={i18n("Order status")}
               custom={
                 <span
                   className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ${statusBadge.pill}`}
                 >
                   <Package className="h-3.5 w-3.5" />
-                  {statusBadge.label}
+                  {i18n(statusBadge.label)}
                 </span>
               }
             />
             <Stat
-              label="Payment"
+              label={i18n("Payment")}
               custom={
                 <div className="flex flex-col gap-1">
                   <span className="text-sm font-semibold text-gray-900">
@@ -386,7 +386,7 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                   <span
                     className={`inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ${paymentBadge.pill}`}
                   >
-                    {paymentBadge.label}
+                    {i18n(paymentBadge.label)}
                   </span>
                 </div>
               }
@@ -425,41 +425,41 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
             <div>
               <h2 className="text-sm font-bold">
                 {paymentUnderReview && order.paymentStatus !== "PAID"
-                  ? "Payment verification needs review"
+                  ? i18n("Payment verification needs review")
                   : order.paymentStatus === "PAID"
                   ? paymentUnderReview
-                    ? "Payment received — review pending"
-                    : "Payment confirmed"
+                    ? i18n("Payment received — review pending")
+                    : i18n("Payment confirmed")
                   : order.paymentStatus === "REFUNDED"
-                    ? "Payment refunded"
+                    ? i18n("Payment refunded")
                   : order.paymentStatus === "FAILED"
-                    ? "Payment was not completed"
+                    ? i18n("Payment was not completed")
                     : paymentPollTimedOut
-                      ? "Payment confirmation is taking longer than expected"
+                      ? i18n("Payment confirmation is taking longer than expected")
                       : paymentReturnOutcome === "failed"
-                        ? "Checking the failed payment"
+                        ? i18n("Checking the failed payment")
                         : paymentReturnOutcome === "cancelled"
-                          ? "Checking the cancelled payment"
-                          : "Confirming your payment"}
+                          ? i18n("Checking the cancelled payment")
+                          : i18n("Confirming your payment")}
               </h2>
               <p className="mt-1 text-xs leading-5">
                 {paymentUnderReview && order.paymentStatus !== "PAID"
-                  ? "BangBuy detected a gateway verification discrepancy. The order remains safely on hold while support investigates the payment."
+                  ? i18n("BangBuy detected a gateway verification discrepancy. The order remains safely on hold while support investigates the payment.")
                   : order.paymentStatus === "PAID"
                   ? paymentUnderReview
-                    ? "BangBuy verified the payment, but the order is safely on hold for an operations review."
-                    : "SSLCommerz has been verified by BangBuy. Your order is ready for processing."
+                    ? i18n("BangBuy verified the payment, but the order is safely on hold for an operations review.")
+                    : i18n("SSLCommerz has been verified by BangBuy. Your order is ready for processing.")
                   : order.paymentStatus === "REFUNDED"
-                    ? "BangBuy recorded the externally confirmed SSLCommerz refund. No payment is retained for this order."
+                    ? i18n("BangBuy recorded the externally confirmed SSLCommerz refund. No payment is retained for this order.")
                   : order.paymentStatus === "FAILED"
-                    ? "BangBuy has not confirmed this payment. You can review your orders or try checkout again."
+                    ? i18n("BangBuy has not confirmed this payment. You can review your orders or try checkout again.")
                     : paymentPollTimedOut
-                      ? "Your order remains safe. Check this page again shortly for the authoritative payment status."
+                      ? i18n("Your order remains safe. Check this page again shortly for the authoritative payment status.")
                       : paymentReturnOutcome === "failed"
-                        ? "SSLCommerz returned a failure signal. BangBuy is waiting for the authoritative server notification before finalizing the order."
+                        ? i18n("SSLCommerz returned a failure signal. BangBuy is waiting for the authoritative server notification before finalizing the order.")
                         : paymentReturnOutcome === "cancelled"
-                          ? "SSLCommerz returned a cancellation signal. BangBuy is waiting for the authoritative server notification before finalizing the order."
-                          : "BangBuy is waiting for secure server verification from SSLCommerz. This page updates automatically."}
+                          ? i18n("SSLCommerz returned a cancellation signal. BangBuy is waiting for the authoritative server notification before finalizing the order.")
+                          : i18n("BangBuy is waiting for secure server verification from SSLCommerz. This page updates automatically.")}
               </p>
             </div>
           </section>
@@ -478,20 +478,17 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
               <section className="rounded-3xl border border-brand-border bg-white p-5 shadow-sm sm:p-6">
                 <h2 className="text-lg font-bold text-gray-900">
                   {order.paymentStatus === "FAILED"
-                    ? "Try payment again"
-                    : "Complete your payment"}
+                    ? i18n("Try payment again")
+                    : i18n("Complete your payment")}
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-gray-600">
-                  Your order and inventory are reserved. Continue to
-                  Airwallex&apos;s hosted checkout; BangBuy does not collect your
-                  card details.
-                </p>
+                  {i18n("Your order and inventory are reserved. Continue to Airwallex's hosted checkout; BangBuy does not collect your card details.")}</p>
                 <AirwallexPayButton
                   orderId={order.id}
                   label={
                     order.paymentStatus === "FAILED"
-                      ? "Retry secure payment"
-                      : "Continue to secure payment"
+                      ? i18n("Retry secure payment")
+                      : i18n("Continue to secure payment")
                   }
                   className="mt-4 h-12 w-full rounded-2xl bg-brand-red px-5 text-base font-bold text-white sm:w-auto"
                 />
@@ -516,34 +513,33 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                   <User className="h-4 w-4" />
                 </span>
                 <h2 className="text-lg font-bold text-gray-900">
-                  Customer details
-                </h2>
+                  {i18n("Customer details")}</h2>
               </header>
               <dl className="grid gap-4 text-sm sm:grid-cols-2">
                 <Field
                   icon={<User className="h-4 w-4" />}
-                  label="Name"
+                  label={i18n("Name")}
                   value={order.customerName}
                 />
                 <Field
                   icon={<Phone className="h-4 w-4" />}
-                  label="Phone"
+                  label={i18n("Phone")}
                   value={order.customerPhone}
                 />
                 <Field
                   icon={<Mail className="h-4 w-4" />}
-                  label="Email"
+                  label={i18n("Email")}
                   value={order.customerEmail ?? "—"}
                 />
                 <Field
                   icon={<Truck className="h-4 w-4" />}
-                  label="Payment method"
+                  label={i18n("Payment method")}
                   value={paymentMethodLabel(order.paymentMethod)}
                 />
                 <div className="sm:col-span-2">
                   <Field
                     icon={<MapPin className="h-4 w-4" />}
-                    label="Shipping address"
+                    label={i18n("Shipping address")}
                     value={addressLines.join(", ")}
                   />
                 </div>
@@ -551,7 +547,7 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                   <div className="sm:col-span-2">
                     <Field
                       icon={<Mail className="h-4 w-4" />}
-                      label="Note from customer"
+                      label={i18n("Note from customer")}
                       value={order.customerNote}
                     />
                   </div>
@@ -566,11 +562,11 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                   <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-light-bg text-brand-black">
                     <Package className="h-4 w-4" />
                   </span>
-                  <h2 className="text-lg font-bold text-gray-900">Items</h2>
+                  <h2 className="text-lg font-bold text-gray-900">{i18n("Items")}</h2>
                 </div>
                 <span className="text-xs text-gray-500">
                   {order.items.length}{" "}
-                  {order.items.length === 1 ? "product" : "products"}
+                  {order.items.length === 1 ? i18n("product") : i18n("products")}
                 </span>
               </header>
               <ul className="divide-y divide-brand-border">
@@ -605,13 +601,12 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                           </p>
                         )}
                         <p className="mt-0.5 text-xs text-gray-500">
-                          Qty {item.quantity} ·{" "}
+                          {i18n("Qty")}{item.quantity} ·{" "}
                           <FormattedCurrencyAmount
                             amount={item.unitPrice}
                             currency={currency}
                           />{" "}
-                          each
-                        </p>
+                          {i18n("each")}</p>
                       </div>
                       <FormattedCurrencyAmount
                         amount={item.totalPrice}
@@ -628,10 +623,10 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
           {/* Totals */}
           <aside className="lg:sticky lg:top-[88px] lg:self-start">
             <section className="rounded-3xl border border-brand-border bg-brand-white p-5 shadow-sm sm:p-6">
-              <h2 className="text-lg font-bold text-gray-900">Total</h2>
+              <h2 className="text-lg font-bold text-gray-900">{i18n("Total")}</h2>
               <div className="mt-4 space-y-2.5 text-sm">
                 <SummaryRow
-                  label="Subtotal"
+                  label={i18n("Subtotal")}
                   value={order.subtotal}
                   currency={currency}
                 />
@@ -639,8 +634,8 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                   <SummaryRow
                     label={
                       order.promoCode
-                        ? `Discount (${order.promoCode})`
-                        : "Discount"
+                        ? i18n("Discount ({value0})", { value0: order.promoCode })
+                        : i18n("Discount")
                     }
                     value={-order.discountAmount}
                     tone="success"
@@ -648,14 +643,14 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                   />
                 )}
                 <SummaryRow
-                  label="Delivery charge"
+                  label={i18n("Delivery charge")}
                   value={order.deliveryCharge}
                   freeLabel={order.deliveryCharge === 0 ? "FREE" : undefined}
                   currency={currency}
                 />
                 {order.taxAmount > 0 && (
                   <SummaryRow
-                    label="Tax"
+                    label={i18n("Tax")}
                     value={order.taxAmount}
                     currency={currency}
                   />
@@ -663,13 +658,13 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                 {order.advancePayment > 0 && (
                   <>
                     <SummaryRow
-                      label="Advance payment"
+                      label={i18n("Advance payment")}
                       value={-order.advancePayment}
                       tone="success"
                       currency={currency}
                     />
                     <SummaryRow
-                      label="Balance due"
+                      label={i18n("Balance due")}
                       value={Math.max(
                         order.totalAmount - order.advancePayment,
                         0,
@@ -682,8 +677,7 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
               <div className="mt-4 rounded-2xl border border-brand-border bg-brand-light-bg p-4">
                 <div className="flex items-baseline justify-between">
                   <span className="text-sm font-semibold text-gray-700">
-                    Grand total
-                  </span>
+                    {i18n("Grand total")}</span>
                   <FormattedCurrencyAmount
                     amount={order.totalAmount}
                     currency={currency}
@@ -695,8 +689,8 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                     <span className="text-xs font-semibold text-gray-600">
                       {order.paymentStatus === "PAID" ||
                       order.paymentStatus === "REFUNDED"
-                        ? "Airwallex charge"
-                        : "Expected Airwallex payment"}
+                        ? i18n("Airwallex charge")
+                        : i18n("Expected Airwallex payment")}
                     </span>
                     <FormattedCurrencyAmount
                       amount={airwallexPaymentCharge.amount}
@@ -707,7 +701,7 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                 )}
                 {totalSavings > 0 && (
                   <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
-                    You saved{" "}
+                    {i18n("You saved")}{" "}
                     <FormattedCurrencyAmount
                       amount={totalSavings}
                       currency={currency}
@@ -718,16 +712,16 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
               {currency !== order.baseCurrency && (
                 <div className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-[11px] font-medium leading-5 text-sky-900">
                   <p>
-                    Saved order snapshot: 1 {order.baseCurrency} ={" "}
+                    {i18n("Saved order snapshot: 1")}{order.baseCurrency} ={" "}
                     {order.exchangeRate} {currency}
                     {order.exchangeRateTimestamp
-                      ? ` on ${formatDateTime(order.exchangeRateTimestamp)}`
+                      ? i18n(" on {value0}", { value0: formatDateTime(order.exchangeRateTimestamp, locale) })
                       : ""}
                     .
                   </p>
                   {order.paymentMethod === "CASH_ON_DELIVERY" && (
                     <p className="mt-1 font-semibold text-amber-800">
-                      Cash on delivery amount due in BDT: {" "}
+                      {i18n("Cash on delivery amount due in BDT:")}{" "}
                       <FormattedCurrencyAmount
                         amount={Math.max(
                           order.baseTotalAmount - order.baseAdvancePayment,
@@ -748,12 +742,11 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                 aria-busy={downloading}
               >
                 {downloading ? (
-                  <ButtonLoader label="Generating PDF..." />
+                  <ButtonLoader label={i18n("Generating PDF...")} />
                 ) : (
                   <>
                     <Download className="h-4 w-4" />
-                    Download PDF receipt
-                  </>
+                    {i18n("Download PDF receipt")}</>
                 )}
               </button>
               {downloadError && (
@@ -768,8 +761,7 @@ export default function OrderSummaryClient({ orderId }: OrderSummaryClientProps)
                 className="mt-3 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-brand-border bg-brand-white text-sm font-bold text-brand-black transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-red hover:bg-brand-light-bg"
               >
                 <ShoppingBag className="h-4 w-4" />
-                Continue shopping
-              </button>
+                {i18n("Continue shopping")}</button>
             </section>
           </aside>
         </div>
@@ -787,6 +779,7 @@ function Field({
   label: string;
   value: string;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceOrdersIdComponentsOrderSummaryClient");
   return (
     <div className="flex items-start gap-2.5">
       <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-brand-light-bg text-brand-black">
@@ -794,7 +787,7 @@ function Field({
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-          {label}
+          {i18n(label)}
         </p>
         <p className="mt-0.5 wrap-break-word text-sm font-medium text-gray-900">
           {value}
@@ -815,10 +808,11 @@ function Stat({
   custom?: React.ReactNode;
   mono?: boolean;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceOrdersIdComponentsOrderSummaryClient");
   return (
     <div className="rounded-2xl border border-brand-border bg-brand-white p-3">
       <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-        {label}
+        {i18n(label)}
       </p>
       <div className="mt-1">
         {custom ? (
@@ -848,10 +842,11 @@ function SummaryRow({
   freeLabel?: string;
   currency: CurrencyCode;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceOrdersIdComponentsOrderSummaryClient");
   return (
     <div className="flex items-start justify-between gap-2 sm:items-center">
       <span className="min-w-0 flex-1 text-gray-600 [overflow-wrap:anywhere]">
-        {label}
+        {i18n(label)}
       </span>
       {freeLabel ? (
         <span className="shrink-0 font-bold uppercase tracking-wider text-emerald-600">
@@ -861,7 +856,7 @@ function SummaryRow({
         <FormattedCurrencyAmount
           amount={value}
           currency={currency}
-          className={`shrink-0 text-right font-semibold ${
+          className={`shrink-0 text-end font-semibold ${
             tone === "success" ? "text-emerald-600" : "text-gray-900"
           }`}
         />

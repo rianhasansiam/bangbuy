@@ -1,7 +1,9 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useEffect, useRef } from "react";
-import Link from "next/link";
+import Link from "@/lib/i18n/navigation";
 import {
   ArrowRight,
   Lock,
@@ -49,6 +51,7 @@ const PROFILE_PREVIEW_LIMIT = 6;
  * compact list with quantity steppers and a deep link to the full cart.
  */
 export default function CartTab() {
+  const i18n = useInterfaceTranslations("InterfaceProfileComponentsCartTab");
   const dispatch = useDispatch<AppDispatch>();
   const { data: session, status } = useSession();
 
@@ -127,12 +130,12 @@ export default function CartTab() {
           dispatch(setCartData({ items: next, summary: computeCartSummary(next) }));
         }
 
-        toast.success("Item removed from cart");
+        toast.success(i18n("Item removed from cart"));
       },
       (error) => {
         const message =
           error instanceof Error ? error.message : "Failed to remove cart item.";
-        toast.error(message);
+        toast.error(i18n(message));
       },
     );
   };
@@ -150,12 +153,10 @@ export default function CartTab() {
             </span>
             <div className="min-w-0">
               <h2 className="text-base font-bold text-gray-900 sm:text-lg">
-                Cart
-              </h2>
+                {i18n("Cart")}</h2>
               <p className="text-xs text-gray-500">
                 {summary.totalItems}{" "}
-                {summary.totalItems === 1 ? "item" : "items"} ready to check
-                out · subtotal <CurrencyAmount amountBDT={summary.subtotal} />
+                {summary.totalItems === 1 ? i18n("item") : i18n("items")} {i18n("ready to check out · subtotal")}<CurrencyAmount amountBDT={summary.subtotal} />
               </p>
             </div>
           </div>
@@ -163,38 +164,34 @@ export default function CartTab() {
             href="/cart"
             className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-brand-border bg-brand-white px-3 py-2 text-xs font-bold text-brand-red transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-red hover:bg-brand-light-bg sm:w-auto"
           >
-            Open cart
-            <ArrowRight className="h-3.5 w-3.5" />
+            {i18n("Open cart")}<ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
           </Link>
         </div>
       </header>
 
       {error && (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
-          {error}
+          {i18n(error)}
         </div>
       )}
 
       {isLoading && items.length === 0 ? (
-        <SectionLoader title="Loading cart" rows={4} />
+        <SectionLoader title={i18n("Loading cart")} rows={4} />
       ) : items.length === 0 ? (
         <div className="rounded-2xl border border-brand-border bg-brand-white p-6 text-center shadow-sm sm:rounded-3xl sm:p-10">
           <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-brand-light-bg text-brand-black">
             <ShoppingBag className="h-6 w-6" />
           </div>
           <h3 className="mt-4 text-lg font-extrabold text-gray-900">
-            Your cart is empty
-          </h3>
+            {i18n("Your cart is empty")}</h3>
           <p className="mt-1 text-sm text-gray-600">
-            Add products to your cart to see them here.
-          </p>
+            {i18n("Add products to your cart to see them here.")}</p>
           <Link
             href="/products"
             className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-brand-red px-5 py-2.5 text-sm font-bold text-brand-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl"
           >
             <ShoppingBag className="h-4 w-4" />
-            Browse products
-          </Link>
+            {i18n("Browse products")}</Link>
         </div>
       ) : (
         <>
@@ -243,7 +240,7 @@ export default function CartTab() {
                   <p className="mt-0.5 text-xs text-gray-500">
                     <CurrencyAmount amountBDT={item.unitPrice} />
                     {item.originalPrice > item.unitPrice && (
-                      <span className="ml-1.5 text-gray-400 line-through">
+                      <span className="ms-1.5 text-gray-400 line-through">
                         <CurrencyAmount amountBDT={item.originalPrice} />
                       </span>
                     )}
@@ -256,8 +253,8 @@ export default function CartTab() {
                           handleQuantityChange(item, item.quantity - 1)
                         }
                         disabled={item.quantity <= 1}
-                        aria-label="Decrease quantity"
-                        className="grid h-8 w-8 place-items-center rounded-l-xl text-gray-700 transition-colors hover:bg-brand-light-bg disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label={i18n("Decrease quantity")}
+                        className="grid h-8 w-8 place-items-center rounded-s-xl text-gray-700 transition-colors hover:bg-brand-light-bg disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <Minus className="h-3.5 w-3.5" />
                       </button>
@@ -270,8 +267,8 @@ export default function CartTab() {
                           handleQuantityChange(item, item.quantity + 1)
                         }
                         disabled={item.quantity >= item.stock}
-                        aria-label="Increase quantity"
-                        className="grid h-8 w-8 place-items-center rounded-r-xl text-gray-700 transition-colors hover:bg-brand-light-bg disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label={i18n("Increase quantity")}
+                        className="grid h-8 w-8 place-items-center rounded-e-xl text-gray-700 transition-colors hover:bg-brand-light-bg disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <Plus className="h-3.5 w-3.5" />
                       </button>
@@ -279,14 +276,14 @@ export default function CartTab() {
                     <button
                       type="button"
                       onClick={() => handleRemove(item)}
-                      aria-label="Remove from cart"
+                      aria-label={i18n("Remove from cart")}
                       className="grid h-8 w-8 place-items-center rounded-xl border border-rose-200 bg-rose-50 text-rose-600 transition-colors hover:bg-rose-100"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
-                <p className="col-start-2 shrink-0 text-left text-sm font-extrabold text-gray-900 sm:col-start-3 sm:row-start-1 sm:text-right">
+                <p className="col-start-2 shrink-0 text-start text-sm font-extrabold text-gray-900 sm:col-start-3 sm:row-start-1 sm:text-end">
                   <CurrencyAmount amountBDT={item.lineTotal} />
                 </p>
                 </motion.li>
@@ -299,8 +296,7 @@ export default function CartTab() {
               href="/cart"
               className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-dashed border-brand-border bg-brand-white px-4 py-3 text-sm font-bold text-brand-red transition-colors hover:bg-brand-light-bg"
             >
-              View {hiddenCount} more {hiddenCount === 1 ? "item" : "items"} in cart
-              <ArrowRight className="h-4 w-4" />
+              {i18n("View {count, plural, one {# more item} other {# more items}} in cart", { count: hiddenCount })}<ArrowRight className="h-4 w-4 rtl:rotate-180" />
             </Link>
           )}
 
@@ -308,8 +304,7 @@ export default function CartTab() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-                  Subtotal
-                </p>
+                  {i18n("Subtotal")}</p>
                 <p className="text-xl font-extrabold text-brand-red sm:text-2xl">
                   <CurrencyAmount amountBDT={summary.subtotal} />
                 </p>
@@ -319,8 +314,7 @@ export default function CartTab() {
                 className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-brand-red px-5 text-sm font-bold text-brand-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl sm:w-auto"
               >
                 <Lock className="h-4 w-4" />
-                Checkout
-              </Link>
+                {i18n("Checkout")}</Link>
             </div>
           </section>
         </>

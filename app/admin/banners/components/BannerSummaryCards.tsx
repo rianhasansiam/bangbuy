@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Image as ImageIcon, Layers, Sparkles } from "lucide-react";
 
@@ -57,35 +59,36 @@ export default function BannerSummaryCards({
     activePromo: number;
   };
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminBannersComponentsBannerSummaryCards");
   return (
     <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-5">
       <SummaryCard
         icon={<Layers className="h-4 w-4" />}
-        label="Hero carousel"
+        label={i18n("Hero carousel")}
         value={`${totals.activeCarousel} / ${totals.carousel} active`}
         accent="violet"
       />
       <SummaryCard
         icon={<ImageIcon className="h-4 w-4" />}
-        label="Category banners"
+        label={i18n("Category banners")}
         value={`${totals.activeCategory} / ${totals.category} active`}
         accent="emerald"
       />
       <SummaryCard
         icon={<Sparkles className="h-4 w-4" />}
-        label="Top strip"
+        label={i18n("Top strip")}
         value={`${totals.activeTop} / ${totals.top} active`}
         accent="amber"
       />
       <SummaryCard
         icon={<Layers className="h-4 w-4" />}
-        label="Product deals"
+        label={i18n("Product deals")}
         value={`${totals.activeDeal} / ${totals.deal} active`}
         accent="violet"
       />
       <SummaryCard
         icon={<ImageIcon className="h-4 w-4" />}
-        label="Product promos"
+        label={i18n("Product promos")}
         value={`${totals.activePromo} / ${totals.promo} active`}
         accent="emerald"
       />

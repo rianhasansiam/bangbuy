@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Mail, User } from "lucide-react";
 
@@ -22,11 +24,12 @@ export default function AccountStep({
   emailValid,
   onFieldChange,
 }: AccountStepProps) {
+  const i18n = useInterfaceTranslations("InterfaceRegisterComponentsAccountStep");
   return (
     <>
       <FloatField
         icon={<User className="h-4 w-4" />}
-        label="Full name"
+        label={i18n("Full name")}
         value={form.name}
         onChange={(value) => onFieldChange("name", value)}
         autoComplete="name"
@@ -35,7 +38,7 @@ export default function AccountStep({
 
       <FloatField
         icon={<Mail className="h-4 w-4" />}
-        label="Email address"
+        label={i18n("Email address")}
         value={form.email}
         onChange={(value) => onFieldChange("email", value)}
         type="email"

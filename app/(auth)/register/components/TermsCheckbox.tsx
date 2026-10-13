@@ -1,6 +1,8 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 
-import Link from "next/link";
+
+import Link from "@/lib/i18n/navigation";
 import { Check } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -14,6 +16,7 @@ export default function TermsCheckbox({
   checked,
   onChange,
 }: TermsCheckboxProps) {
+  const i18n = useInterfaceTranslations("InterfaceRegisterComponentsTermsCheckbox");
   return (
     <label className="group flex cursor-pointer select-none items-start gap-3 rounded-xl border border-brand-border bg-brand-light-bg p-3 transition-colors hover:bg-brand-red/5">
       <span className="relative mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-brand-border bg-white transition-colors group-hover:border-brand-red">
@@ -40,22 +43,19 @@ export default function TermsCheckbox({
       </span>
 
       <span className="text-xs leading-relaxed text-brand-text-dark">
-        I agree to the{" "}
+        {i18n("I agree to the")}{" "}
         <Link
-          href="/about"
+          href="/terms-and-conditions"
           className="font-semibold text-brand-red hover:underline"
         >
-          Terms of Service
-        </Link>{" "}
-        and{" "}
+          {i18n("Terms of Service")}</Link>{" "}
+        {i18n("and")}{" "}
         <Link
-          href="/about"
+          href="/privacy-policy"
           className="font-semibold text-brand-red hover:underline"
         >
-          Privacy Policy
-        </Link>
-        . I&apos;d like to receive deals and updates.
-      </span>
+          {i18n("Privacy Policy")}</Link>
+        {i18n(". I'd like to receive deals and updates.")}</span>
     </label>
   );
 }

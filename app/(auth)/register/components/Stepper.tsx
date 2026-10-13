@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Check } from "lucide-react";
 
@@ -8,6 +10,7 @@ import { REGISTER_STEPS } from "./constants";
 import type { RegisterStep } from "../page";
 
 export default function Stepper({ currentStep }: { currentStep: RegisterStep }) {
+  const i18n = useInterfaceTranslations("InterfaceRegisterComponentsStepper");
   return (
     <ol className="flex items-center">
       {REGISTER_STEPS.map((stepItem, index) => {
@@ -50,14 +53,14 @@ export default function Stepper({ currentStep }: { currentStep: RegisterStep }) 
                   isCompleted || isActive ? "text-brand-red" : "text-brand-text-muted",
                 )}
               >
-                {stepItem.label}
+                {i18n(stepItem.label)}
               </p>
             </div>
 
             {index < REGISTER_STEPS.length - 1 && (
               <div className="relative mx-2 h-0.5 flex-1 overflow-hidden rounded-full bg-brand-border sm:mx-3">
                 <div
-                  className="absolute inset-y-0 left-0 bg-brand-red transition-all duration-700 ease-out"
+                  className="absolute inset-y-0 start-0 bg-brand-red transition-all duration-700 ease-out"
                   style={{ width: index < currentStep ? "100%" : "0%" }}
                 />
               </div>

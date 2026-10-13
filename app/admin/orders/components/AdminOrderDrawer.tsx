@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useMemo, useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
 import { Download, PackagePlus, Plus, ReceiptText, Trash2, X } from "lucide-react";
@@ -65,6 +69,8 @@ export default function AdminOrderDrawer({
   onDownloadPdf: () => void;
   onCreateAnother: () => void;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminOrdersComponentsAdminOrderDrawer");
   const [productToAdd, setProductToAdd] = useState("");
   const locked = isSubmitting || placedOrder !== null;
 
@@ -156,25 +162,24 @@ export default function AdminOrderDrawer({
 
       <aside
         aria-modal="true"
-        aria-label="Place customer order"
+        aria-label={i18n("Place customer order")}
         role="dialog"
         className={cn(
-          "fixed inset-y-0 right-0 z-70 flex w-full max-w-2xl flex-col border-l border-brand-border bg-brand-white shadow-2xl transition-transform duration-300",
+          "fixed inset-y-0 right-0 z-70 flex w-full max-w-2xl flex-col border-s border-brand-border bg-brand-white shadow-2xl transition-transform duration-300",
           open ? "translate-x-0" : "translate-x-full",
         )}
       >
         <header className="flex items-start justify-between gap-4 border-b border-brand-border bg-brand-black px-5 py-4 text-brand-white">
           <div>
-            <h2 className="text-lg font-bold">Place order for customer</h2>
+            <h2 className="text-lg font-bold">{i18n("Place order for customer")}</h2>
             <p className="mt-0.5 text-xs text-brand-white/70">
-              Create an order for a registered customer or a walk-in guest with the same checkout, stock, revenue, and profit rules.
-            </p>
+              {i18n("Create an order for a registered customer or a walk-in guest with the same checkout, stock, revenue, and profit rules.")}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="rounded-lg p-1 text-brand-white/75 transition hover:bg-white/10 hover:text-brand-white"
-            aria-label="Close order form"
+            aria-label={i18n("Close order form")}
           >
             <X className="h-5 w-5" />
           </button>
@@ -184,29 +189,27 @@ export default function AdminOrderDrawer({
           <div className="flex flex-1 flex-col justify-center overflow-y-auto p-5 sm:p-7">
             <div className="mx-auto w-full max-w-md rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
               <ReceiptText className="mx-auto h-10 w-10 text-emerald-700" />
-              <h3 className="mt-3 text-lg font-bold text-emerald-950">Order placed</h3>
+              <h3 className="mt-3 text-lg font-bold text-emerald-950">{i18n("Order placed")}</h3>
               {getAdminOrderCustomerType(placedOrder) && (
                 <span className="mt-2 inline-flex rounded-full bg-white/80 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 ring-1 ring-inset ring-emerald-200">
-                  {getAdminOrderCustomerType(placedOrder) === "GUEST" ? "Guest" : "Registered"}
+                  {getAdminOrderCustomerType(placedOrder) === "GUEST" ? i18n("Guest") : i18n("Registered")}
                 </span>
               )}
               <p className="mt-1 text-sm text-emerald-800">
-                {placedOrder.orderNumber} for {placedOrder.customerName} is now included in sales, revenue, and profit.
-              </p>
+                {placedOrder.orderNumber} {i18n("for")}{" "}{placedOrder.customerName} {i18n("is now included in sales, revenue, and profit.")}</p>
               <p className="mt-3 text-xl font-bold text-emerald-950">
-                {formatCurrency(placedOrder.totalAmount)}
+                {formatCurrency(placedOrder.totalAmount, locale)}
               </p>
               {placedOrder.advancePayment > 0 && (
                 <p className="mt-2 text-sm font-semibold text-emerald-800">
-                  {formatCurrency(placedOrder.advancePayment)} advance paid - {formatCurrency(
+                  {formatCurrency(placedOrder.advancePayment, locale)} {i18n("advance paid -")}{" "}{formatCurrency(
                     Math.max(
                       placedOrder.totalAmount - placedOrder.advancePayment,
                       0,
-                    ),
-                  )} balance due
-                </p>
+                    ), locale
+                  )} {i18n("balance due")}</p>
               )}
-              <ul className="mt-4 space-y-2 text-left">
+              <ul className="mt-4 space-y-2 text-start">
                 {placedOrder.items.map((item) => (
                   <li key={item.id} className="rounded-xl border border-emerald-200 bg-white/80 px-3 py-2 text-xs text-emerald-950">
                     <p className="font-semibold">{item.productName} × {item.quantity}</p>
@@ -229,7 +232,7 @@ export default function AdminOrderDrawer({
                   className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isDownloadingPdf ? <LoadingSpinner decorative size="sm" /> : <Download className="h-4 w-4" />}
-                  {isDownloadingPdf ? "Preparing PDF..." : "Download PDF receipt"}
+                  {isDownloadingPdf ? i18n("Preparing PDF...") : i18n("Download PDF receipt (English)")}
                 </button>
                 <button
                   type="button"
@@ -237,8 +240,7 @@ export default function AdminOrderDrawer({
                   className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-white px-4 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
                 >
                   <PackagePlus className="h-4 w-4" />
-                  Create another
-                </button>
+                  {i18n("Create another")}</button>
               </div>
             </div>
           </div>
@@ -252,14 +254,14 @@ export default function AdminOrderDrawer({
               )}
               {error && (
                 <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                  {error}
+                  {i18n(error)}
                 </div>
               )}
 
               <section className="space-y-3">
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900">Customer</h3>
-                  <p className="text-xs text-gray-500">Use a registered account or leave the selection on guest for a walk-in customer.</p>
+                  <h3 className="text-sm font-bold text-gray-900">{i18n("Customer")}</h3>
+                  <p className="text-xs text-gray-500">{i18n("Use a registered account or leave the selection on guest for a walk-in customer.")}</p>
                 </div>
                 <select
                   value={draft.customerId}
@@ -267,7 +269,7 @@ export default function AdminOrderDrawer({
                   disabled={locked || isCatalogLoading}
                   className={inputClass}
                 >
-                  <option value="">Guest customer (not registered)</option>
+                  <option value="">{i18n("Guest customer (not registered)")}</option>
                   {customers.map((customer) => (
                     <option key={customer.id} value={customer.id}>
                       {[customer.name || "Unnamed customer", customer.email || customer.phone || customer.id]
@@ -278,34 +280,34 @@ export default function AdminOrderDrawer({
                 </select>
                 {selectedCustomer?.email && (
                   <p className="text-xs text-gray-500">
-                    Receipt email: {selectedCustomer.email}
+                    {i18n("Receipt email:")}{" "}{selectedCustomer.email}
                   </p>
                 )}
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="block space-y-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">Customer name *</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">{i18n("Customer name *")}</span>
                     <input
                       value={draft.customerName}
                       onChange={(event) => onDraftChange((current) => ({ ...current, customerName: event.target.value }))}
                       disabled={locked}
                       className={inputClass}
-                      placeholder="Customer name"
+                      placeholder={i18n("Customer name")}
                     />
                   </label>
                   <label className="block space-y-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">Phone *</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">{i18n("Phone *")}</span>
                     <input
                       value={draft.customerPhone}
                       onChange={(event) => onDraftChange((current) => ({ ...current, customerPhone: event.target.value }))}
                       disabled={locked}
                       className={inputClass}
-                      placeholder="Phone number"
+                      placeholder={i18n("Phone number")}
                     />
                   </label>
                   <label className="block space-y-1.5">
                     <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-                      Email {selectedCustomer ? "(account)" : "(optional)"}
+                      {i18n("Email")}{" "}{selectedCustomer ? i18n("(account)") : i18n("(optional)")}
                     </span>
                     <input
                       type="email"
@@ -318,28 +320,28 @@ export default function AdminOrderDrawer({
                   </label>
                 </div>
                 <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">Delivery address *</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">{i18n("Delivery address *")}</span>
                   <textarea
                     value={draft.customerAddress}
                     onChange={(event) => onDraftChange((current) => ({ ...current, customerAddress: event.target.value }))}
                     disabled={locked}
                     className="min-h-20 w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-red disabled:cursor-not-allowed disabled:bg-brand-light-bg"
-                    placeholder="Street, area, city"
+                    placeholder={i18n("Street, area, city")}
                   />
                 </label>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="block space-y-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">City / district</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">{i18n("City / district")}</span>
                     <input
                       value={draft.customerCity}
                       onChange={(event) => onDraftChange((current) => ({ ...current, customerCity: event.target.value }))}
                       disabled={locked}
                       className={inputClass}
-                      placeholder="Optional"
+                      placeholder={i18n("Optional")}
                     />
                   </label>
                   <label className="block space-y-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">Delivery area *</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">{i18n("Delivery area *")}</span>
                     <select
                       value={draft.deliveryZone}
                       onChange={(event) => onDraftChange((current) => ({
@@ -349,18 +351,18 @@ export default function AdminOrderDrawer({
                       disabled={locked}
                       className={inputClass}
                     >
-                      <option value="INSIDE_DHAKA">Delivery inside Dhaka</option>
-                      <option value="OUTSIDE_DHAKA">Delivery outside Dhaka</option>
+                      <option value="INSIDE_DHAKA">{i18n("Delivery inside Dhaka")}</option>
+                      <option value="OUTSIDE_DHAKA">{i18n("Delivery outside Dhaka")}</option>
                     </select>
                   </label>
                   <label className="block space-y-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">Postal code</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">{i18n("Postal code")}</span>
                     <input
                       value={draft.customerPostalCode}
                       onChange={(event) => onDraftChange((current) => ({ ...current, customerPostalCode: event.target.value }))}
                       disabled={locked}
                       className={inputClass}
-                      placeholder="Optional"
+                      placeholder={i18n("Optional")}
                     />
                   </label>
                 </div>
@@ -369,8 +371,8 @@ export default function AdminOrderDrawer({
               <section className="space-y-3 border-t border-brand-border pt-5">
                 <div className="flex flex-wrap items-end gap-2">
                   <div className="min-w-52 flex-1">
-                    <h3 className="text-sm font-bold text-gray-900">Products</h3>
-                    <p className="text-xs text-gray-500">Only active, in-stock variants can be added.</p>
+                    <h3 className="text-sm font-bold text-gray-900">{i18n("Products")}</h3>
+                    <p className="text-xs text-gray-500">{i18n("Only active, in-stock variants can be added.")}</p>
                   </div>
                   <select
                     value={productToAdd}
@@ -378,10 +380,10 @@ export default function AdminOrderDrawer({
                     disabled={locked || isCatalogLoading}
                     className="h-10 min-w-48 rounded-xl border border-brand-border bg-white px-3 text-sm outline-none transition focus:border-brand-red disabled:cursor-not-allowed disabled:bg-brand-light-bg"
                   >
-                    <option value="">Select product</option>
+                    <option value="">{i18n("Select product")}</option>
                     {purchasableProducts.map((product) => (
                       <option key={product.id} value={product.id}>
-                        {product.name} - {formatCurrency(productPrice(product))}
+                        {product.name} - {formatCurrency(productPrice(product), locale)}
                       </option>
                     ))}
                   </select>
@@ -392,14 +394,12 @@ export default function AdminOrderDrawer({
                     className="inline-flex h-10 items-center gap-2 rounded-xl border border-brand-border px-3 text-sm font-semibold text-foreground transition hover:bg-brand-light-bg disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Plus className="h-4 w-4" />
-                    Add
-                  </button>
+                    {i18n("Add")}</button>
                 </div>
 
                 {draft.items.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-brand-border bg-brand-light-bg p-4 text-sm text-gray-500">
-                    Add at least one product to calculate and place the order.
-                  </div>
+                    {i18n("Add at least one product to calculate and place the order.")}</div>
                 ) : (
                   <div className="space-y-2">
                     {draft.items.map((line, index) => {
@@ -414,8 +414,7 @@ export default function AdminOrderDrawer({
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-semibold text-gray-900">{product?.name ?? "Unavailable product"}</p>
                               <p className="mt-0.5 text-xs text-gray-500">
-                                {product ? formatCurrency(productPrice(product)) : ""} each
-                              </p>
+                                {product ? formatCurrency(productPrice(product), locale) : ""} {i18n("each")}</p>
                             </div>
                             <select
                               value={line.variantId}
@@ -432,8 +431,7 @@ export default function AdminOrderDrawer({
                                       .join(" / ") ||
                                     variant.modelNumber ||
                                     variant.sku ||
-                                    "Default option"} ({variant.stock} in stock)
-                                </option>
+                                    "Default option"} ({variant.stock} {i18n("in stock)")}</option>
                               ))}
                             </select>
                             <input
@@ -469,21 +467,21 @@ export default function AdminOrderDrawer({
               <section className="space-y-3 border-t border-brand-border pt-5">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="block space-y-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">Promo code</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">{i18n("Promo code")}</span>
                     <input
                       value={draft.promoCode}
                       onChange={(event) => onDraftChange((current) => ({ ...current, promoCode: event.target.value }))}
                       disabled={locked}
                       className={inputClass}
-                      placeholder="Optional"
+                      placeholder={i18n("Optional")}
                     />
                   </label>
                   <label className="block space-y-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">Payment</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">{i18n("Payment")}</span>
                     <input value="Cash on delivery" disabled className={inputClass} />
                   </label>
                   <label className="block space-y-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">Advance payment</span>
+                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">{i18n("Advance payment")}</span>
                     <input
                       type="number"
                       min="0"
@@ -495,17 +493,17 @@ export default function AdminOrderDrawer({
                       className={inputClass}
                       placeholder="0"
                     />
-                    <span className="text-[11px] text-gray-500">Collected now; it does not change the order total.</span>
+                    <span className="text-[11px] text-gray-500">{i18n("Collected now; it does not change the order total.")}</span>
                   </label>
                 </div>
                 <label className="block space-y-1.5">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">Order note</span>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">{i18n("Order note")}</span>
                   <textarea
                     value={draft.customerNote}
                     onChange={(event) => onDraftChange((current) => ({ ...current, customerNote: event.target.value }))}
                     disabled={locked}
                     className="min-h-20 w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-red disabled:cursor-not-allowed disabled:bg-brand-light-bg"
-                    placeholder="Optional delivery or customer note"
+                    placeholder={i18n("Optional delivery or customer note")}
                   />
                 </label>
               </section>
@@ -513,8 +511,8 @@ export default function AdminOrderDrawer({
               <section className="rounded-2xl border border-brand-border bg-brand-light-bg p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h3 className="text-sm font-bold text-gray-900">Order total</h3>
-                    <p className="text-xs text-gray-500">Calculated from current store pricing on the server.</p>
+                    <h3 className="text-sm font-bold text-gray-900">{i18n("Order total")}</h3>
+                    <p className="text-xs text-gray-500">{i18n("Calculated from current store pricing on the server.")}</p>
                   </div>
                   <button
                     type="button"
@@ -524,24 +522,24 @@ export default function AdminOrderDrawer({
                     className="inline-flex h-9 items-center gap-2 rounded-lg border border-brand-border bg-white px-3 text-xs font-semibold text-foreground transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isPreviewing && <LoadingSpinner decorative size="xs" />}
-                    {isPreviewing ? "Calculating..." : "Calculate total"}
+                    {isPreviewing ? i18n("Calculating...") : i18n("Calculate total")}
                   </button>
                 </div>
                 {preview ? (
                   <div className="mt-4 space-y-2 text-sm">
-                    <div className="flex justify-between text-gray-600"><span>Products</span><span>{formatCurrency(preview.summary.subtotal)}</span></div>
-                    {preview.summary.discount > 0 && <div className="flex justify-between text-emerald-700"><span>Discount</span><span>-{formatCurrency(preview.summary.discount)}</span></div>}
-                    <div className="flex justify-between text-gray-600"><span>{preview.summary.isOutsideDhaka ? "Delivery outside Dhaka" : "Delivery inside Dhaka"}</span><span>{preview.summary.shipping === 0 ? "FREE" : formatCurrency(preview.summary.shipping)}</span></div>
-                    {preview.summary.tax > 0 && <div className="flex justify-between text-gray-600"><span>Tax</span><span>{formatCurrency(preview.summary.tax)}</span></div>}
-                    <div className="flex justify-between border-t border-brand-border pt-2 text-base font-bold text-gray-900"><span>Total</span><span>{formatCurrency(preview.summary.total)}</span></div>
+                    <div className="flex justify-between text-gray-600"><span>{i18n("Products")}</span><span>{formatCurrency(preview.summary.subtotal, locale)}</span></div>
+                    {preview.summary.discount > 0 && <div className="flex justify-between text-emerald-700"><span>{i18n("Discount")}</span><span>-{formatCurrency(preview.summary.discount, locale)}</span></div>}
+                    <div className="flex justify-between text-gray-600"><span>{preview.summary.isOutsideDhaka ? i18n("Delivery outside Dhaka") : i18n("Delivery inside Dhaka")}</span><span>{preview.summary.shipping === 0 ? "FREE" : formatCurrency(preview.summary.shipping, locale)}</span></div>
+                    {preview.summary.tax > 0 && <div className="flex justify-between text-gray-600"><span>{i18n("Tax")}</span><span>{formatCurrency(preview.summary.tax, locale)}</span></div>}
+                    <div className="flex justify-between border-t border-brand-border pt-2 text-base font-bold text-gray-900"><span>{i18n("Total")}</span><span>{formatCurrency(preview.summary.total, locale)}</span></div>
                     {advancePayment > 0 && <>
-                      <div className="flex justify-between text-emerald-700"><span>Advance payment</span><span>-{formatCurrency(advancePayment)}</span></div>
-                      <div className="flex justify-between font-semibold text-gray-900"><span>Balance due</span><span>{formatCurrency(Math.max(preview.summary.total - advancePayment, 0))}</span></div>
+                      <div className="flex justify-between text-emerald-700"><span>{i18n("Advance payment")}</span><span>-{formatCurrency(advancePayment, locale)}</span></div>
+                      <div className="flex justify-between font-semibold text-gray-900"><span>{i18n("Balance due")}</span><span>{formatCurrency(Math.max(preview.summary.total - advancePayment, 0), locale)}</span></div>
                     </>}
                     {preview.promo && !preview.promo.ok && <p className="pt-1 text-xs font-semibold text-red-600">{preview.promo.reason}</p>}
                   </div>
                 ) : (
-                  <p className="mt-3 text-sm text-gray-500">Calculate the total before placing the order.</p>
+                  <p className="mt-3 text-sm text-gray-500">{i18n("Calculate the total before placing the order.")}</p>
                 )}
               </section>
             </div>
@@ -553,8 +551,7 @@ export default function AdminOrderDrawer({
                 disabled={isSubmitting}
                 className="h-10 rounded-xl border border-brand-border px-4 text-sm font-semibold text-foreground transition hover:bg-brand-light-bg disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Cancel
-              </button>
+                {i18n("Cancel")}</button>
               <button
                 type="submit"
                 disabled={isSubmitting || isCatalogLoading}
@@ -562,7 +559,7 @@ export default function AdminOrderDrawer({
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-brand-red px-4 text-sm font-semibold text-brand-white transition hover:bg-brand-red-hover disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? <LoadingSpinner decorative size="sm" /> : <PackagePlus className="h-4 w-4" />}
-                {isSubmitting ? "Placing order..." : "Place order"}
+                {isSubmitting ? i18n("Placing order...") : i18n("Place order")}
               </button>
             </footer>
           </form>

@@ -1,6 +1,8 @@
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 import React from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from "@/lib/i18n/navigation"
 import CurrencyAmount from '@/components/currency/CurrencyAmount'
 
 type RecentProductItem = {
@@ -22,6 +24,7 @@ const RecentProducts: React.FC<RecentProductsProps> = ({
   products, 
   title = 'Recent Product' 
 }) => {
+  const i18n = useInterfaceTranslations("InterfaceProductsSlugComponentsRecentProducts");
   if (!products || products.length === 0) {
     return null
   }
@@ -29,7 +32,7 @@ const RecentProducts: React.FC<RecentProductsProps> = ({
   return (
     <div className="min-w-0 rounded-2xl border border-gray-100 bg-white p-4">
       <h3 className="mb-4 text-lg font-bold text-gray-900 [overflow-wrap:anywhere]">
-        {title}
+        {i18n(title)}
       </h3>
       
       <div className="space-y-3">
@@ -42,7 +45,7 @@ const RecentProducts: React.FC<RecentProductsProps> = ({
             {/* Thumbnail */}
             <div
               className="relative w-16 h-16 rounded-lg overflow-hidden bg-gray-100 shrink-0"
-              style={{ position: 'relative' }}
+              style={{ position: "relative" }}
             >
               <Image
                 src={product.image}

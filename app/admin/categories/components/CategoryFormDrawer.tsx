@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useEffect, useMemo, useRef } from "react";
 import { X } from "lucide-react";
@@ -38,6 +40,7 @@ export default function CategoryFormDrawer({
   onChange: React.Dispatch<React.SetStateAction<CategoryFormState>>;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminCategoriesComponentsCategoryFormDrawer");
   const nameRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -70,7 +73,7 @@ export default function CategoryFormDrawer({
     <>
       <button
         type="button"
-        aria-label="Close category editor"
+        aria-label={i18n("Close category editor")}
         tabIndex={open ? 0 : -1}
         onClick={onClose}
         className={cn(
@@ -86,23 +89,23 @@ export default function CategoryFormDrawer({
         aria-hidden={!open}
         inert={!open}
         className={cn(
-          "fixed inset-y-0 right-0 z-70 w-full max-w-lg border-l border-brand-border bg-brand-white shadow-2xl transition-transform duration-300",
+          "fixed inset-y-0 right-0 z-70 w-full max-w-lg border-s border-brand-border bg-brand-white shadow-2xl transition-transform duration-300",
           open ? "translate-x-0" : "translate-x-full",
         )}
       >
         <div className="flex h-full flex-col">
-          <div className="relative border-b border-brand-border bg-brand-black px-5 py-4 pr-14 text-brand-white">
+          <div className="relative border-b border-brand-border bg-brand-black px-5 py-4 pe-14 text-brand-white">
             <h2 id="category-editor-title" className="text-lg font-bold">
-              {mode === "create" ? "Add Category" : "Edit Category"}
+              {mode === "create" ? i18n("Add Category") : i18n("Edit Category")}
             </h2>
             <p className="mt-0.5 text-xs text-brand-white/70">
               {mode === "create"
-                ? "Create a root category or place it anywhere in the catalog tree."
-                : "Update details, visibility, position, or move this subtree."}
+                ? i18n("Create a root category or place it anywhere in the catalog tree.")
+                : i18n("Update details, visibility, position, or move this subtree.")}
             </p>
             <button
               type="button"
-              aria-label="Close editor"
+              aria-label={i18n("Close editor")}
               disabled={isSubmitting}
               onClick={onClose}
               className="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg p-2 text-white/80 hover:bg-white/10 hover:text-white"
@@ -113,24 +116,24 @@ export default function CategoryFormDrawer({
 
           <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
-              <Field label="Name" required>
+              <Field label={i18n("Name")} required>
                 <input
                   ref={nameRef}
                   value={form.name}
                   onChange={(event) => onChange((prev) => ({ ...prev, name: event.target.value }))}
                   className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-                  placeholder="Category name"
+                  placeholder={i18n("Category name")}
                 />
               </Field>
 
               <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem]">
-                <Field label="Parent category">
+                <Field label={i18n("Parent category")}>
                   <select
                     value={form.parentId}
                     onChange={(event) => onChange((prev) => ({ ...prev, parentId: event.target.value }))}
                     className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
                   >
-                    <option value="">Root category</option>
+                    <option value="">{i18n("Root category")}</option>
                     {parentOptions.map((category) => (
                       <option key={category.id} value={category.id}>
                         {categoryLabel(category)}
@@ -138,7 +141,7 @@ export default function CategoryFormDrawer({
                     ))}
                   </select>
                 </Field>
-                <Field label="Position" required>
+                <Field label={i18n("Position")} required>
                   <input
                     type="number"
                     min="0"
@@ -150,7 +153,7 @@ export default function CategoryFormDrawer({
                 </Field>
               </div>
 
-              <Field label="Status" required>
+              <Field label={i18n("Status")} required>
                 <select
                   value={form.status}
                   onChange={(event) =>
@@ -161,11 +164,10 @@ export default function CategoryFormDrawer({
                   {STATUS_VALUES.map((status) => <option key={status}>{status}</option>)}
                 </select>
                 <p className="mt-1 text-xs text-brand-text-muted">
-                  Hiding a parent hides its complete subtree publicly without changing child statuses.
-                </p>
+                  {i18n("Hiding a parent hides its complete subtree publicly without changing child statuses.")}</p>
               </Field>
 
-              <Field label="Image">
+              <Field label={i18n("Image")}>
                 <ImageUploader
                   category="categories"
                   value={form.image}
@@ -174,26 +176,24 @@ export default function CategoryFormDrawer({
                 />
               </Field>
 
-              <Field label="Description">
+              <Field label={i18n("Description")}>
                 <textarea
                   value={form.description}
                   onChange={(event) => onChange((prev) => ({ ...prev, description: event.target.value }))}
                   className="min-h-28 w-full rounded-xl border border-brand-border px-3 py-2 text-sm outline-none transition focus:border-brand-red"
-                  placeholder="What shoppers will find here"
+                  placeholder={i18n("What shoppers will find here")}
                 />
               </Field>
 
               <div className="rounded-xl border border-brand-border p-4">
                 <div className="mb-4">
-                  <h3 className="text-sm font-semibold text-brand-black">Search and social</h3>
+                  <h3 className="text-sm font-semibold text-brand-black">{i18n("Search and social")}</h3>
                   <p className="mt-1 text-xs text-brand-text-muted">
-                    Optional overrides for search results and shared links. Storefront defaults are
-                    used when these fields are empty.
-                  </p>
+                    {i18n("Optional overrides for search results and shared links. Storefront defaults are used when these fields are empty.")}</p>
                 </div>
 
                 <div className="space-y-4">
-                  <Field label="SEO title">
+                  <Field label={i18n("SEO title")}>
                     <input
                       value={form.seoTitle}
                       maxLength={70}
@@ -201,14 +201,14 @@ export default function CategoryFormDrawer({
                         onChange((prev) => ({ ...prev, seoTitle: event.target.value }))
                       }
                       className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-                      placeholder="Category title for search results"
+                      placeholder={i18n("Category title for search results")}
                     />
-                    <p className="mt-1 text-right text-xs text-brand-text-muted">
+                    <p className="mt-1 text-end text-xs text-brand-text-muted">
                       {form.seoTitle.length}/70
                     </p>
                   </Field>
 
-                  <Field label="Meta description">
+                  <Field label={i18n("Meta description")}>
                     <textarea
                       value={form.metaDescription}
                       maxLength={320}
@@ -216,14 +216,14 @@ export default function CategoryFormDrawer({
                         onChange((prev) => ({ ...prev, metaDescription: event.target.value }))
                       }
                       className="min-h-24 w-full rounded-xl border border-brand-border px-3 py-2 text-sm outline-none transition focus:border-brand-red"
-                      placeholder="Summary shown by search engines"
+                      placeholder={i18n("Summary shown by search engines")}
                     />
-                    <p className="mt-1 text-right text-xs text-brand-text-muted">
+                    <p className="mt-1 text-end text-xs text-brand-text-muted">
                       {form.metaDescription.length}/320
                     </p>
                   </Field>
 
-                  <Field label="Social image">
+                  <Field label={i18n("Social image")}>
                     <ImageUploader
                       category="categories"
                       value={form.ogImage}
@@ -235,17 +235,15 @@ export default function CategoryFormDrawer({
               </div>
 
               <div className="rounded-xl border border-brand-border bg-brand-light-bg p-3 text-xs text-brand-text-muted">
-                <p className="font-semibold text-brand-black">Canonical path preview</p>
+                <p className="font-semibold text-brand-black">{i18n("Canonical path preview")}</p>
                 <p className="mt-1 break-all font-mono">/categories/{pathPreview}</p>
                 {editing && form.parentId !== (editing.parentId ?? "") && (
                   <p className="mt-2 font-medium text-amber-700">
-                    Moving this category also changes every descendant URL.
-                  </p>
+                    {i18n("Moving this category also changes every descendant URL.")}</p>
                 )}
                 {editing && form.name !== editing.name && (
                   <p className="mt-2 text-emerald-700">
-                    The existing slug remains stable when only the display name changes.
-                  </p>
+                    {i18n("The existing slug remains stable when only the display name changes.")}</p>
                 )}
               </div>
             </div>
@@ -258,8 +256,7 @@ export default function CategoryFormDrawer({
                   disabled={isSubmitting}
                   className="h-10 rounded-xl border border-brand-border px-4 text-sm font-semibold text-brand-black transition hover:bg-brand-light-bg disabled:opacity-60"
                 >
-                  Cancel
-                </button>
+                  {i18n("Cancel")}</button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
@@ -267,8 +264,8 @@ export default function CategoryFormDrawer({
                   className="inline-flex h-10 items-center gap-2 rounded-xl bg-brand-red px-4 text-sm font-semibold text-brand-white transition hover:bg-brand-red-hover disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSubmitting ? (
-                    <ButtonLoader label={mode === "create" ? "Creating..." : "Saving..."} />
-                  ) : mode === "create" ? "Create category" : "Save changes"}
+                    <ButtonLoader label={mode === "create" ? i18n("Creating...") : i18n("Saving...")} />
+                  ) : mode === "create" ? i18n("Create category") : i18n("Save changes")}
                 </button>
               </div>
             </div>

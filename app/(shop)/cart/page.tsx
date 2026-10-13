@@ -1,8 +1,11 @@
 "use client";
+import { useLocaleDraft, useLocaleSwitchGuard } from "@/components/i18n/useLocaleDraft";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/lib/i18n/navigation";
+import { useRouter } from "@/lib/i18n/navigation";
 import { Check, Lock, Minus } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSession } from "@/lib/auth/use-app-session";
@@ -126,6 +129,7 @@ function toCartViewModel(item: CartItem) {
 }
 
 export default function CartPage() {
+  const i18n = useInterfaceTranslations("InterfaceCartPage");
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -151,6 +155,13 @@ export default function CartPage() {
     () => new Set(),
   );
   const [isCheckoutPending, startCheckoutTransition] = useTransition();
+  useLocaleSwitchGuard(pendingQuantityUpdates > 0 || isCheckoutPending);
+  const cartSelectionDraft = { deselectedIds: [...deselectedItemIds], promoCode: promo?.code ?? promoCandidate ?? "" };
+  useLocaleDraft("cart-selection", cartSelectionDraft, (update) => {
+    const next = typeof update === "function" ? update(cartSelectionDraft) : update;
+    if (Array.isArray(next.deselectedIds)) setDeselectedItemIds(new Set(next.deselectedIds.filter((id) => typeof id === "string")));
+    setPromoCandidate(next.promoCode || null);
+  }, ["deselectedIds", "promoCode"]);
   const itemsRef = useRef(items);
   const quantitySyncsRef = useRef(new Map<string, PendingQuantitySync>());
   const quantityVersionsRef = useRef(new Map<string, number>());
@@ -396,7 +407,7 @@ export default function CartPage() {
           ? requestError.message
           : "Failed to update cart quantity.";
       dispatch(setCartError(message));
-      toast.error(message);
+      toast.error(i18n(message));
       setPreviewToken((token) => token + 1);
     }
   };
@@ -534,7 +545,7 @@ export default function CartPage() {
     if (!target) return;
 
     const ok = await confirm({
-      title: "Remove item?",
+      title: i18n("Remove item?"),
       description: `"${target.name}" will be removed from your cart.`,
       confirmLabel: "Remove",
       variant: "danger",
@@ -545,12 +556,12 @@ export default function CartPage() {
       id,
       async () => {
         await commitRemoveFromCart(id);
-        toast.success("Item removed from cart");
+        toast.success(i18n("Item removed from cart"));
       },
       (error) => {
         const message =
           error instanceof Error ? error.message : "Failed to remove item from cart.";
-        toast.error(message);
+        toast.error(i18n(message));
       },
     );
   };
@@ -575,12 +586,12 @@ export default function CartPage() {
           writeLocalSaved(next);
           return next;
         });
-        toast.info("Saved for later");
+        toast.info(i18n("Saved for later"));
       },
       (error) => {
         const message =
           error instanceof Error ? error.message : "Failed to save item for later.";
-        toast.error(message);
+        toast.error(i18n(message));
       },
     );
   };
@@ -588,7 +599,7 @@ export default function CartPage() {
   const handleSavedRemove = (id: string) => {
     queueSavedRemoval(id, () => {
       removeSavedFromLocal(id);
-      toast.success("Removed from saved items");
+      toast.success(i18n("Removed from saved items"));
     });
   };
 
@@ -664,14 +675,14 @@ export default function CartPage() {
         }
 
         removeSavedFromLocal(id);
-        toast.success(`${target.name} moved to cart`);
+        toast.success(i18n(`${target.name} moved to cart`));
       },
       (error) => {
         const message =
           error instanceof Error
             ? error.message
             : "Failed to move saved item to cart.";
-        toast.error(message);
+        toast.error(i18n(message));
       },
     );
   };
@@ -697,7 +708,7 @@ export default function CartPage() {
     setPromo(null);
     setPromoCandidate(null);
     setPromoError(null);
-    toast.info("Promo code removed");
+    toast.info(i18n("Promo code removed"));
   };
 
   const handleToggleItemSelection = (id: string) => {
@@ -734,12 +745,12 @@ export default function CartPage() {
 
   const handleCheckout = () => {
     if (selectedItems.length === 0) {
-      toast.info("Select at least one product to checkout.");
+      toast.info(i18n("Select at least one product to checkout."));
       return;
     }
 
     if (pendingQuantityUpdates > 0) {
-      toast.info("Updating your cart quantity. Please wait a moment.");
+      toast.info(i18n("Updating your cart quantity. Please wait a moment."));
       return;
     }
 
@@ -775,30 +786,27 @@ export default function CartPage() {
         <CartHeader itemCount={cartTotals.itemCount} />
 
         <div className="mt-2 flex items-center justify-between px-1 text-xs text-gray-500">
-          <span>Storage mode: {mode === "server" ? "Server + Local" : "Local only"}</span>
+          <span>{i18n("Storage mode: {mode}", { mode: mode === "server" ? i18n("Server + Local") : i18n("Local only") })}</span>
           {isLoading && (
             <span className="inline-flex items-center gap-1.5">
               <LoadingSpinner decorative size="xs" />
-              Syncing cart...
-            </span>
+              {i18n("Syncing cart...")}</span>
           )}
         </div>
 
         {error && (
           <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            {error}
+            {i18n(error)}
           </div>
         )}
 
         {pricingError && !error && (
           <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-            {pricingError} Shipping, tax, and promotions will be checked again at
-            checkout.
-          </div>
+            {pricingError} {i18n("Shipping, tax, and promotions will be checked again at checkout.")}</div>
         )}
 
         {isCartBootstrapping || (isLoading && isEmpty) ? (
-          <SectionLoader title="Loading cart" rows={6} className="mt-6" />
+          <SectionLoader title={i18n("Loading cart")} rows={6} className="mt-6" />
         ) : isEmpty ? (
           <>
             <EmptyCart />
@@ -848,11 +856,10 @@ export default function CartPage() {
                         <Check className="h-3.5 w-3.5" strokeWidth={3} />
                       )}
                     </span>
-                    <span>{allItemsSelected ? "Deselect all" : "Select all"}</span>
+                    <span>{allItemsSelected ? i18n("Deselect all") : i18n("Select all")}</span>
                   </button>
                   <span className="shrink-0 text-xs font-medium text-gray-500">
-                    {selectedItems.length} of {selectableItems.length} selected
-                  </span>
+                    {i18n("{selected, number} of {total, number} selected", { selected: selectedItems.length, total: selectableItems.length })}</span>
                 </div>
 
                 <AnimatePresence initial={false} mode="popLayout">
@@ -882,12 +889,12 @@ export default function CartPage() {
               </div>
 
               <div className="flex items-center justify-between rounded-2xl border border-dashed border-brand-border bg-brand-white/60 px-4 py-3 text-sm">
-                <p className="text-gray-600">Looking for something else?</p>
+                <p className="text-gray-600">{i18n("Looking for something else?")}</p>
                 <Link
                   href="/products"
                   className="font-semibold text-brand-red hover:underline"
                 >
-                  Continue shopping {"->"}
+                  {i18n("Continue shopping")}{"->"}
                 </Link>
               </div>
 
@@ -948,8 +955,8 @@ export default function CartPage() {
           <div className="mx-auto flex max-w-2xl items-center gap-2 min-[360px]:gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-medium text-gray-500">
-                {verifiedSummary ? "Total" : "Subtotal"} ({selectedTotals.itemCount}{" "}
-                {selectedTotals.itemCount === 1 ? "item" : "items"})
+                {verifiedSummary ? i18n("Total") : i18n("Subtotal")} ({selectedTotals.itemCount}{" "}
+                {selectedTotals.itemCount === 1 ? i18n("item") : i18n("items")})
               </p>
               <p className="text-base font-extrabold text-brand-red min-[360px]:text-lg">
                 <CurrencyAmount amountBDT={mobileAmountBDT} />
@@ -970,10 +977,9 @@ export default function CartPage() {
                 <ButtonLoader
                   label={
                     <>
-                      <span className="min-[360px]:hidden">Updating...</span>
+                      <span className="min-[360px]:hidden">{i18n("Updating...")}</span>
                       <span className="hidden min-[360px]:inline">
-                        Updating cart...
-                      </span>
+                        {i18n("Updating cart...")}</span>
                     </>
                   }
                 />
@@ -981,20 +987,18 @@ export default function CartPage() {
                 <ButtonLoader
                   label={
                     <>
-                      <span className="min-[360px]:hidden">Opening...</span>
+                      <span className="min-[360px]:hidden">{i18n("Opening...")}</span>
                       <span className="hidden min-[360px]:inline">
-                        Opening checkout...
-                      </span>
+                        {i18n("Opening checkout...")}</span>
                     </>
                   }
                 />
               ) : selectedItems.length === 0 ? (
-                "Select items"
+                i18n("Select items")
               ) : (
                 <>
                   <Lock className="h-4 w-4" />
-                  Checkout
-                </>
+                  {i18n("Checkout")}</>
               )}
             </button>
           </div>

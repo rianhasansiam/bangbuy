@@ -7,7 +7,7 @@ type PolicyListProps = {
 /** Bulleted list with violet→pink gradient markers matching the storefront style. */
 export default function PolicyList({ items }: PolicyListProps) {
   return (
-    <ul className="space-y-2 pl-1">
+    <ul className="space-y-2 ps-1">
       {items.map((item, i) => (
         <li key={i} className="flex gap-2.5">
           <span

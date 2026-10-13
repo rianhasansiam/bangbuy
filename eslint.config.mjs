@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Native translation dependencies and persistent runtime assets are external.
+    "tools/libretranslate/.venv/**",
+    "tools/libretranslate/.venvs/**",
+    "tools/libretranslate/state/**",
   ]),
 ]);
 

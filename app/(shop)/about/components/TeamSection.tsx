@@ -1,3 +1,5 @@
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 import Image from "next/image";
 import { Users } from "lucide-react";
 
@@ -16,6 +18,7 @@ const team = [
 ];
 
 export default function TeamSection() {
+  const i18n = useInterfaceTranslations("InterfaceAboutComponentsTeamSection");
   return (
     <section>
       <div className="mb-6 flex items-center justify-between">
@@ -23,15 +26,12 @@ export default function TeamSection() {
           <div className="inline-flex items-center gap-2 rounded-full bg-brand-light-bg px-3 py-1.5">
             <Users className="h-3.5 w-3.5 text-brand-red" />
             <span className="text-[11px] font-bold uppercase tracking-wide text-brand-red">
-              Meet The Team
-            </span>
+              {i18n("Meet The Team")}</span>
           </div>
           <h2 className="mt-3 text-2xl font-black tracking-tight text-foreground sm:text-3xl lg:text-4xl">
-            People behind BangBuy
-          </h2>
+            {i18n("People behind BangBuy")}</h2>
           <p className="mt-2 text-sm text-muted-foreground sm:text-base">
-            A passionate team obsessed with making local shopping feel effortless.
-          </p>
+            {i18n("A passionate team obsessed with making local shopping feel effortless.")}</p>
         </div>
       </div>
 
@@ -64,7 +64,7 @@ export default function TeamSection() {
               {member.name}
             </h3>
             <span className="mt-2 inline-flex rounded-full bg-brand-light-bg px-3 py-1 text-xs font-semibold text-brand-red">
-              {member.role}
+              {i18n(member.role)}
             </span>
           </div>
         ))}

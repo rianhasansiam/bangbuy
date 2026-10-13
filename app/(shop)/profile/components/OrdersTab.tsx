@@ -1,7 +1,10 @@
 "use client";
+import { useLocale } from "next-intl";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import Link from "@/lib/i18n/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertCircle,
@@ -66,9 +69,9 @@ type LoadState =
   | { status: "ready"; page: MyOrdersPage }
   | { status: "error"; message: string };
 
-function formatDate(value: string): string {
+function formatDate(value: string, locale: string): string {
   try {
-    return new Date(value).toLocaleString();
+    return new Date(value).toLocaleString(locale);
   } catch {
     return value;
   }
@@ -83,6 +86,7 @@ function formatDate(value: string): string {
  * full receipt page already implemented at `/orders/[id]`.
  */
 export default function OrdersTab() {
+  const i18n = useInterfaceTranslations("InterfaceProfileComponentsOrdersTab");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "ALL">("ALL");
   const [page, setPage] = useState(1);
   const [state, setState] = useState<LoadState>({ status: "loading" });
@@ -178,17 +182,14 @@ export default function OrdersTab() {
             </span>
             <div className="min-w-0">
               <h2 className="text-base font-bold text-gray-900 sm:text-lg">
-                My orders
-              </h2>
+                {i18n("My orders")}</h2>
               <p className="text-xs text-gray-500">
-                Review every order placed on this account.
-              </p>
+                {i18n("Review every order placed on this account.")}</p>
             </div>
           </div>
           {meta && (
             <p className="text-xs font-medium text-gray-500">
-              {meta.total} {meta.total === 1 ? "order" : "orders"} total
-            </p>
+              {meta.total} {meta.total === 1 ? i18n("order") : i18n("orders")} {i18n("total")}</p>
           )}
         </div>
 
@@ -207,7 +208,7 @@ export default function OrdersTab() {
                 }
                 aria-pressed={active}
               >
-                {filter.label}
+                {i18n(filter.label)}
               </button>
             );
           })}
@@ -222,12 +223,12 @@ export default function OrdersTab() {
       )}
 
       {state.status === "loading" && (
-        <TableSkeleton rows={5} columns={5} ariaLabel="Loading orders" />
+        <TableSkeleton rows={5} columns={5} ariaLabel={i18n("Loading orders")} />
       )}
 
       {state.status === "error" && (
         <div className="rounded-3xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700 shadow-sm">
-          {state.message}
+          {i18n(state.message)}
         </div>
       )}
 
@@ -237,20 +238,18 @@ export default function OrdersTab() {
             <Package className="h-6 w-6" />
           </div>
           <h3 className="mt-4 text-lg font-extrabold text-gray-900">
-            No orders here yet
-          </h3>
+            {i18n("No orders here yet")}</h3>
           <p className="mt-1 text-sm text-gray-600">
             {statusFilter === "ALL"
-              ? "Your purchases will appear here as soon as you place an order."
-              : `No ${STATUS_FILTERS.find((f) => f.id === statusFilter)?.label.toLowerCase()} orders right now.`}
+              ? i18n("Your purchases will appear here as soon as you place an order.")
+              : i18n("No {value0} orders right now.", { value0: i18n(STATUS_FILTERS.find((f) => f.id === statusFilter)?.label ?? statusFilter) })}
           </p>
           <Link
             href="/products"
             className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-brand-red px-5 py-2.5 text-sm font-bold text-brand-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl"
           >
             <ShoppingBag className="h-4 w-4" />
-            Start shopping
-          </Link>
+            {i18n("Start shopping")}</Link>
         </div>
       )}
 
@@ -299,6 +298,8 @@ function OrderRow({
   cancelling: boolean;
   onCancel: (orderId: string) => void;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("InterfaceProfileComponentsOrdersTab");
   const tone = ORDER_STATUS_TONE[order.status];
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
   const previewItems = order.items.slice(0, 3);
@@ -346,33 +347,33 @@ function OrderRow({
               <span
                 className={`inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold leading-tight ${tone.pill}`}
               >
-                {tone.label}
+                {i18n(tone.label)}
               </span>
               <span
                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${PAYMENT_STATUS_META[order.paymentStatus].pill}`}
               >
-                {PAYMENT_STATUS_META[order.paymentStatus].label}
+                {i18n(PAYMENT_STATUS_META[order.paymentStatus].label)}
               </span>
             </div>
             <p className="mt-1.5 truncate text-sm font-bold text-gray-900">
-              {order.items[0]?.productName ?? "Order items"}
+              {order.items[0]?.productName ?? i18n("Order items")}
               {order.items.length > 1 && (
                 <span className="text-gray-500">
                   {" "}
                   + {order.items.length - 1}{" "}
-                  {order.items.length - 1 === 1 ? "more" : "more"}
+                  {order.items.length - 1 === 1 ? i18n("more") : i18n("more")}
                 </span>
               )}
             </p>
             <p className="mt-0.5 text-xs text-gray-500">
-              {itemCount} {itemCount === 1 ? "item" : "items"} ·{" "}
-              {formatDate(order.createdAt)}
+              {itemCount} {itemCount === 1 ? i18n("item") : i18n("items")} ·{" "}
+              {formatDate(order.createdAt, locale)}
             </p>
           </div>
         </div>
 
         <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between lg:flex-col lg:items-end lg:justify-center">
-          <div className="text-left sm:text-right">
+          <div className="text-start sm:text-end">
             <FormattedCurrencyAmount
               amount={order.totalAmount}
               currency={order.currency}
@@ -381,7 +382,7 @@ function OrderRow({
             {order.paymentMethod === "CASH_ON_DELIVERY" &&
               order.currency !== order.paymentCurrency && (
                 <p className="mt-0.5 text-[11px] font-medium text-gray-500">
-                  COD due{" "}
+                  {i18n("COD due")}{" "}
                   <FormattedCurrencyAmount
                     amount={Math.max(
                       order.baseTotalAmount - order.baseAdvancePayment,
@@ -398,8 +399,7 @@ function OrderRow({
               className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-brand-border bg-brand-white px-3 text-xs font-bold text-brand-red transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-red hover:bg-brand-light-bg"
             >
               <Eye className="h-3.5 w-3.5" />
-              View
-            </Link>
+              {i18n("View")}</Link>
             {canCancel ? (
               <button
                 type="button"
@@ -408,7 +408,7 @@ function OrderRow({
                 className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 text-xs font-bold text-rose-700 transition-all duration-200 hover:-translate-y-0.5 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
               >
                 <XCircle className="h-3.5 w-3.5" />
-                {cancelling ? "Cancelling..." : "Cancel"}
+                {cancelling ? i18n("Cancelling...") : i18n("Cancel")}
               </button>
             ) : reviewableProductId ? (
               <Link
@@ -416,16 +416,14 @@ function OrderRow({
                 className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-brand-red px-3 text-xs font-bold text-brand-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-md"
               >
                 <Star className="h-3.5 w-3.5" />
-                Review
-              </Link>
+                {i18n("Review")}</Link>
             ) : (
               <Link
                 href="/products"
                 className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-brand-red px-3 text-xs font-bold text-brand-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-md"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
-                Reorder
-              </Link>
+                {i18n("Reorder")}</Link>
             )}
           </div>
         </div>
@@ -443,6 +441,7 @@ function Pagination({
   totalPages: number;
   onChange: (next: number) => void;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceProfileComponentsOrdersTab");
   return (
     <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-2xl border border-brand-border bg-brand-white p-2.5 text-xs font-semibold text-gray-600 shadow-sm sm:p-3">
       <button
@@ -451,11 +450,11 @@ function Pagination({
         disabled={page <= 1}
         className="inline-flex items-center gap-1 rounded-xl border border-brand-border bg-brand-white px-3 py-1.5 transition-all duration-200 hover:border-brand-red hover:text-brand-red disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-brand-border disabled:hover:text-gray-600"
       >
-        <ChevronLeft className="h-3.5 w-3.5" />
-        <span className="hidden min-[380px]:inline">Previous</span>
+        <ChevronLeft className="h-3.5 w-3.5 rtl:rotate-180" />
+        <span className="hidden min-[380px]:inline">{i18n("Previous")}</span>
       </button>
       <span className="text-center">
-        Page {page} of {totalPages}
+        {i18n("Page {current, number} of {total, number}", { current: page, total: totalPages })}
       </span>
       <button
         type="button"
@@ -463,8 +462,8 @@ function Pagination({
         disabled={page >= totalPages}
         className="inline-flex items-center gap-1 rounded-xl border border-brand-border bg-brand-white px-3 py-1.5 transition-all duration-200 hover:border-brand-red hover:text-brand-red disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-brand-border disabled:hover:text-gray-600"
       >
-        <span className="hidden min-[380px]:inline">Next</span>
-        <ChevronRight className="h-3.5 w-3.5" />
+        <span className="hidden min-[380px]:inline">{i18n("Next")}</span>
+        <ChevronRight className="h-3.5 w-3.5 rtl:rotate-180" />
       </button>
     </div>
   );

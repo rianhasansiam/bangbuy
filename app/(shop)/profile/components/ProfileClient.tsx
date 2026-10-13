@@ -1,9 +1,12 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "@/lib/i18n/navigation";
 import { useSession } from "@/lib/auth/use-app-session";
-import Link from "next/link";
+import Link from "@/lib/i18n/navigation";
 import { AlertCircle, LogIn } from "lucide-react";
 
 import {
@@ -45,6 +48,7 @@ function isProfileTabId(value: string | null | undefined): value is ProfileTabId
  * useful default (Overview).
  */
 export default function ProfileClient() {
+  const i18n = useInterfaceTranslations("InterfaceProfileComponentsProfileClient");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { status: authStatus, update: updateSession } = useSession();
@@ -146,9 +150,8 @@ export default function ProfileClient() {
               <AlertCircle className="h-7 w-7" />
             </div>
             <h1 className="mt-4 text-2xl font-extrabold text-gray-900">
-              Profile unavailable
-            </h1>
-            <p className="mt-2 text-sm text-gray-600">{message}</p>
+              {i18n("Profile unavailable")}</h1>
+            <p className="mt-2 text-sm text-gray-600">{i18n(message)}</p>
             <div className="mt-6 flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-3">
               {isUnauth ? (
                 <Link
@@ -156,16 +159,14 @@ export default function ProfileClient() {
                   className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-red px-5 py-2.5 text-sm font-bold text-brand-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl sm:w-auto"
                 >
                   <LogIn className="h-4 w-4" />
-                  Sign in
-                </Link>
+                  {i18n("Sign in")}</Link>
               ) : (
                 <button
                   type="button"
                   onClick={() => router.refresh()}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-red px-5 py-2.5 text-sm font-bold text-brand-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl sm:w-auto"
                 >
-                  Try again
-                </button>
+                  {i18n("Try again")}</button>
               )}
             </div>
           </div>

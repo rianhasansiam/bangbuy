@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import {
   FolderTree,
@@ -9,7 +11,7 @@ import {
   X,
 } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/lib/i18n/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { Input } from "@/components/ui/input";
@@ -66,6 +68,7 @@ export default function SearchBar({
   onNavigate,
   recommendations = [],
 }: SearchBarProps) {
+  const i18n = useInterfaceTranslations("InterfaceLayoutSearchBar");
   const router = useRouter();
   const rawId = useId();
   const listboxId = `catalog-search-${rawId.replace(/:/g, "")}`;
@@ -286,13 +289,13 @@ export default function SearchBar({
       <div className="relative w-full">
         <Search
           aria-hidden="true"
-          className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500"
+          className="pointer-events-none absolute start-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500"
         />
         <Input
           ref={inputRef}
           type="search"
           role="combobox"
-          aria-label="Search the catalog"
+          aria-label={i18n("Search the catalog")}
           aria-expanded={showDropdown}
           aria-controls={listboxId}
           aria-activedescendant={activeDescendant}
@@ -313,16 +316,16 @@ export default function SearchBar({
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder}
+          placeholder={i18n(placeholder)}
           className={cn(
-            "h-10 rounded-xl border-brand-border bg-white/60 pl-11 pr-9 text-sm text-gray-800 focus-visible:border-brand-red focus-visible:bg-white focus-visible:ring-brand-red/30",
+            "h-10 rounded-xl border-brand-border bg-white/60 ps-11 pe-9 text-sm text-gray-800 focus-visible:border-brand-red focus-visible:bg-white focus-visible:ring-brand-red/30",
             inputClassName,
           )}
         />
         {query && (
           <button
             type="button"
-            aria-label="Clear search"
+            aria-label={i18n("Clear search")}
             onClick={() => {
               setQuery("");
               setResults(EMPTY_RESULTS);
@@ -332,7 +335,7 @@ export default function SearchBar({
               setOpen(true);
               inputRef.current?.focus();
             }}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 transition-colors hover:bg-white/70"
+            className="absolute end-2 top-1/2 -translate-y-1/2 rounded-full p-1 transition-colors hover:bg-white/70"
           >
             <X className="h-4 w-4 text-gray-600" />
           </button>
@@ -347,7 +350,7 @@ export default function SearchBar({
               className="flex items-center justify-center gap-2 border-b border-gray-100 px-3 py-4 text-sm text-brand-red"
             >
               <LoadingSpinner decorative size="sm" />
-              <span>Finding products and categories...</span>
+              <span>{i18n("Finding products and categories...")}</span>
             </div>
           )}
 
@@ -356,7 +359,7 @@ export default function SearchBar({
               role="alert"
               className="flex items-center justify-between gap-3 border-b border-red-100 bg-red-50 px-3 py-3 text-sm text-red-700"
             >
-              <span className="min-w-0 break-words">{error}</span>
+              <span className="min-w-0 break-words">{i18n(error)}</span>
               <button
                 type="button"
                 onClick={() => {
@@ -368,15 +371,14 @@ export default function SearchBar({
                 className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
-                Retry
-              </button>
+                {i18n("Retry")}</button>
             </div>
           )}
 
           <ul
             id={listboxId}
             role="listbox"
-            aria-label="Catalog search suggestions"
+            aria-label={i18n("Catalog search suggestions")}
             className="min-w-0 py-1"
           >
             {!isLoading && !error && trimmed && !queryIsReady && (
@@ -385,9 +387,7 @@ export default function SearchBar({
                 className="flex items-center gap-2 border-b border-gray-100 px-3 py-3 text-xs text-gray-600"
               >
                 <PackageSearch className="h-4 w-4 shrink-0 text-brand-red" />
-                Type at least {MIN_CATALOG_SEARCH_LENGTH} characters for live
-                catalog matches.
-              </li>
+                {i18n("Type at least {count, number} characters for live catalog matches.", { count: MIN_CATALOG_SEARCH_LENGTH })}</li>
             )}
 
             {!isLoading &&
@@ -401,7 +401,7 @@ export default function SearchBar({
                 >
                   <PackageSearch className="h-4 w-4 shrink-0 text-brand-text-muted" />
                   <span className="min-w-0 break-words">
-                    No direct matches for <strong>“{trimmed}”</strong>.
+                    {i18n("No direct matches for")}<strong>“{trimmed}”</strong>.
                   </span>
                 </li>
               )}
@@ -409,9 +409,8 @@ export default function SearchBar({
             {visibleProducts.length > 0 && (
               <li role="presentation">
                   <div className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-wide text-gray-400">
-                    Products
-                  </div>
-                  <ul role="group" aria-label="Products">
+                    {i18n("Products")}</div>
+                  <ul role="group" aria-label={i18n("Products")}>
                     {visibleProducts.map((product) => {
                       const key = `product-${product.id}`;
                       const index = optionIndexByKey.get(key) ?? -1;
@@ -429,7 +428,7 @@ export default function SearchBar({
                           onMouseDown={(event) => event.preventDefault()}
                           onClick={() => selectOption(options[index])}
                           className={cn(
-                            "flex min-w-0 cursor-pointer items-center gap-2.5 px-2.5 py-2 text-left transition-colors sm:gap-3 sm:px-3",
+                            "flex min-w-0 cursor-pointer items-center gap-2.5 px-2.5 py-2 text-start transition-colors sm:gap-3 sm:px-3",
                             index === activeIndex
                               ? "bg-brand-red/10"
                               : "hover:bg-brand-red/5",
@@ -458,7 +457,7 @@ export default function SearchBar({
                                   .filter(Boolean)
                                   .join(" · ")}
                               </p>
-                              <div className="shrink-0 text-right">
+                              <div className="shrink-0 text-end">
                                 <p className="whitespace-nowrap text-xs font-bold text-brand-red sm:text-sm">
                                   <CurrencyAmount amountBDT={finalPrice} />
                                 </p>
@@ -480,9 +479,8 @@ export default function SearchBar({
             {visibleCategories.length > 0 && (
               <li role="presentation" className="border-t border-gray-100">
                   <div className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-wide text-gray-400">
-                    Categories
-                  </div>
-                  <ul role="group" aria-label="Categories">
+                    {i18n("Categories")}</div>
+                  <ul role="group" aria-label={i18n("Categories")}>
                     {visibleCategories.map((category) => {
                       const key = `category-${category.id}`;
                       const index = optionIndexByKey.get(key) ?? -1;
@@ -499,7 +497,7 @@ export default function SearchBar({
                           onMouseDown={(event) => event.preventDefault()}
                           onClick={() => selectOption(options[index])}
                           className={cn(
-                            "flex min-w-0 cursor-pointer items-center gap-2.5 px-2.5 py-2 text-left transition-colors sm:gap-3 sm:px-3",
+                            "flex min-w-0 cursor-pointer items-center gap-2.5 px-2.5 py-2 text-start transition-colors sm:gap-3 sm:px-3",
                             index === activeIndex
                               ? "bg-brand-red/10"
                               : "hover:bg-brand-red/5",
@@ -517,8 +515,7 @@ export default function SearchBar({
                             </span>
                           </span>
                           <span className="hidden shrink-0 whitespace-nowrap text-[11px] text-gray-400 min-[360px]:inline">
-                            {category.totalProductCount} items
-                          </span>
+                            {category.totalProductCount} {i18n("items")}</span>
                         </li>
                       );
                     })}
@@ -530,9 +527,8 @@ export default function SearchBar({
               <li role="presentation" className="border-t border-gray-100">
                 <div className="flex items-center gap-1.5 px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-wide text-gray-400">
                   <Sparkles className="h-3 w-3" />
-                  Recommended searches
-                </div>
-                <ul role="group" aria-label="Recommended searches">
+                  {i18n("Recommended searches")}</div>
+                <ul role="group" aria-label={i18n("Recommended searches")}>
                   {recommendedSearches.map((phrase) => {
                     const key = `phrase-${phrase.toLocaleLowerCase()}`;
                     const index = optionIndexByKey.get(key) ?? -1;
@@ -579,7 +575,7 @@ export default function SearchBar({
                   >
                     <Search className="h-4 w-4 shrink-0" />
                     <span className="min-w-0 truncate">
-                      Search all for “{trimmed}”
+                      {i18n("Search all for “")}{trimmed}”
                     </span>
                   </li>
                 );

@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import {
   AlertCircle,
@@ -61,6 +63,7 @@ export default function OrderSummaryCard({
   paymentMethod,
   airwallexPaymentQuote,
 }: OrderSummaryCardProps) {
+  const i18n = useInterfaceTranslations("InterfaceCheckoutComponentsOrderSummaryCard");
   const totalSaved = summary?.totalSaved ?? 0;
 
   const buttonLabel = isPlacing
@@ -80,10 +83,9 @@ export default function OrderSummaryCard({
       aria-busy={isLoading || isPlacing}
     >
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-gray-900">Order summary</h2>
+        <h2 className="text-lg font-bold text-gray-900">{i18n("Order summary")}</h2>
         <span className="rounded-full bg-brand-light-bg px-2.5 py-0.5 text-xs font-semibold text-brand-black">
-          Server-priced
-        </span>
+          {i18n("Server-priced")}</span>
       </div>
 
       {/* Promo code */}
@@ -101,7 +103,7 @@ export default function OrderSummaryCard({
                 >
                   {appliedPromo}
                 </span>
-                <span className="shrink-0">applied</span>
+                <span className="shrink-0">{i18n("applied")}</span>
               </p>
               {summary && (
                 <p className="truncate text-xs text-emerald-700">
@@ -109,14 +111,13 @@ export default function OrderSummaryCard({
                     amount={-summary.discount}
                     currency={summary.currency}
                   />{" "}
-                  off
-                </p>
+                  {i18n("off")}</p>
               )}
             </div>
             <button
               type="button"
               onClick={onRemovePromo}
-              aria-label="Remove promo"
+              aria-label={i18n("Remove promo")}
               disabled={isPlacing}
               className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-emerald-700 transition-colors hover:bg-emerald-100"
             >
@@ -134,15 +135,15 @@ export default function OrderSummaryCard({
             className="flex items-stretch gap-2"
           >
             <div className="relative min-w-0 flex-1">
-              <Tag className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-text-muted" />
+              <Tag className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-text-muted" />
               <Input
                 type="text"
                 value={promoCode}
                 onChange={(e) => onPromoCodeChange(e.target.value)}
                 disabled={isPlacing}
                 maxLength={40}
-                placeholder="Promo code"
-                className="h-11 rounded-xl border-brand-border bg-white pl-10 pr-3 text-sm font-medium uppercase tracking-wide focus-visible:border-brand-red focus-visible:ring-brand-red/30"
+                placeholder={i18n("Promo code")}
+                className="h-11 rounded-xl border-brand-border bg-white ps-10 pe-3 text-sm font-medium uppercase tracking-wide focus-visible:border-brand-red focus-visible:ring-brand-red/30"
               />
             </div>
             <button
@@ -151,7 +152,7 @@ export default function OrderSummaryCard({
               aria-busy={isApplyingPromo}
               className="rounded-xl bg-brand-red px-4 text-sm font-semibold text-brand-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-sm"
             >
-              {isApplyingPromo ? <ButtonLoader label="Applying..." /> : "Apply"}
+              {isApplyingPromo ? <ButtonLoader label={i18n("Applying...")} /> : i18n("Apply")}
             </button>
           </form>
           {promoFeedback && (
@@ -163,7 +164,7 @@ export default function OrderSummaryCard({
               }`}
             >
               <AlertCircle className="h-3.5 w-3.5" />
-              {promoFeedback.message}
+              {i18n(promoFeedback.message)}
             </p>
           )}
         </div>
@@ -172,9 +173,9 @@ export default function OrderSummaryCard({
       {/* Totals */}
       <div className="space-y-2.5 border-t border-dashed border-brand-border pt-4 text-sm">
         {!deliveryAreaSelected ? (
-          <p className="text-gray-600">Select a delivery area to calculate your total.</p>
+          <p className="text-gray-600">{i18n("Select a delivery area to calculate your total.")}</p>
         ) : isLoading || !summary ? (
-          <div className="space-y-2.5" aria-label="Calculating totals">
+          <div className="space-y-2.5" aria-label={i18n("Calculating totals")}>
             {Array.from({ length: 4 }).map((_, index) => (
               <div key={index} className="flex items-center justify-between gap-3">
                 <Skeleton className="h-4 w-24" />
@@ -185,13 +186,13 @@ export default function OrderSummaryCard({
         ) : (
           <>
             <SummaryRow
-              label="Subtotal"
+              label={i18n("Subtotal")}
               value={summary.subtotal}
               currency={summary.currency}
             />
             {summary.discount > 0 && appliedPromo && (
               <SummaryRow
-                label={`Promo (${appliedPromo})`}
+                label={i18n("Promo ({value0})", { value0: appliedPromo })}
                 value={-summary.discount}
                 tone="success"
                 currency={summary.currency}
@@ -200,15 +201,15 @@ export default function OrderSummaryCard({
             <SummaryRow
               label={
                 summary.isOutsideDhaka
-                  ? "Delivery outside Dhaka"
-                  : "Delivery inside Dhaka"
+                  ? i18n("Delivery outside Dhaka")
+                  : i18n("Delivery inside Dhaka")
               }
               value={summary.shipping}
               freeLabel={summary.shipping === 0 ? "FREE" : undefined}
               currency={summary.currency}
             />
             <SummaryRow
-              label={`Tax (${Math.round(summary.taxRate * 100)}%)`}
+              label={i18n("Tax ({value0}%)", { value0: Math.round(summary.taxRate * 100) })}
               value={summary.tax}
               currency={summary.currency}
             />
@@ -221,8 +222,8 @@ export default function OrderSummaryCard({
           <div className="flex items-baseline justify-between">
             <span className="text-sm font-semibold text-gray-700">
               {summary.currency === summary.baseCurrency
-                ? "Total"
-                : "Display total"}
+                ? i18n("Total")
+                : i18n("Display total")}
             </span>
             <FormattedCurrencyAmount
               amount={summary.total}
@@ -236,8 +237,7 @@ export default function OrderSummaryCard({
               airwallexPaymentQuote.paymentCurrency && (
               <div className="mt-3 flex items-baseline justify-between gap-3 border-t border-brand-border pt-3">
                 <span className="text-xs font-semibold text-gray-600">
-                  Payment processed as
-                </span>
+                  {i18n("Payment processed as")}</span>
                 <FormattedCurrencyAmount
                   amount={airwallexPaymentQuote.paymentAmount}
                   currency={airwallexPaymentQuote.paymentCurrency}
@@ -248,7 +248,7 @@ export default function OrderSummaryCard({
           {totalSaved > 0 && (
             <p className="mt-1 inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
               <Sparkles className="h-3 w-3" />
-              You saved{" "}
+              {i18n("You saved")}{" "}
               <FormattedCurrencyAmount
                 amount={totalSaved}
                 currency={summary.currency}
@@ -269,7 +269,7 @@ export default function OrderSummaryCard({
       {submitError && (
         <p className="flex items-start gap-1.5 rounded-xl border border-red-200 bg-red-50 p-2.5 text-xs font-medium text-red-700">
           <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          {submitError}
+          {i18n(submitError)}
         </p>
       )}
 
@@ -286,22 +286,20 @@ export default function OrderSummaryCard({
           <>
             <Lock className="h-4 w-4" />
             {buttonLabel}
-            <ChevronRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+            <ChevronRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 rtl:rotate-180" />
           </>
         )}
       </button>
       {paymentMethod === "SSLCOMMERZ" && (
         <p className="-mt-1 text-center text-[11px] font-medium text-gray-600">
-          You&apos;ll continue to SSLCommerz to complete your secure payment.
-        </p>
+          {i18n("You'll continue to SSLCommerz to complete your secure payment.")}</p>
       )}
 
       {summary &&
         paymentMethod === "CASH_ON_DELIVERY" &&
         summary.currency !== summary.baseCurrency && (
           <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-medium leading-5 text-amber-800">
-            The converted total above is your saved display equivalent. Cash on
-            delivery is collected in BDT: {" "}
+            {i18n("The converted total above is your saved display equivalent. Cash on delivery is collected in BDT:")}{" "}
             <FormattedCurrencyAmount
               amount={summary.baseTotal}
               currency={summary.baseCurrency}
@@ -312,15 +310,12 @@ export default function OrderSummaryCard({
         )}
       {paymentMethod === "AIRWALLEX" && (
         <p className="-mt-1 text-center text-[11px] font-medium text-gray-600">
-          You&apos;ll continue to Airwallex&apos;s hosted checkout. BangBuy never
-          collects your card details.
-        </p>
+          {i18n("You'll continue to Airwallex's hosted checkout. BangBuy never collects your card details.")}</p>
       )}
 
       <div className="flex items-center justify-center gap-1.5 text-[11px] text-gray-500">
         <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-        Pricing verified by server • Buyer protection included
-      </div>
+        {i18n("Pricing verified by server • Buyer protection included")}</div>
     </aside>
   );
 }
@@ -338,10 +333,11 @@ function SummaryRow({
   freeLabel?: string;
   currency: CurrencyCode;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceCheckoutComponentsOrderSummaryCard");
   return (
     <div className="flex items-start justify-between gap-2 sm:items-center">
       <span className="min-w-0 flex-1 text-gray-600 [overflow-wrap:anywhere]">
-        {label}
+        {i18n(label)}
       </span>
       {freeLabel ? (
         <span className="shrink-0 font-bold uppercase tracking-wider text-emerald-600">
@@ -351,7 +347,7 @@ function SummaryRow({
         <FormattedCurrencyAmount
           amount={value}
           currency={currency}
-          className={`shrink-0 text-right font-semibold ${
+          className={`shrink-0 text-end font-semibold ${
             tone === "success" ? "text-emerald-600" : "text-gray-900"
           }`}
         />

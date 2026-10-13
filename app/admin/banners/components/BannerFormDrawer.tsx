@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import type {
   CarouselFormState,
@@ -53,6 +55,7 @@ export default function BannerFormDrawer({
   onClose: () => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminBannersComponentsBannerFormDrawer");
   return (
     <>
       <div
@@ -66,14 +69,14 @@ export default function BannerFormDrawer({
 
       <aside
         className={cn(
-          "fixed inset-y-0 right-0 z-70 w-full max-w-md border-l border-brand-border bg-brand-white shadow-2xl transition-transform duration-300",
+          "fixed inset-y-0 right-0 z-70 w-full max-w-md border-s border-brand-border bg-brand-white shadow-2xl transition-transform duration-300",
           editing ? "translate-x-0" : "translate-x-full",
         )}
       >
         <div className="flex h-full flex-col">
           <div className="border-b border-brand-border bg-brand-black px-5 py-4 text-white">
             <h2 className="text-lg font-bold">
-              {editing?.mode === "create" ? "Create banner" : "Edit banner"}
+              {editing?.mode === "create" ? i18n("Create banner") : i18n("Edit banner")}
             </h2>
             <p className="mt-0.5 text-xs text-white/70">
               {editing
@@ -112,8 +115,7 @@ export default function BannerFormDrawer({
                   onClick={onClose}
                   className="h-10 rounded-xl border border-brand-border px-4 text-sm font-semibold text-foreground transition hover:bg-brand-light-bg"
                 >
-                  Cancel
-                </button>
+                  {i18n("Cancel")}</button>
                 <button
                   type="submit"
                   disabled={isSubmitting || !editing}
@@ -122,12 +124,12 @@ export default function BannerFormDrawer({
                 >
                   {isSubmitting ? (
                     <ButtonLoader
-                      label={editing?.mode === "create" ? "Creating..." : "Saving..."}
+                      label={editing?.mode === "create" ? i18n("Creating...") : i18n("Saving...")}
                     />
                   ) : editing?.mode === "create" ? (
-                    "Create"
+                    i18n("Create")
                   ) : (
-                    "Save changes"
+                    i18n("Save changes")
                   )}
                 </button>
               </div>

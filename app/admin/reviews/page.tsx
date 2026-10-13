@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -32,6 +34,7 @@ type SourceFilter = "ALL" | ReviewSource;
 type RatingFilter = "ALL" | 1 | 2 | 3 | 4 | 5;
 
 export default function AdminReviewsPage() {
+  const i18n = useInterfaceTranslations("AdminAdminReviewsPage");
   const dispatch = useDispatch<AppDispatch>();
   const reviews = useSelector((state: RootState) => state.adminReviews.items);
   const isLoading = useSelector(
@@ -108,8 +111,8 @@ export default function AdminReviewsPage() {
 
   const handleDelete = async (id: string) => {
     const confirmed = await confirmMajorAction({
-      title: "Delete this review?",
-      description: "This action cannot be undone.",
+      title: i18n("Delete this review?"),
+      description: i18n("This action cannot be undone."),
       confirmLabel: "Delete",
       variant: "danger",
     });
@@ -191,7 +194,7 @@ export default function AdminReviewsPage() {
 
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {error}
+          {i18n(error)}
         </div>
       )}
 

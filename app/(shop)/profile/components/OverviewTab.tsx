@@ -1,6 +1,9 @@
 "use client";
+import { useLocale } from "next-intl";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 
-import Link from "next/link";
+
+import Link from "@/lib/i18n/navigation";
 import {
   ArrowRight,
   ClipboardList,
@@ -23,10 +26,10 @@ type OverviewTabProps = {
   onJumpToTab: (tabId: ProfileTabId) => void;
 };
 
-function formatDate(value: string | null): string {
+function formatDate(value: string | null, locale: string): string {
   if (!value) return "—";
   try {
-    return new Date(value).toLocaleString();
+    return new Date(value).toLocaleString(locale);
   } catch {
     return value;
   }
@@ -37,6 +40,8 @@ export default function OverviewTab({
   stats,
   onJumpToTab,
 }: OverviewTabProps) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("InterfaceProfileComponentsOverviewTab");
   // Headline milestones for the overview widget (fits the 5-col grid).
   // The full per-status breakdown lives on the Orders tab.
   const ordered = (
@@ -60,19 +65,19 @@ export default function OverviewTab({
       <section className="grid grid-cols-1 gap-2 @xs:grid-cols-2 sm:gap-3 @3xl:grid-cols-4">
         <MetricCard
           icon={<Wallet className="h-4 w-4" />}
-          label="Lifetime spend"
+          label={i18n("Lifetime spend")}
           value={<CurrencyAmount amountBDT={stats.totalSpend} />}
           tone="violet"
         />
         <MetricCard
           icon={<Package className="h-4 w-4" />}
-          label="Total orders"
+          label={i18n("Total orders")}
           value={stats.totalOrders.toString()}
           tone="indigo"
         />
         <MetricCard
           icon={<ShoppingBag className="h-4 w-4" />}
-          label="In your cart"
+          label={i18n("In your cart")}
           value={stats.cartCount.toString()}
           tone="fuchsia"
           actionLabel="Open cart"
@@ -80,7 +85,7 @@ export default function OverviewTab({
         />
         <MetricCard
           icon={<Heart className="h-4 w-4" />}
-          label="Wishlist"
+          label={i18n("Wishlist")}
           value={stats.wishlistCount.toString()}
           tone="rose"
           actionLabel="Open wishlist"
@@ -96,26 +101,23 @@ export default function OverviewTab({
             </span>
             <div className="min-w-0 flex-1">
               <h3 className="text-sm font-extrabold text-amber-900">
-                Finish setting up your profile
-              </h3>
+                {i18n("Finish setting up your profile")}</h3>
               <p className="mt-0.5 text-xs text-amber-800">
-                Add your{" "}
+                {i18n("Add your")}{" "}
                 {[
                   !user.phone ? "phone number" : null,
                   !user.city ? "city" : null,
                 ]
                   .filter(Boolean)
                   .join(" and ")}{" "}
-                so checkout is one click away.
-              </p>
+                {i18n("so checkout is one click away.")}</p>
             </div>
             <button
               type="button"
               onClick={() => onJumpToTab("settings")}
               className="inline-flex w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-amber-900 px-3 py-2 text-xs font-bold text-amber-50 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-amber-950 sm:w-auto sm:py-1.5"
             >
-              Edit profile
-              <ArrowRight className="h-3.5 w-3.5" />
+              {i18n("Edit profile")}<ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
             </button>
           </div>
         </section>
@@ -129,16 +131,14 @@ export default function OverviewTab({
               <ClipboardList className="h-4 w-4" />
             </span>
             <h2 className="text-base font-bold text-gray-900 sm:text-lg">
-              Order activity
-            </h2>
+              {i18n("Order activity")}</h2>
           </div>
           <button
             type="button"
             onClick={() => onJumpToTab("orders")}
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-red hover:text-brand-red-hover"
           >
-            View all
-            <ArrowRight className="h-3.5 w-3.5" />
+            {i18n("View all")}<ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
           </button>
         </header>
 
@@ -153,13 +153,13 @@ export default function OverviewTab({
                 <span
                   className={`inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold leading-tight ${tone.pill}`}
                 >
-                  {tone.label}
+                  {i18n(tone.label)}
                 </span>
                 <p className="mt-2 text-2xl font-extrabold text-gray-900">
                   {count}
                 </p>
                 <p className="text-[11px] text-gray-500">
-                  {count === 1 ? "order" : "orders"}
+                  {count === 1 ? i18n("order") : i18n("orders")}
                 </p>
               </div>
             );
@@ -167,9 +167,9 @@ export default function OverviewTab({
         </div>
 
         <p className="mt-4 text-xs text-gray-500">
-          Last order placed:{" "}
+          {i18n("Last order placed:")}{" "}
           <span className="font-semibold text-gray-700">
-            {formatDate(stats.lastOrderAt)}
+            {formatDate(stats.lastOrderAt, locale)}
           </span>
         </p>
       </section>
@@ -181,25 +181,24 @@ export default function OverviewTab({
             <Gift className="h-4 w-4" />
           </span>
           <h2 className="text-base font-bold text-gray-900 sm:text-lg">
-            Quick actions
-          </h2>
+            {i18n("Quick actions")}</h2>
         </header>
         <div className="grid gap-3 @md:grid-cols-2 @2xl:grid-cols-3">
           <QuickAction
-            label="Browse products"
-            description="Discover what's new in store."
+            label={i18n("Browse products")}
+            description={i18n("Discover what's new in store.")}
             href="/products"
             icon={<ShoppingBag className="h-4 w-4" />}
           />
           <QuickAction
-            label="Update profile"
-            description="Keep contact details current."
+            label={i18n("Update profile")}
+            description={i18n("Keep contact details current.")}
             onClick={() => onJumpToTab("settings")}
             icon={<Sparkles className="h-4 w-4" />}
           />
           <QuickAction
-            label="Change password"
-            description="Rotate credentials regularly."
+            label={i18n("Change password")}
+            description={i18n("Rotate credentials regularly.")}
             onClick={() => onJumpToTab("security")}
             icon={<Heart className="h-4 w-4" />}
           />
@@ -250,6 +249,7 @@ function MetricCard({
   actionLabel?: string;
   onAction?: () => void;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceProfileComponentsOverviewTab");
   const styles = TONE_STYLES[tone];
   return (
     <div
@@ -268,12 +268,12 @@ function MetricCard({
             className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-brand-red hover:text-brand-red-hover"
           >
             {actionLabel}
-            <ArrowRight className="h-3 w-3" />
+            <ArrowRight className="h-3 w-3 rtl:rotate-180" />
           </button>
         )}
       </div>
       <p className="mt-3 text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-        {label}
+        {i18n(label)}
       </p>
       <p className="mt-0.5 wrap-break-word text-xl font-extrabold text-gray-900 sm:text-2xl">
         {value}
@@ -295,8 +295,9 @@ function QuickAction({
   onClick?: () => void;
   icon: React.ReactNode;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceProfileComponentsOverviewTab");
   const className =
-    "group flex items-center justify-between gap-3 rounded-2xl border border-brand-border bg-brand-white p-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-red hover:shadow-md";
+    "group flex items-center justify-between gap-3 rounded-2xl border border-brand-border bg-brand-white p-3 text-start transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-red hover:shadow-md";
 
   const inner = (
     <>
@@ -306,14 +307,14 @@ function QuickAction({
         </span>
         <span className="min-w-0">
           <span className="block truncate text-sm font-bold text-gray-900">
-            {label}
+            {i18n(label)}
           </span>
           <span className="block truncate text-[11px] text-gray-500">
-            {description}
+            {i18n(description)}
           </span>
         </span>
       </div>
-      <ArrowRight className="h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-brand-red" />
+      <ArrowRight className="h-4 w-4 shrink-0 text-gray-400 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-brand-red rtl:rotate-180" />
     </>
   );
 

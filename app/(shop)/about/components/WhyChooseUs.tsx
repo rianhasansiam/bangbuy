@@ -1,3 +1,5 @@
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 import {
  
   Truck,
@@ -31,25 +33,19 @@ const features = [
 ];
 
 export default function WhyChooseUs() {
+  const i18n = useInterfaceTranslations("InterfaceAboutComponentsWhyChooseUs");
   return (
     <section>
       <div className="mb-6 text-center">
         <div className="inline-flex items-center gap-2 rounded-full bg-brand-light-bg px-3 py-1.5">
           <Sparkles className="h-3.5 w-3.5 text-brand-red" />
           <span className="text-[11px] font-bold uppercase tracking-wide text-brand-red">
-            Why Choose Us
-          </span>
+            {i18n("Why Choose Us")}</span>
         </div>
         <h2 className="mt-3 text-2xl font-black tracking-tight text-foreground sm:text-3xl lg:text-4xl">
-          Built for a{" "}
-          <span className="text-brand-red">
-            better shopping
-          </span>{" "}
-          experience.
-        </h2>
+          {i18n.rich("Built for a <highlight>better shopping</highlight> experience.", { highlight: (chunks) => <span className="text-brand-red">{chunks}</span> })}</h2>
         <p className="mx-auto mt-3 max-w-2xl text-sm text-muted-foreground sm:text-base">
-          We obsess over the details so you can shop with confidence, every single time.
-        </p>
+          {i18n("We obsess over the details so you can shop with confidence, every single time.")}</p>
       </div>
 
       <div className="h-0.5 w-full bg-brand-border rounded-full mb-6" />
@@ -68,14 +64,14 @@ export default function WhyChooseUs() {
                 <Icon className="h-6 w-6" />
               </div>
               <h3 className="text-base font-bold text-foreground sm:text-lg">
-                {f.title}
+                {i18n(f.title)}
               </h3>
               <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                {f.desc}
+                {i18n(f.desc)}
               </p>
 
               {/* Hover accent */}
-              <div className="absolute -right-8 -bottom-8 h-24 w-24 rounded-full bg-brand-red/10 opacity-0 transition-all duration-500 group-hover:scale-150 group-hover:opacity-100" />
+              <div className="absolute -end-8 -bottom-8 h-24 w-24 rounded-full bg-brand-red/10 opacity-0 transition-all duration-500 group-hover:scale-150 group-hover:opacity-100" />
             </div>
           );
         })}

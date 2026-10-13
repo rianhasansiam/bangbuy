@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Eye, FolderRoot, FolderTree, Package } from "lucide-react";
 
@@ -22,6 +26,8 @@ export default function CategorySummaryCards({
   active: number;
   productsMapped: number;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminCategoriesComponentsCategorySummaryCards");
   const values = { roots, children: subcategories, active, products: productsMapped };
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -32,10 +38,10 @@ export default function CategorySummaryCards({
           <div key={key} className="rounded-2xl border border-brand-border bg-brand-white p-4 shadow-sm">
             <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
               <Icon className="h-4 w-4" />
-              {config.label}
+              {i18n(config.label)}
             </p>
             <p className={cn("mt-2 inline-flex rounded-xl px-3 py-1.5 text-sm font-bold", config.style)}>
-              {values[key].toLocaleString()}
+              {values[key].toLocaleString(locale)}
             </p>
           </div>
         );

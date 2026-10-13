@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { ShieldCheck, UserRound, Users } from "lucide-react";
 
@@ -55,30 +59,32 @@ export default function UserSummaryCards({
   withOrders: number;
   lifetimeRevenue: number;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminUsersComponentsUserSummaryCards");
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <SummaryCard
         icon={<Users className="h-4 w-4" />}
-        label="Total customers"
-        value={totalCustomers.toLocaleString()}
+        label={i18n("Total customers")}
+        value={totalCustomers.toLocaleString(locale)}
         accent="violet"
       />
       <SummaryCard
         icon={<UserRound className="h-4 w-4" />}
-        label="Guest customers"
-        value={guests.toLocaleString()}
+        label={i18n("Guest customers")}
+        value={guests.toLocaleString(locale)}
         accent="violet"
       />
       <SummaryCard
         icon={<ShieldCheck className="h-4 w-4" />}
-        label="Admins"
-        value={admins.toLocaleString()}
+        label={i18n("Admins")}
+        value={admins.toLocaleString(locale)}
         accent="emerald"
       />
       <SummaryCard
         icon={<UserRound className="h-4 w-4" />}
-        label="With orders"
-        value={`${withOrders} · ${formatCurrency(lifetimeRevenue)}`}
+        label={i18n("With orders")}
+        value={`${withOrders} · ${formatCurrency(lifetimeRevenue, locale)}`}
         accent="amber"
       />
     </div>

@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Plus, Copy, Trash2 } from "lucide-react";
 
@@ -27,6 +29,7 @@ export default function SpecificationTableBlockForm({
   onChange,
   disabled,
 }: Props) {
+  const i18n = useInterfaceTranslations("InterfaceProductDescriptionBlocksSpecificationTableBlockForm");
   const patch = (fields: Partial<SpecificationTableBlock>) =>
     onChange({ ...block, ...fields });
 
@@ -73,13 +76,12 @@ export default function SpecificationTableBlockForm({
       {/* Heading */}
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Section heading (optional)
-        </label>
+          {i18n("Section heading (optional)")}</label>
         <input
           type="text"
           value={block.heading ?? ""}
           onChange={(e) => patch({ heading: e.target.value || undefined })}
-          placeholder="e.g. Technical Specifications"
+          placeholder={i18n("e.g. Technical Specifications")}
           maxLength={200}
           disabled={disabled}
           className={cn(inputClass)}
@@ -89,16 +91,16 @@ export default function SpecificationTableBlockForm({
       {/* Rows */}
       <div>
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Specification rows ({block.rows.length}/50)
+          {i18n("Specification rows (")}{block.rows.length}/50)
         </p>
 
         {block.rows.length > 0 && (
           <div className="overflow-hidden rounded-xl border border-brand-border">
             {/* Header */}
             <div className="grid grid-cols-[1fr_1fr_auto] gap-2 border-b border-brand-border bg-brand-light-bg px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-gray-500">
-              <span>Label</span>
-              <span>Value</span>
-              <span className="w-24 text-right">Actions</span>
+              <span>{i18n("Label")}</span>
+              <span>{i18n("Value")}</span>
+              <span className="w-24 text-end">{i18n("Actions")}</span>
             </div>
 
             {block.rows.map((row, index) => (
@@ -114,7 +116,7 @@ export default function SpecificationTableBlockForm({
                   type="text"
                   value={row.label}
                   onChange={(e) => patchRow(row.id, { label: e.target.value })}
-                  placeholder="Label"
+                  placeholder={i18n("Label")}
                   maxLength={150}
                   disabled={disabled}
                   className="h-8 w-full rounded-lg border border-transparent bg-transparent px-2 text-sm outline-none transition hover:border-brand-border focus:border-brand-red"
@@ -123,7 +125,7 @@ export default function SpecificationTableBlockForm({
                   type="text"
                   value={row.value}
                   onChange={(e) => patchRow(row.id, { value: e.target.value })}
-                  placeholder="Value"
+                  placeholder={i18n("Value")}
                   maxLength={500}
                   disabled={disabled}
                   className="h-8 w-full rounded-lg border border-transparent bg-transparent px-2 text-sm outline-none transition hover:border-brand-border focus:border-brand-red"
@@ -133,7 +135,7 @@ export default function SpecificationTableBlockForm({
                     type="button"
                     onClick={() => moveRow(row.id, -1)}
                     disabled={disabled || index === 0}
-                    title="Move up"
+                    title={i18n("Move up")}
                     className="rounded p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30"
                   >
                     ▲
@@ -142,7 +144,7 @@ export default function SpecificationTableBlockForm({
                     type="button"
                     onClick={() => moveRow(row.id, 1)}
                     disabled={disabled || index === block.rows.length - 1}
-                    title="Move down"
+                    title={i18n("Move down")}
                     className="rounded p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30"
                   >
                     ▼
@@ -151,7 +153,7 @@ export default function SpecificationTableBlockForm({
                     type="button"
                     onClick={() => duplicateRow(row.id)}
                     disabled={disabled || block.rows.length >= 50}
-                    title="Duplicate"
+                    title={i18n("Duplicate")}
                     className="rounded p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30"
                   >
                     <Copy className="h-3 w-3" />
@@ -160,7 +162,7 @@ export default function SpecificationTableBlockForm({
                     type="button"
                     onClick={() => deleteRow(row.id)}
                     disabled={disabled}
-                    title="Delete"
+                    title={i18n("Delete")}
                     className="rounded p-1 text-red-400 hover:text-red-600 disabled:opacity-30"
                   >
                     <Trash2 className="h-3 w-3" />
@@ -178,8 +180,7 @@ export default function SpecificationTableBlockForm({
           className="mt-2 inline-flex h-9 items-center gap-2 rounded-xl border border-dashed border-brand-border px-3 text-sm font-semibold text-gray-600 transition hover:border-brand-red hover:text-brand-red disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Plus className="h-4 w-4" />
-          Add row
-        </button>
+          {i18n("Add row")}</button>
       </div>
 
       <BlockCommonControls

@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 /* eslint-disable @next/next/no-img-element */
 
@@ -39,6 +41,7 @@ export default function ImageUploader({
   disabled,
   className,
 }: ImageUploaderProps) {
+  const i18n = useInterfaceTranslations("InterfaceUiImageUploader");
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -87,7 +90,7 @@ export default function ImageUploader({
     <div className={cn("space-y-1.5", className)}>
       {label && (
         <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-          {label}
+          {i18n(label)}
         </span>
       )}
 
@@ -110,13 +113,12 @@ export default function ImageUploader({
           <>
             <img
               src={value}
-              alt="Upload preview"
+              alt={i18n("Upload preview")}
               className="h-36 w-full rounded-lg object-cover"
             />
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-gray-900/0 transition group-hover:bg-gray-900/40">
               <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-brand-red opacity-0 transition group-hover:opacity-100">
-                Click or drop to replace
-              </span>
+                {i18n("Click or drop to replace")}</span>
             </div>
           </>
         ) : (
@@ -129,12 +131,11 @@ export default function ImageUploader({
               )}
             </span>
             <span className="text-sm font-semibold text-brand-red">
-              {isUploading ? "Uploading..." : "Click to upload"}
+              {isUploading ? i18n("Uploading...") : i18n("Click to upload")}
             </span>
             <span className="flex items-center gap-1 text-[11px] text-gray-500">
               <UploadCloud className="h-3 w-3" />
-              or drag &amp; drop an image (max 5MB)
-            </span>
+              {i18n("or drag & drop an image (max 5MB)")}</span>
           </>
         )}
 
@@ -157,18 +158,16 @@ export default function ImageUploader({
           className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600 transition hover:text-rose-700 disabled:opacity-50"
         >
           <Trash2 className="h-3.5 w-3.5" />
-          Remove image
-        </button>
+          {i18n("Remove image")}</button>
       )}
 
       {isUploading && (
         <p className="flex items-center gap-1 text-xs text-brand-red">
           <LoadingSpinner decorative size="xs" />
-          Uploading image...
-        </p>
+          {i18n("Uploading image...")}</p>
       )}
 
-      {error && <p className="text-xs font-semibold text-rose-600">{error}</p>}
+      {error && <p className="text-xs font-semibold text-rose-600">{i18n(error)}</p>}
     </div>
   );
 }

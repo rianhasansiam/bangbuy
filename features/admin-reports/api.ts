@@ -320,38 +320,38 @@ export async function fetchReport(args: FetchArgs): Promise<ReportPayload> {
 /*  Formatting helpers                                                        */
 /* -------------------------------------------------------------------------- */
 
-export function formatCurrency(value: number, currency = "BDT"): string {
+export function formatCurrency(value: number, currency = "BDT", locale = "en"): string {
   const safe = Number.isFinite(value) ? value : 0;
   // Round to 2dp first to dodge floating-point noise (e.g. 2579.1000001),
   // then only show decimals when they carry information.
   const rounded = Math.round((safe + Number.EPSILON) * 100) / 100;
   const hasFraction = Math.abs(rounded % 1) > 0.0001;
-  return `${currency} ${rounded.toLocaleString("en-US", {
+  return `${currency} ${rounded.toLocaleString(locale, {
     minimumFractionDigits: hasFraction ? 2 : 0,
     maximumFractionDigits: 2,
   })}`;
 }
 
-export function formatNumber(value: number): string {
-  return value.toLocaleString();
+export function formatNumber(value: number, locale = "en"): string {
+  return value.toLocaleString(locale);
 }
 
-export function formatDate(value: string): string {
+export function formatDate(value: string, locale = "en"): string {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString(locale, {
     year: "numeric",
     month: "short",
     day: "2-digit",
   });
 }
 
-export function formatDateTime(value: string): string {
+export function formatDateTime(value: string, locale = "en"): string {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString(undefined, {
+  return date.toLocaleString(locale, {
     year: "numeric",
     month: "short",
     day: "2-digit",

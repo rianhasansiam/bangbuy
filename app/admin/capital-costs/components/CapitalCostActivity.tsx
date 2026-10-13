@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import {
   Boxes,
@@ -81,16 +85,16 @@ export default function CapitalCostActivity({
   currency: string;
   isLoading: boolean;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminCapitalCostsComponentsCapitalCostActivity");
   return (
     <div className="rounded-2xl border border-brand-border bg-brand-white p-4 shadow-sm sm:p-5">
       <header className="mb-4">
         <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
           <History className="h-4 w-4 text-brand-red" />
-          Page activity
-        </h2>
+          {i18n("Page activity")}</h2>
         <p className="mt-0.5 text-xs text-gray-500">
-          Recent capital changes and cost edits on this page.
-        </p>
+          {i18n("Recent capital changes and cost edits on this page.")}</p>
       </header>
 
       {isLoading && activity.length === 0 ? (
@@ -105,8 +109,7 @@ export default function CapitalCostActivity({
       ) : activity.length === 0 ? (
         <div className="rounded-xl border border-dashed border-brand-border bg-brand-light-bg p-8 text-center text-sm text-gray-600">
           <History className="mx-auto mb-2 h-7 w-7 text-brand-text-muted" />
-          No activity yet. Capital and cost changes will appear here.
-        </div>
+          {i18n("No activity yet. Capital and cost changes will appear here.")}</div>
       ) : (
         <ol className="relative space-y-3">
           {activity.map((entry) => {
@@ -132,7 +135,7 @@ export default function CapitalCostActivity({
                     </p>
                     {entry.amount !== null && (
                       <span className="text-sm font-bold text-gray-700">
-                        {formatCurrency(entry.amount, currency)}
+                        {formatCurrency(entry.amount, currency, locale)}
                       </span>
                     )}
                   </div>
@@ -149,7 +152,7 @@ export default function CapitalCostActivity({
                     <span aria-hidden>·</span>
                     {meta.label}
                     <span aria-hidden>·</span>
-                    {formatDateTime(entry.createdAt)}
+                    {formatDateTime(entry.createdAt, locale)}
                   </p>
                 </div>
               </li>

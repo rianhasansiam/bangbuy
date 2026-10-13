@@ -1,7 +1,11 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/lib/i18n/navigation";
 import {
   AlertCircle,
   CheckCircle2,
@@ -203,6 +207,8 @@ export function AirwallexPaymentStatus({
   className,
   onSettled,
 }: AirwallexPaymentStatusProps) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("InterfaceAirwallexComponentsAirwallexPaymentStatus");
   const { data: session } = useSession();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [refreshToken, setRefreshToken] = useState(0);
@@ -287,13 +293,11 @@ export function AirwallexPaymentStatus({
         <section className="mx-auto max-w-xl rounded-3xl border border-rose-200 bg-white p-8 text-center shadow-sm">
           <AlertCircle className="mx-auto h-10 w-10 text-rose-700" aria-hidden="true" />
           <h1 className="mt-4 text-2xl font-extrabold text-gray-900">
-            Payment return link is incomplete
-          </h1>
+            {i18n("Payment return link is incomplete")}</h1>
           <p className="mt-2 text-sm text-gray-600">
-            Open your order history to review the server-confirmed payment status.
-          </p>
+            {i18n("Open your order history to review the server-confirmed payment status.")}</p>
           <Button asChild className="mt-6 h-11 px-5">
-            <Link href="/profile">View your orders</Link>
+            <Link href="/profile">{i18n("View your orders")}</Link>
           </Button>
         </section>
       </main>
@@ -318,17 +322,17 @@ export function AirwallexPaymentStatus({
           <div className="min-w-0 flex-1">
             {embedded ? (
               <h2 className="text-xl font-extrabold tracking-tight">
-                {presentation.title}
+                {i18n(presentation.title)}
               </h2>
             ) : (
               <h1 className="text-2xl font-extrabold tracking-tight">
-                {presentation.title}
+                {i18n(presentation.title)}
               </h1>
             )}
-            <p className="mt-2 text-sm leading-6">{presentation.description}</p>
+            <p className="mt-2 text-sm leading-6">{i18n(presentation.description)}</p>
             {state.status === "ready" ? (
               <p className="mt-3 text-xs font-medium opacity-75">
-                Last checked {new Date(state.snapshot.updatedAt).toLocaleString()}
+                {i18n("Last checked")}{new Date(state.snapshot.updatedAt).toLocaleString(locale)}
               </p>
             ) : null}
           </div>
@@ -348,13 +352,11 @@ export function AirwallexPaymentStatus({
             loadingText="Checking..."
           >
             <RefreshCw aria-hidden="true" />
-            Refresh status
-          </Button>
+            {i18n("Refresh status")}</Button>
           {showOrderLink ? (
             <Button asChild className="h-11 px-4">
               <Link href={`/orders/${encodeURIComponent(orderId)}`}>
-                View order details
-              </Link>
+                {i18n("View order details")}</Link>
             </Button>
           ) : null}
         </div>

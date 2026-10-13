@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Pencil, Receipt, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -29,6 +33,8 @@ export default function OtherCostsTable({
   onEdit: (cost: OtherCostRow) => void;
   onDelete: (cost: OtherCostRow) => void;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminCapitalCostsComponentsOtherCostsTable");
   if (isLoading && costs.length === 0) {
     return <TableSkeleton rows={5} columns={4} ariaLabel="Loading cost records" />;
   }
@@ -37,8 +43,7 @@ export default function OtherCostsTable({
     return (
       <div className="rounded-2xl border border-brand-border bg-brand-white p-10 text-center text-sm text-gray-600 shadow-sm">
         <Receipt className="mx-auto mb-2 h-8 w-8 text-brand-text-muted" />
-        No cost records yet. Add your first manual cost to start tracking.
-      </div>
+        {i18n("No cost records yet. Add your first manual cost to start tracking.")}</div>
     );
   }
 
@@ -46,12 +51,12 @@ export default function OtherCostsTable({
     <div className="overflow-hidden rounded-2xl border border-brand-border bg-brand-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
-          <thead className="bg-brand-light-bg text-left text-xs uppercase tracking-wider text-foreground">
+          <thead className="bg-brand-light-bg text-start text-xs uppercase tracking-wider text-foreground">
             <tr>
-              <th className="px-4 py-3">Reason</th>
-              <th className="px-4 py-3">Amount</th>
-              <th className="px-4 py-3">Cost date</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">{i18n("Reason")}</th>
+              <th className="px-4 py-3">{i18n("Amount")}</th>
+              <th className="px-4 py-3">{i18n("Cost date")}</th>
+              <th className="px-4 py-3 text-end">{i18n("Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -81,11 +86,11 @@ export default function OtherCostsTable({
                     </td>
                     <td className="px-4 py-3">
                       <span className="font-semibold text-gray-900">
-                        {formatCurrency(cost.amount, currency)}
+                        {formatCurrency(cost.amount, currency, locale)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600">
-                      {formatDateTime(cost.costDate)}
+                      {formatDateTime(cost.costDate, locale)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
@@ -95,8 +100,7 @@ export default function OtherCostsTable({
                           disabled={isBusy}
                           className="inline-flex items-center gap-1 rounded-lg border border-brand-border px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-brand-light-bg disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          <Pencil className="h-3.5 w-3.5" /> Edit
-                        </button>
+                          <Pencil className="h-3.5 w-3.5" /> {i18n("Edit")}</button>
                         <button
                           type="button"
                           onClick={() => onDelete(cost)}
@@ -109,8 +113,7 @@ export default function OtherCostsTable({
                           ) : (
                             <Trash2 className="h-3.5 w-3.5" />
                           )}
-                          Delete
-                        </button>
+                          {i18n("Delete")}</button>
                       </div>
                     </td>
                   </motion.tr>

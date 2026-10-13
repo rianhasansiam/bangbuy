@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { RotateCcw, Star } from "lucide-react";
 import { useId, useState } from "react";
@@ -51,6 +53,7 @@ export default function FilterSidebar({
   facets,
   className,
 }: Props) {
+  const i18n = useInterfaceTranslations("InterfaceProductsComponentsFilterSidebar");
   const controlId = useId();
   const brandFilterId = `${controlId}-brand-filter`;
   const manufacturerFilterId = `${controlId}-manufacturer-filter`;
@@ -67,29 +70,28 @@ export default function FilterSidebar({
 
   return (
     <aside
-      aria-label="Product filters"
+      aria-label={i18n("Product filters")}
       className={cn(
         "sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto rounded-2xl border border-brand-border bg-white p-5 shadow-sm",
         className,
       )}
     >
       <div className="mb-2 flex items-center justify-between border-b border-gray-100 pb-3">
-        <h2 className="text-base font-bold text-gray-900">Filters</h2>
+        <h2 className="text-base font-bold text-gray-900">{i18n("Filters")}</h2>
         <button
           type="button"
           onClick={onReset}
           className="group flex items-center gap-1 text-xs font-semibold text-brand-red transition-colors hover:text-brand-red-hover"
         >
           <RotateCcw className="h-3 w-3 transition-transform duration-500 group-hover:-rotate-180" />
-          Reset
-        </button>
+          {i18n("Reset")}</button>
       </div>
 
-      <FilterGroup title="Category">
-        <div className="max-h-64 space-y-1 overflow-y-auto pr-1">
+      <FilterGroup title={i18n("Category")}>
+        <div className="max-h-64 space-y-1 overflow-y-auto pe-1">
           <FilterChoice
             active={!filters.categoryPath}
-            label="All categories"
+            label={i18n("All categories")}
             count={facets.categories.reduce(
               (total, category) => total + category.totalProductCount,
               0,
@@ -109,7 +111,7 @@ export default function FilterSidebar({
         </div>
       </FilterGroup>
 
-      <FilterGroup title="Price range">
+      <FilterGroup title={i18n("Price range")}>
         <PriceFilter
           key={`${filters.minPrice ?? ""}:${filters.maxPrice ?? ""}:${facets.priceBounds.min}:${facets.priceBounds.max}`}
           filters={filters}
@@ -120,7 +122,7 @@ export default function FilterSidebar({
         />
       </FilterGroup>
 
-      <FilterGroup title="Customer rating">
+      <FilterGroup title={i18n("Customer rating")}>
         <div className="space-y-1">
           {[4, 3, 2, 1].map((rating) => (
             <button
@@ -135,7 +137,7 @@ export default function FilterSidebar({
                   : "text-gray-700 hover:bg-gray-50",
               )}
             >
-              <span className="flex" aria-label={`${rating} stars and up`}>
+              <span className="flex" aria-label={i18n("{value0} stars and up", { value0: rating })}>
                 {Array.from({ length: 5 }).map((_, index) => (
                   <Star
                     key={index}
@@ -149,24 +151,23 @@ export default function FilterSidebar({
                   />
                 ))}
               </span>
-              <span className="text-xs">& up</span>
+              <span className="text-xs">{i18n("& up")}</span>
             </button>
           ))}
         </div>
       </FilterGroup>
 
       {facets.brands.length > 0 && (
-        <FilterGroup title="Brand">
+        <FilterGroup title={i18n("Brand")}>
           <label className="sr-only" htmlFor={brandFilterId}>
-            Brand
-          </label>
+            {i18n("Brand")}</label>
           <select
             id={brandFilterId}
             value={filters.brandSlug}
             onChange={(event) => update("brandSlug", event.target.value)}
             className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-brand-red focus:ring-2 focus:ring-brand-red/20"
           >
-            <option value="">All brands</option>
+            <option value="">{i18n("All brands")}</option>
             {facets.brands.map((brand) => (
               <option key={brand.id} value={brand.slug}>
                 {brand.name} ({brand.productCount})
@@ -177,17 +178,16 @@ export default function FilterSidebar({
       )}
 
       {facets.manufacturers.length > 0 && (
-        <FilterGroup title="Manufacturer">
+        <FilterGroup title={i18n("Manufacturer")}>
           <label className="sr-only" htmlFor={manufacturerFilterId}>
-            Manufacturer
-          </label>
+            {i18n("Manufacturer")}</label>
           <select
             id={manufacturerFilterId}
             value={filters.manufacturerSlug}
             onChange={(event) => update("manufacturerSlug", event.target.value)}
             className="h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 outline-none focus:border-brand-red focus:ring-2 focus:ring-brand-red/20"
           >
-            <option value="">All manufacturers</option>
+            <option value="">{i18n("All manufacturers")}</option>
             {facets.manufacturers.map((manufacturer) => (
               <option key={manufacturer.id} value={manufacturer.slug}>
                 {manufacturer.name} ({manufacturer.productCount})
@@ -197,23 +197,23 @@ export default function FilterSidebar({
         </FilterGroup>
       )}
 
-      <FilterGroup title="Availability" last>
+      <FilterGroup title={i18n("Availability")} last>
         <div className="space-y-1">
           <FilterChoice
             active={!filters.stock}
-            label="Any availability"
+            label={i18n("Any availability")}
             count={facets.availability.inStock + facets.availability.outOfStock}
             onClick={() => update("stock", "")}
           />
           <FilterChoice
             active={filters.stock === "in-stock"}
-            label="In stock"
+            label={i18n("In stock")}
             count={facets.availability.inStock}
             onClick={() => update("stock", "in-stock")}
           />
           <FilterChoice
             active={filters.stock === "out-of-stock"}
-            label="Out of stock"
+            label={i18n("Out of stock")}
             count={facets.availability.outOfStock}
             onClick={() => update("stock", "out-of-stock")}
           />
@@ -236,6 +236,7 @@ function FilterChoice({
   onClick: () => void;
   style?: React.CSSProperties;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceProductsComponentsFilterSidebar");
   return (
     <button
       type="button"
@@ -243,13 +244,13 @@ function FilterChoice({
       onClick={onClick}
       style={style}
       className={cn(
-        "flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors",
+        "flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-start text-sm transition-colors",
         active
           ? "bg-brand-red/10 font-semibold text-brand-red"
           : "text-gray-700 hover:bg-gray-50 hover:text-brand-red",
       )}
     >
-      <span className="min-w-0 truncate">{label}</span>
+      <span className="min-w-0 truncate">{i18n(label)}</span>
       <span className="shrink-0 text-[11px] text-gray-400">{count}</span>
     </button>
   );
@@ -264,6 +265,7 @@ function PriceFilter({
   bounds: { min: number; max: number };
   onApply: (minPrice: number | null, maxPrice: number | null) => void;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceProductsComponentsFilterSidebar");
   const currencyContext = useCurrency();
   const display = (amount: number) =>
     priceFromBDT({ baseAmount: amount, context: currencyContext }).amount;
@@ -309,7 +311,7 @@ function PriceFilter({
     >
       <div className="grid grid-cols-2 gap-2">
         <label className="text-[11px] font-medium text-gray-500">
-          Minimum ({currencyContext.currency})
+          {i18n("Minimum (")}{currencyContext.currency})
           <input
             inputMode="decimal"
             type="number"
@@ -322,7 +324,7 @@ function PriceFilter({
           />
         </label>
         <label className="text-[11px] font-medium text-gray-500">
-          Maximum ({currencyContext.currency})
+          {i18n("Maximum (")}{currencyContext.currency})
           <input
             inputMode="decimal"
             type="number"
@@ -339,8 +341,7 @@ function PriceFilter({
         type="submit"
         className="h-9 w-full rounded-lg border border-brand-red/20 bg-brand-red/5 text-xs font-semibold text-brand-red transition-colors hover:bg-brand-red/10"
       >
-        Apply price
-      </button>
+        {i18n("Apply price")}</button>
     </form>
   );
 }
@@ -354,10 +355,11 @@ function FilterGroup({
   children: React.ReactNode;
   last?: boolean;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceProductsComponentsFilterSidebar");
   return (
     <section className={`py-4 ${last ? "" : "border-b border-gray-100"}`}>
       <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-gray-900">
-        {title}
+        {i18n(title)}
       </h3>
       {children}
     </section>

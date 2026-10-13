@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import type React from "react";
 import { CircleDollarSign, Percent, RotateCcw, Truck } from "lucide-react";
@@ -29,18 +31,16 @@ export default function StorePricingForm({
   onRefresh: () => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminSettingsComponentsStorePricingForm");
   return (
     <div className="rounded-2xl border border-brand-border bg-brand-white p-5 shadow-sm">
       <header className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
             <CircleDollarSign className="h-4 w-4 text-brand-red" />
-            Store pricing
-          </h2>
+            {i18n("Store pricing")}</h2>
           <p className="mt-1 text-xs text-gray-500">
-            Tax rate, delivery charges, and free shipping threshold. Applied to
-            every cart on the next pricing pass.
-          </p>
+            {i18n("Tax rate, delivery charges, and free shipping threshold. Applied to every cart on the next pricing pass.")}</p>
         </div>
 
         <button
@@ -55,7 +55,7 @@ export default function StorePricingForm({
           ) : (
             <RotateCcw className="h-3.5 w-3.5" />
           )}
-          {isLoading ? "Refreshing..." : "Refresh"}
+          {isLoading ? i18n("Refreshing...") : i18n("Refresh")}
         </button>
       </header>
 
@@ -71,13 +71,13 @@ export default function StorePricingForm({
       )}
 
       {isLoading && !hasSettings ? (
-        <SectionLoader title="Loading settings" rows={4} />
+        <SectionLoader title={i18n("Loading settings")} rows={4} />
       ) : (
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid gap-3 md:grid-cols-2">
             <Field
-              label="Tax rate (%)"
-              hint="Customer's cart shows this percentage of subtotal."
+              label={i18n("Tax rate (%)")}
+              hint={i18n("Customer's cart shows this percentage of subtotal.")}
               icon={<Percent className="h-3.5 w-3.5" />}
               required
             >
@@ -96,8 +96,8 @@ export default function StorePricingForm({
             </Field>
 
             <Field
-              label="Base currency"
-              hint="Locked to BDT; customer display currencies are converted separately."
+              label={i18n("Base currency")}
+              hint={i18n("Locked to BDT; customer display currencies are converted separately.")}
               required
             >
               <input
@@ -112,7 +112,7 @@ export default function StorePricingForm({
 
           <div className="grid gap-3 md:grid-cols-3">
             <Field
-              label="Delivery inside Dhaka"
+              label={i18n("Delivery inside Dhaka")}
               icon={<Truck className="h-3.5 w-3.5" />}
               required
             >
@@ -133,7 +133,7 @@ export default function StorePricingForm({
             </Field>
 
             <Field
-              label="Delivery outside Dhaka"
+              label={i18n("Delivery outside Dhaka")}
               icon={<Truck className="h-3.5 w-3.5" />}
               required
             >
@@ -154,8 +154,8 @@ export default function StorePricingForm({
             </Field>
 
             <Field
-              label="Free shipping above"
-              hint="Subtotal at which delivery is free. Use 0 to disable."
+              label={i18n("Free shipping above")}
+              hint={i18n("Subtotal at which delivery is free. Use 0 to disable.")}
               required
             >
               <input
@@ -182,7 +182,7 @@ export default function StorePricingForm({
               aria-busy={isSaving}
               className="inline-flex h-10 items-center gap-2 rounded-xl bg-brand-red px-4 text-sm font-semibold text-white transition hover:bg-brand-red-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSaving ? <ButtonLoader label="Saving..." /> : "Save settings"}
+              {isSaving ? <ButtonLoader label={i18n("Saving...")} /> : i18n("Save settings")}
             </button>
           </div>
         </form>

@@ -256,18 +256,18 @@ export async function patchUserRole(
   return parseRow(envelope.data);
 }
 
-export function formatCurrency(value: number): string {
-  return `BDT ${value.toLocaleString(undefined, {
+export function formatCurrency(value: number, locale = "en"): string {
+  return `BDT ${value.toLocaleString(locale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   })}`;
 }
 
-export function formatDate(value: string | null): string {
+export function formatDate(value: string | null, locale = "en"): string {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString(locale, {
     year: "numeric",
     month: "short",
     day: "2-digit",

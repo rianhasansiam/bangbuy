@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -56,6 +58,7 @@ function freshOrderDraft(): AdminOrderDraft {
 }
 
 export default function AdminOrdersPage() {
+  const i18n = useInterfaceTranslations("AdminAdminOrdersPage");
   const dispatch = useDispatch<AppDispatch>();
   const orders = useSelector((state: RootState) => state.adminOrders.items);
   const isLoading = useSelector(
@@ -178,7 +181,7 @@ export default function AdminOrdersPage() {
       const confirmed = await confirmMajorAction({
         title: `Cancel order ${order.orderNumber}?`,
         description:
-          "This will mark the order as cancelled and stop further processing.",
+          i18n("This will mark the order as cancelled and stop further processing."),
         confirmLabel: "Cancel order",
         variant: "danger",
       });
@@ -304,7 +307,7 @@ export default function AdminOrdersPage() {
     const confirmed = await confirmMajorAction({
       title: `Record refund and cancel ${order.orderNumber}?`,
       description:
-        "Use this only after the refund has been completed and verified in SSLCommerz. BangBuy will record the reference, cancel the order, and restore its reservation; it does not initiate the refund.",
+        i18n("Use this only after the refund has been completed and verified in SSLCommerz. BangBuy will record the reference, cancel the order, and restore its reservation; it does not initiate the refund."),
       confirmLabel: "Record refund and cancel",
       variant: "danger",
     });
@@ -519,7 +522,7 @@ export default function AdminOrdersPage() {
 
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {error}
+          {i18n(error)}
         </div>
       )}
 

@@ -1,5 +1,8 @@
 "use client";
 
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
+
 import {
   CAROUSEL_BG_TYPES,
   categoryBannerHref,
@@ -58,6 +61,7 @@ function BannerColorField({
   required?: boolean;
   onChange: (value: string) => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminBannersComponentsBannerFormFields");
   const hexInputValue = formatHexInputValue(value);
   const colorPreview = isRenderableHex(hexInputValue)
     ? normalizeHexInputValue(hexInputValue)
@@ -71,7 +75,7 @@ function BannerColorField({
     <div className="flex flex-col gap-1.5 text-sm">
       <span className="flex items-center gap-1.5 font-semibold text-gray-700">
         {label}
-        {required && <span className="ml-0.5 text-brand-red">*</span>}
+        {required && <span className="ms-0.5 text-brand-red">*</span>}
       </span>
 
       
@@ -96,7 +100,7 @@ function BannerColorField({
             aria-label={`${pickerLabel} hex color`}
             className={[
               colorInputClass,
-              "pl-9 font-mono text-xs font-semibold uppercase",
+              "ps-9 font-mono text-xs font-semibold uppercase",
               hasInvalidHex ? "border-red-300 focus:border-red-500" : "",
             ]
               .filter(Boolean)
@@ -109,8 +113,7 @@ function BannerColorField({
 
       {hasInvalidHex && (
         <span className="text-[11px] font-semibold text-red-600">
-          Enter a valid hex color.
-        </span>
+          {i18n("Enter a valid hex color.")}</span>
       )}
     </div>
   );
@@ -123,6 +126,7 @@ export function CarouselFormFields({
   form: CarouselFormState;
   setForm: React.Dispatch<React.SetStateAction<CarouselFormState>>;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminBannersComponentsBannerFormFields");
   const update = <K extends keyof CarouselFormState>(
     key: K,
     value: CarouselFormState[K],
@@ -130,44 +134,44 @@ export function CarouselFormFields({
 
   return (
     <>
-      <Field label="Image" required>
+      <Field label={i18n("Image")} required>
         <ImageUploader category="banners" value={form.image} onChange={(url) => update("image", url)} />
       </Field>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="Title" required>
+        <Field label={i18n("Title")} required>
           <input
             value={form.title}
             onChange={(e) => update("title", e.target.value)}
             className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-            placeholder="25% OFF"
+            placeholder={i18n("25% OFF")}
           />
         </Field>
-        <Field label="Subtitle" required>
+        <Field label={i18n("Subtitle")} required>
           <input
             value={form.subtitle}
             onChange={(e) => update("subtitle", e.target.value)}
             className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-            placeholder="VEGETABLES"
+            placeholder={i18n("VEGETABLES")}
           />
         </Field>
       </div>
-      <Field label="Badge" required>
+      <Field label={i18n("Badge")} required>
         <input
           value={form.badge}
           onChange={(e) => update("badge", e.target.value)}
           className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-          placeholder="Weekend Special"
+          placeholder={i18n("Weekend Special")}
         />
       </Field>
-      <Field label="Description" required>
+      <Field label={i18n("Description")} required>
         <textarea
           value={form.description}
           onChange={(e) => update("description", e.target.value)}
           className="min-h-24 w-full rounded-xl border border-brand-border px-3 py-2 text-sm outline-none transition focus:border-brand-red"
-          placeholder="Short marketing copy"
+          placeholder={i18n("Short marketing copy")}
         />
       </Field>
-      <Field label="Background style" required>
+      <Field label={i18n("Background style")} required>
         <select
           value={form.bgType}
           onChange={(e) =>
@@ -177,14 +181,14 @@ export function CarouselFormFields({
         >
           {CAROUSEL_BG_TYPES.map((type) => (
             <option key={type} value={type}>
-              {type === "gradient" ? "Gradient" : "Solid color"}
+              {type === "gradient" ? i18n("Gradient") : i18n("Solid color")}
             </option>
           ))}
         </select>
       </Field>
       {form.bgType === "solid" ? (
         <BannerColorField
-          label="Background color"
+          label={i18n("Background color")}
           pickerLabel="Background color"
           value={form.bgColor}
           required
@@ -193,20 +197,20 @@ export function CarouselFormFields({
       ) : (
         <div className="grid grid-cols-1 gap-3">
           <BannerColorField
-            label="From"
+            label={i18n("From")}
             pickerLabel="Gradient from color"
             value={form.bgFrom}
             required
             onChange={(value) => update("bgFrom", value)}
           />
           <BannerColorField
-            label="Via"
+            label={i18n("Via")}
             pickerLabel="Gradient via color"
             value={form.bgVia}
             onChange={(value) => update("bgVia", value)}
           />
           <BannerColorField
-            label="To"
+            label={i18n("To")}
             pickerLabel="Gradient to color"
             value={form.bgTo}
             required
@@ -214,7 +218,7 @@ export function CarouselFormFields({
           />
         </div>
       )}
-      <Field label="Link">
+      <Field label={i18n("Link")}>
         <input
           value={form.link}
           onChange={(e) => update("link", e.target.value)}
@@ -223,7 +227,7 @@ export function CarouselFormFields({
         />
       </Field>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="Position" required>
+        <Field label={i18n("Position")} required>
           <input
             type="number"
             min="0"
@@ -233,7 +237,7 @@ export function CarouselFormFields({
             className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
           />
         </Field>
-        <Field label="Status" required>
+        <Field label={i18n("Status")} required>
           <select
             value={form.status}
             onChange={(e) => update("status", e.target.value as BannerStatus)}
@@ -260,6 +264,7 @@ export function CategoryBannerFormFields({
   setForm: React.Dispatch<React.SetStateAction<CategoryBannerFormState>>;
   categories: CategoryBannerCategoryOption[];
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminBannersComponentsBannerFormFields");
   const update = <K extends keyof CategoryBannerFormState>(
     key: K,
     value: CategoryBannerFormState[K],
@@ -267,7 +272,7 @@ export function CategoryBannerFormFields({
 
   return (
     <>
-      <Field label="Category" required>
+      <Field label={i18n("Category")} required>
         <select
           value={form.categoryId}
           onChange={(event) => {
@@ -297,7 +302,7 @@ export function CategoryBannerFormFields({
           }}
           className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
         >
-          <option value="">Select category</option>
+          <option value="">{i18n("Select category")}</option>
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name} · /{category.path}
@@ -305,19 +310,19 @@ export function CategoryBannerFormFields({
           ))}
         </select>
       </Field>
-      <Field label="Image" required>
+      <Field label={i18n("Image")} required>
         <ImageUploader category="banners" value={form.image} onChange={(url) => update("image", url)} />
       </Field>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="Label" required>
+        <Field label={i18n("Label")} required>
           <input
             value={form.label}
             onChange={(e) => update("label", e.target.value)}
             className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-            placeholder="SALE"
+            placeholder={i18n("SALE")}
           />
         </Field>
-        <Field label="Discount" required>
+        <Field label={i18n("Discount")} required>
           <input
             value={form.discount}
             onChange={(e) => update("discount", e.target.value)}
@@ -326,23 +331,23 @@ export function CategoryBannerFormFields({
           />
         </Field>
       </div>
-      <Field label="Heading" required>
+      <Field label={i18n("Heading")} required>
         <input
           value={form.heading}
           onChange={(e) => update("heading", e.target.value)}
           className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-          placeholder="FLASH SALE"
+          placeholder={i18n("FLASH SALE")}
         />
       </Field>
-      <Field label="Description" required>
+      <Field label={i18n("Description")} required>
         <textarea
           value={form.description}
           onChange={(e) => update("description", e.target.value)}
           className="min-h-24 w-full rounded-xl border border-brand-border px-3 py-2 text-sm outline-none transition focus:border-brand-red"
-          placeholder="Short banner copy"
+          placeholder={i18n("Short banner copy")}
         />
       </Field>
-      <Field label="Link">
+      <Field label={i18n("Link")}>
         <input
           value={form.link}
           onChange={(e) => update("link", e.target.value)}
@@ -350,11 +355,9 @@ export function CategoryBannerFormFields({
           placeholder="/categories/tools"
         />
         <p className="mt-1 text-[11px] text-gray-500">
-          Leave blank to use the selected category&apos;s canonical storefront
-          path.
-        </p>
+          {i18n("Leave blank to use the selected category's canonical storefront path.")}</p>
       </Field>
-      <Field label="Status" required>
+      <Field label={i18n("Status")} required>
         <select
           value={form.status}
           onChange={(e) => update("status", e.target.value as BannerStatus)}
@@ -378,6 +381,7 @@ export function DealFormFields({
   form: DealFormState;
   setForm: React.Dispatch<React.SetStateAction<DealFormState>>;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminBannersComponentsBannerFormFields");
   const update = <K extends keyof DealFormState>(
     key: K,
     value: DealFormState[K],
@@ -385,35 +389,35 @@ export function DealFormFields({
 
   return (
     <>
-      <Field label="Image" required>
+      <Field label={i18n("Image")} required>
         <ImageUploader category="banners" value={form.image} onChange={(url) => update("image", url)} />
       </Field>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="Title" required>
+        <Field label={i18n("Title")} required>
           <input
             value={form.title}
             onChange={(e) => update("title", e.target.value)}
             className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-            placeholder="Up to 70% Off"
+            placeholder={i18n("Up to 70% Off")}
           />
         </Field>
-        <Field label="Subtitle" required>
+        <Field label={i18n("Subtitle")} required>
           <input
             value={form.subtitle}
             onChange={(e) => update("subtitle", e.target.value)}
             className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-            placeholder="Black Friday"
+            placeholder={i18n("Black Friday")}
           />
         </Field>
       </div>
       <BannerColorField
-        label="Background color"
+        label={i18n("Background color")}
         pickerLabel="Deal background color"
         value={form.bgClass}
         required
         onChange={(value) => update("bgClass", value)}
       />
-      <Field label="Link">
+      <Field label={i18n("Link")}>
         <input
           value={form.link}
           onChange={(e) => update("link", e.target.value)}
@@ -422,7 +426,7 @@ export function DealFormFields({
         />
       </Field>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="Position" required>
+        <Field label={i18n("Position")} required>
           <input
             type="number"
             min="0"
@@ -432,7 +436,7 @@ export function DealFormFields({
             className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
           />
         </Field>
-        <Field label="Status" required>
+        <Field label={i18n("Status")} required>
           <select
             value={form.status}
             onChange={(e) => update("status", e.target.value as BannerStatus)}
@@ -457,6 +461,7 @@ export function PromoFormFields({
   form: PromoFormState;
   setForm: React.Dispatch<React.SetStateAction<PromoFormState>>;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminBannersComponentsBannerFormFields");
   const update = <K extends keyof PromoFormState>(
     key: K,
     value: PromoFormState[K],
@@ -464,43 +469,43 @@ export function PromoFormFields({
 
   return (
     <>
-      <Field label="Image" required>
+      <Field label={i18n("Image")} required>
         <ImageUploader category="banners" value={form.image} onChange={(url) => update("image", url)} />
       </Field>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="Title" required>
+        <Field label={i18n("Title")} required>
           <input
             value={form.title}
             onChange={(e) => update("title", e.target.value)}
             className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-            placeholder="Mega Sale"
+            placeholder={i18n("Mega Sale")}
           />
         </Field>
-        <Field label="Subtitle" required>
+        <Field label={i18n("Subtitle")} required>
           <input
             value={form.subtitle}
             onChange={(e) => update("subtitle", e.target.value)}
             className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-            placeholder="Save Big Today"
+            placeholder={i18n("Save Big Today")}
           />
         </Field>
       </div>
-      <Field label="Discount" required>
+      <Field label={i18n("Discount")} required>
         <input
           value={form.discount}
           onChange={(e) => update("discount", e.target.value)}
           className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-          placeholder="UP TO 60% OFF"
+          placeholder={i18n("UP TO 60% OFF")}
         />
       </Field>
       <BannerColorField
-        label="Background color"
+        label={i18n("Background color")}
         pickerLabel="Promo background color"
         value={form.bgClass}
         required
         onChange={(value) => update("bgClass", value)}
       />
-      <Field label="Link">
+      <Field label={i18n("Link")}>
         <input
           value={form.link}
           onChange={(e) => update("link", e.target.value)}
@@ -509,7 +514,7 @@ export function PromoFormFields({
         />
       </Field>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="Position" required>
+        <Field label={i18n("Position")} required>
           <input
             type="number"
             min="0"
@@ -519,7 +524,7 @@ export function PromoFormFields({
             className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
           />
         </Field>
-        <Field label="Status" required>
+        <Field label={i18n("Status")} required>
           <select
             value={form.status}
             onChange={(e) => update("status", e.target.value as BannerStatus)}
@@ -544,6 +549,7 @@ export function TopFormFields({
   form: TopFormState;
   setForm: React.Dispatch<React.SetStateAction<TopFormState>>;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminBannersComponentsBannerFormFields");
   const update = <K extends keyof TopFormState>(
     key: K,
     value: TopFormState[K],
@@ -552,56 +558,56 @@ export function TopFormFields({
   return (
     <>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="Icon name" required>
+        <Field label={i18n("Icon name")} required>
           <input
             value={form.icon}
             onChange={(e) => update("icon", e.target.value)}
             className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-            placeholder="Tag, Gift, Percent..."
+            placeholder={i18n("Tag, Gift, Percent...")}
           />
         </Field>
-        <Field label="Tag icon name" required>
+        <Field label={i18n("Tag icon name")} required>
           <input
             value={form.tagIcon}
             onChange={(e) => update("tagIcon", e.target.value)}
             className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-            placeholder="Sparkles, Zap..."
+            placeholder={i18n("Sparkles, Zap...")}
           />
         </Field>
       </div>
-      <Field label="Badge" required>
+      <Field label={i18n("Badge")} required>
         <input
           value={form.badge}
           onChange={(e) => update("badge", e.target.value)}
           className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-          placeholder="MEGA SALE"
+          placeholder={i18n("MEGA SALE")}
         />
       </Field>
-      <Field label="Discount" required>
+      <Field label={i18n("Discount")} required>
         <input
           value={form.discount}
           onChange={(e) => update("discount", e.target.value)}
           className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-          placeholder="70% OFF"
+          placeholder={i18n("70% OFF")}
         />
       </Field>
-      <Field label="Description" required>
+      <Field label={i18n("Description")} required>
         <input
           value={form.description}
           onChange={(e) => update("description", e.target.value)}
           className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-          placeholder="on all products"
+          placeholder={i18n("on all products")}
         />
       </Field>
-      <Field label="Tag" required>
+      <Field label={i18n("Tag")} required>
         <input
           value={form.tag}
           onChange={(e) => update("tag", e.target.value)}
           className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-          placeholder="Limited Time Only"
+          placeholder={i18n("Limited Time Only")}
         />
       </Field>
-      <Field label="Link">
+      <Field label={i18n("Link")}>
         <input
           value={form.link}
           onChange={(e) => update("link", e.target.value)}
@@ -610,7 +616,7 @@ export function TopFormFields({
         />
       </Field>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Field label="Position" required>
+        <Field label={i18n("Position")} required>
           <input
             type="number"
             min="0"
@@ -620,7 +626,7 @@ export function TopFormFields({
             className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
           />
         </Field>
-        <Field label="Status" required>
+        <Field label={i18n("Status")} required>
           <select
             value={form.status}
             onChange={(e) => update("status", e.target.value as BannerStatus)}

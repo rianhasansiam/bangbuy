@@ -1,8 +1,10 @@
 'use client'
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import React, { useRef } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from "@/lib/i18n/navigation"
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { resolveColorValue } from '@/components/ui/tailwind-palette'
@@ -25,6 +27,7 @@ const DealsCarousel: React.FC<DealsCarouselProps> = ({
   deals, 
   title = 'Black Friday Deals' 
 }) => {
+  const i18n = useInterfaceTranslations("InterfaceProductsSlugComponentsDealsCarousel");
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const scroll = (direction: 'left' | 'right') => {
@@ -45,22 +48,22 @@ const DealsCarousel: React.FC<DealsCarouselProps> = ({
     <div className="min-w-0 space-y-4">
       <div className="flex min-w-0 items-center justify-between gap-3">
         <h2 className="min-w-0 text-xl font-bold text-gray-900 [overflow-wrap:anywhere]">
-          {title}
+          {i18n(title)}
         </h2>
         <div className="flex shrink-0 gap-2">
           <button 
             onClick={() => scroll('left')}
             className="p-2 rounded-full border border-gray-200 hover:bg-brand-light-bg hover:border-brand-red transition-colors"
-            aria-label="Scroll left"
+            aria-label={i18n("Scroll left")}
           >
-            <ChevronLeft className="w-4 h-4 text-gray-600" />
+            <ChevronLeft className="w-4 h-4 text-gray-600 rtl:rotate-180" />
           </button>
           <button 
             onClick={() => scroll('right')}
             className="p-2 rounded-full border border-gray-200 hover:bg-brand-light-bg hover:border-brand-red transition-colors"
-            aria-label="Scroll right"
+            aria-label={i18n("Scroll right")}
           >
-            <ChevronRight className="w-4 h-4 text-gray-600" />
+            <ChevronRight className="w-4 h-4 text-gray-600 rtl:rotate-180" />
           </button>
         </div>
       </div>
@@ -75,23 +78,23 @@ const DealsCarousel: React.FC<DealsCarouselProps> = ({
             href={deal.link ?? "#"}
             style={{
               backgroundColor: resolveColorValue(deal.bgClass) ?? "var(--brand-black)",
-              position: 'relative',
+              position: "relative",
             }}
             className="relative min-w-[180px] h-24 rounded-xl overflow-hidden shrink-0 snap-start group"
           >
             <Image
               src={deal.image}
-              alt={deal.title}
+              alt={i18n(deal.title)}
               fill
               className="object-cover opacity-60 group-hover:scale-105 transition-transform"
               sizes="180px"
             />
             <div className="absolute inset-0 flex min-w-0 flex-col items-center justify-center p-2 text-center text-white">
               <p className="max-w-full line-clamp-2 text-xs font-semibold opacity-90 [overflow-wrap:anywhere]">
-                {deal.subtitle}
+                {i18n(deal.subtitle)}
               </p>
               <h3 className="max-w-full line-clamp-2 text-lg font-black leading-tight [overflow-wrap:anywhere]">
-                {deal.title}
+                {i18n(deal.title)}
               </h3>
             </div>
           </Link>

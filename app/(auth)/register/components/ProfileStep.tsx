@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { MapPin, Phone } from "lucide-react";
 
@@ -15,11 +17,12 @@ type ProfileStepProps = {
 };
 
 export default function ProfileStep({ form, onFieldChange }: ProfileStepProps) {
+  const i18n = useInterfaceTranslations("InterfaceRegisterComponentsProfileStep");
   return (
     <>
       <FloatField
         icon={<Phone className="h-4 w-4" />}
-        label="Phone number"
+        label={i18n("Phone number")}
         value={form.phone}
         onChange={(value) => onFieldChange("phone", value)}
         type="tel"
@@ -29,7 +32,7 @@ export default function ProfileStep({ form, onFieldChange }: ProfileStepProps) {
 
       <FloatField
         icon={<MapPin className="h-4 w-4" />}
-        label="City"
+        label={i18n("City")}
         value={form.city}
         onChange={(value) => onFieldChange("city", value)}
         autoComplete="address-level2"

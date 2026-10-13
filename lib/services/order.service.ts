@@ -414,13 +414,26 @@ async function fireStatusNotification(order: {
   customerName: string;
   customerEmail: string | null;
   customerPhone: string | null;
+  userId?: string | null;
 }) {
+  let localization:{locale?:string;catalog?:Record<string,unknown>}={};
+  if(order.userId){
+    try{
+      const user=await prisma.user.findUnique({where:{id:order.userId},select:{preferredLocale:true}});
+      if(user?.preferredLocale&&user.preferredLocale!=="en"){
+        const [{getPublishedLanguages},{loadMessages}]=await Promise.all([import("@/lib/i18n/server"),import("@/lib/i18n/catalogs")]);
+        const {normalizeLocale}=await import("@/lib/i18n/registry");const locale=normalizeLocale(user.preferredLocale);
+        if(locale&&(await getPublishedLanguages()).some(language=>language.code===locale))localization={locale,catalog:await loadMessages(locale)};
+      }
+    }catch{/* Missing migration or preference lookup cannot block a committed order update. */}
+  }
   await notifyOrderStatusChange({
     orderNumber: order.orderNumber,
     status: order.status,
     customerName: order.customerName,
     customerEmail: order.customerEmail,
     customerPhone: order.customerPhone,
+    ...localization,
   });
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 import React, { memo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -36,6 +37,7 @@ const SortableBlock = memo(function SortableBlock({
   onDelete,
   children,
 }: SortableBlockProps) {
+  const i18n = useInterfaceTranslations("InterfaceMessages");
   const {
     attributes,
     listeners,
@@ -66,13 +68,13 @@ const SortableBlock = memo(function SortableBlock({
         isDragging && "shadow-2xl ring-2 ring-brand-red/30",
         !block.isVisible && "opacity-70",
       )}
-      aria-label={`${blockTypeLabel[block.type]} block`}
+      aria-label={i18n("{type} block", { type: i18n(blockTypeLabel[block.type]) })}
     >
       {/* Block header */}
       <div className="flex items-center justify-between gap-3 border-b border-brand-border px-4 py-3">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold uppercase tracking-wider text-brand-red">
-            {blockTypeLabel[block.type]}
+            {i18n(blockTypeLabel[block.type])}
           </span>
         </div>
         <BlockActions

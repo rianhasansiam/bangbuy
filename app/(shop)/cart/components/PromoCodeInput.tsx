@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useState } from "react";
 import { AlertCircle, Check, Tag, X } from "lucide-react";
@@ -29,6 +31,7 @@ export default function PromoCodeInput({
   error,
   isApplying = false,
 }: PromoCodeInputProps) {
+  const i18n = useInterfaceTranslations("InterfaceCartComponentsPromoCodeInput");
   const [value, setValue] = useState("");
 
   const handleApply = (event: React.FormEvent) => {
@@ -53,11 +56,11 @@ export default function PromoCodeInput({
               >
                 {applied.code}
               </span>
-              <span className="shrink-0">applied</span>
+              <span className="shrink-0">{i18n("applied")}</span>
             </p>
             <p className="truncate text-xs text-emerald-700">
               {isApplying ? (
-                "Revalidating discount..."
+                i18n("Revalidating discount...")
               ) : (
                 <>
                   {applied.description ? `${applied.description} · ` : ""}
@@ -69,7 +72,7 @@ export default function PromoCodeInput({
           <button
             type="button"
             onClick={onRemove}
-            aria-label="Remove promo code"
+            aria-label={i18n("Remove promo code")}
             className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-emerald-700 transition-colors hover:bg-emerald-100"
           >
             <X className="h-4 w-4" />
@@ -83,7 +86,7 @@ export default function PromoCodeInput({
     <div className="space-y-2">
       <form onSubmit={handleApply} className="flex items-stretch gap-2">
         <div className="relative min-w-0 flex-1">
-          <Tag className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-text-muted" />
+          <Tag className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-text-muted" />
           <Input
             type="text"
             value={value}
@@ -93,8 +96,8 @@ export default function PromoCodeInput({
             }}
             disabled={isApplying}
             maxLength={40}
-            placeholder="Promo code"
-            className="h-11 rounded-xl border-brand-border bg-white pl-10 pr-3 text-sm font-medium uppercase tracking-wide focus-visible:border-brand-red focus-visible:ring-brand-red/30"
+            placeholder={i18n("Promo code")}
+            className="h-11 rounded-xl border-brand-border bg-white ps-10 pe-3 text-sm font-medium uppercase tracking-wide focus-visible:border-brand-red focus-visible:ring-brand-red/30"
           />
         </div>
         <button
@@ -103,18 +106,17 @@ export default function PromoCodeInput({
           aria-busy={isApplying}
           className="rounded-xl bg-brand-red px-4 text-sm font-semibold text-brand-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-sm"
         >
-          {isApplying ? "Applying..." : "Apply"}
+          {isApplying ? i18n("Applying...") : i18n("Apply")}
         </button>
       </form>
       {error && (
         <p className="flex items-center gap-1.5 text-xs font-medium text-red-600">
           <AlertCircle className="h-3.5 w-3.5" />
-          {error}
+          {i18n(error)}
         </p>
       )}
       <p className="text-[11px] text-gray-500">
-        Promo availability and discount are verified by the checkout service.
-      </p>
+        {i18n("Promo availability and discount are verified by the checkout service.")}</p>
     </div>
   );
 }

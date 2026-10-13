@@ -1,7 +1,9 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { CheckCircle2 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -28,6 +30,8 @@ export default function FloatField({
   trailing,
   valid = null,
 }: FloatFieldProps) {
+  const i18n = useInterfaceTranslations("InterfaceComponentsFloatField");
+  const inputId = useId();
   const [focused, setFocused] = useState(false);
   const float = focused || value.length > 0;
 
@@ -47,6 +51,7 @@ export default function FloatField({
 
   return (
     <div
+      dir={type === "email" || type === "tel" ? "ltr" : undefined}
       className={cn(
         "group relative rounded-xl border border-brand-border bg-white shadow-sm transition-all duration-300 focus-within:ring-4",
         validationClass,
@@ -54,7 +59,7 @@ export default function FloatField({
     >
       <span
         className={cn(
-          "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 transition-colors",
+          "pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 transition-colors",
           iconClass,
         )}
       >
@@ -62,6 +67,7 @@ export default function FloatField({
       </span>
 
       <input
+        id={inputId}
         type={type}
         value={value}
         autoComplete={autoComplete}
@@ -70,22 +76,23 @@ export default function FloatField({
         onBlur={() => setFocused(false)}
         onChange={(event) => onChange(event.target.value)}
         placeholder=" "
-        className="h-12 w-full rounded-xl bg-transparent pl-9 pr-10 text-sm text-brand-text-dark outline-none placeholder:text-transparent"
+        className="h-12 w-full rounded-xl bg-transparent ps-9 pe-10 text-sm text-brand-text-dark outline-none placeholder:text-transparent"
       />
 
       <label
+        htmlFor={inputId}
         className={cn(
           "pointer-events-none absolute transition-all duration-200 ease-out",
           float
-            ? "-top-2 left-3 bg-white px-1.5 text-[11px] font-bold uppercase tracking-wide text-brand-text-dark"
-            : "left-9 top-1/2 -translate-y-1/2 text-sm font-normal normal-case tracking-normal text-brand-text-muted",
+            ? "-top-2 start-3 bg-white px-1.5 text-[11px] font-bold uppercase tracking-wide text-brand-text-dark"
+            : "start-9 top-1/2 -translate-y-1/2 text-sm font-normal normal-case tracking-normal text-brand-text-muted",
         )}
       >
-        {label}
+        {i18n(label)}
       </label>
 
       {trailing && (
-        <span className="absolute right-2 top-1/2 -translate-y-1/2">
+        <span className="absolute end-2 top-1/2 -translate-y-1/2">
           {trailing}
         </span>
       )}
@@ -97,7 +104,7 @@ export default function FloatField({
 
 function ValidationIcon({ valid }: { valid: boolean }) {
   return (
-    <span className="absolute right-3 top-1/2 -translate-y-1/2">
+    <span className="absolute end-3 top-1/2 -translate-y-1/2">
       {valid ? (
         <CheckCircle2
           className="h-4 w-4 text-emerald-500"

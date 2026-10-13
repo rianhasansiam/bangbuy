@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Plus, RotateCcw } from "lucide-react";
 
@@ -34,6 +36,7 @@ export default function ProductsToolbar({
   onRefresh: () => void;
   onCreate: () => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminProductsComponentsProductsToolbar");
   return (
     <div className="rounded-2xl border border-brand-border bg-brand-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -42,7 +45,7 @@ export default function ProductsToolbar({
             type="text"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="Search name, code, model, brand, category, SKU..."
+            placeholder={i18n("Search name, code, model, brand, category, SKU...")}
             className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
           />
 
@@ -53,9 +56,9 @@ export default function ProductsToolbar({
             }
             className="h-10 rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
           >
-            <option value="ALL">All status</option>
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Inactive</option>
+            <option value="ALL">{i18n("All status")}</option>
+            <option value="ACTIVE">{i18n("Active")}</option>
+            <option value="INACTIVE">{i18n("Inactive")}</option>
           </select>
 
           <select
@@ -63,7 +66,7 @@ export default function ProductsToolbar({
             onChange={(event) => onCategoryChange(event.target.value)}
             className="h-10 rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
           >
-            <option value="ALL">All categories</option>
+            <option value="ALL">{i18n("All categories")}</option>
             {categoryOptions.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
@@ -85,7 +88,7 @@ export default function ProductsToolbar({
             ) : (
               <RotateCcw className="h-4 w-4" />
             )}
-            {isLoading ? "Refreshing..." : "Refresh"}
+            {isLoading ? i18n("Refreshing...") : i18n("Refresh")}
           </button>
 
           <button
@@ -94,20 +97,17 @@ export default function ProductsToolbar({
             className="inline-flex h-10 items-center gap-2 rounded-xl bg-brand-red px-4 text-sm font-semibold text-brand-white transition hover:bg-brand-red-hover"
           >
             <Plus className="h-4 w-4" />
-            Create Product
-          </button>
+            {i18n("Create Product")}</button>
         </div>
       </div>
 
       <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
         <span>
-          {visibleCount} / {totalCount} products
-        </span>
+          {visibleCount} / {totalCount} {i18n("products")}</span>
         {isLoading && (
           <span className="inline-flex items-center gap-1.5">
             <LoadingSpinner decorative size="xs" />
-            Syncing products...
-          </span>
+            {i18n("Syncing products...")}</span>
         )}
       </div>
     </div>

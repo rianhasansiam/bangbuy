@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import {
   DISCOUNT_TYPE_VALUES,
@@ -29,6 +31,7 @@ export default function PromoFormDrawer({
   onClose: () => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminSettingsComponentsPromoFormDrawer");
   return (
     <>
       <div
@@ -41,24 +44,23 @@ export default function PromoFormDrawer({
       />
       <aside
         className={cn(
-          "fixed inset-y-0 right-0 z-70 w-full max-w-md border-l border-brand-border bg-brand-white shadow-2xl transition-transform duration-300",
+          "fixed inset-y-0 right-0 z-70 w-full max-w-md border-s border-brand-border bg-brand-white shadow-2xl transition-transform duration-300",
           open ? "translate-x-0" : "translate-x-full",
         )}
       >
         <div className="flex h-full flex-col">
           <div className="border-b border-brand-border bg-brand-black px-5 py-4 text-white">
             <h2 className="text-lg font-bold">
-              {mode === "create" ? "Create promo code" : "Edit promo code"}
+              {mode === "create" ? i18n("Create promo code") : i18n("Edit promo code")}
             </h2>
             <p className="mt-0.5 text-xs text-white/70">
-              Customers apply these at checkout. Case-insensitive on the wire.
-            </p>
+              {i18n("Customers apply these at checkout. Case-insensitive on the wire.")}</p>
           </div>
 
           <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="Code" required>
+                <Field label={i18n("Code")} required>
                   <input
                     value={form.code}
                     onChange={(e) =>
@@ -68,7 +70,7 @@ export default function PromoFormDrawer({
                     placeholder="ENTERFLY10"
                   />
                 </Field>
-                <Field label="Status" required>
+                <Field label={i18n("Status")} required>
                   <select
                     value={form.status}
                     onChange={(e) =>
@@ -88,19 +90,19 @@ export default function PromoFormDrawer({
                 </Field>
               </div>
 
-              <Field label="Description">
+              <Field label={i18n("Description")}>
                 <textarea
                   value={form.description}
                   onChange={(e) =>
                     setForm((prev) => ({ ...prev, description: e.target.value }))
                   }
                   className="min-h-20 w-full rounded-xl border border-brand-border px-3 py-2 text-sm outline-none transition focus:border-brand-red"
-                  placeholder="What this code does, shown internally."
+                  placeholder={i18n("What this code does, shown internally.")}
                 />
               </Field>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="Discount type" required>
+                <Field label={i18n("Discount type")} required>
                   <select
                     value={form.discountType}
                     onChange={(e) =>
@@ -121,8 +123,8 @@ export default function PromoFormDrawer({
                 <Field
                   label={
                     form.discountType === "PERCENT"
-                      ? "Value (%)"
-                      : "Value (currency)"
+                      ? i18n("Value (%)")
+                      : i18n("Value (currency)")
                   }
                   required
                 >
@@ -141,7 +143,7 @@ export default function PromoFormDrawer({
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="Minimum order">
+                <Field label={i18n("Minimum order")}>
                   <input
                     type="number"
                     step="0.01"
@@ -151,14 +153,14 @@ export default function PromoFormDrawer({
                       setForm((prev) => ({ ...prev, minOrder: e.target.value }))
                     }
                     className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-                    placeholder="Optional"
+                    placeholder={i18n("Optional")}
                   />
                 </Field>
                 <Field
-                  label="Max discount"
+                  label={i18n("Max discount")}
                   hint={
                     form.discountType === "PERCENT"
-                      ? "Cap on percentage discount."
+                      ? i18n("Cap on percentage discount.")
                       : undefined
                   }
                 >
@@ -174,13 +176,13 @@ export default function PromoFormDrawer({
                       }))
                     }
                     className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-                    placeholder="Optional"
+                    placeholder={i18n("Optional")}
                   />
                 </Field>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <Field label="Starts at">
+                <Field label={i18n("Starts at")}>
                   <input
                     type="datetime-local"
                     value={form.startsAt}
@@ -190,7 +192,7 @@ export default function PromoFormDrawer({
                     className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
                   />
                 </Field>
-                <Field label="Ends at">
+                <Field label={i18n("Ends at")}>
                   <input
                     type="datetime-local"
                     value={form.endsAt}
@@ -203,8 +205,8 @@ export default function PromoFormDrawer({
               </div>
 
               <Field
-                label="Usage limit"
-                hint="Total redemptions allowed across all customers."
+                label={i18n("Usage limit")}
+                hint={i18n("Total redemptions allowed across all customers.")}
               >
                 <input
                   type="number"
@@ -215,7 +217,7 @@ export default function PromoFormDrawer({
                     setForm((prev) => ({ ...prev, usageLimit: e.target.value }))
                   }
                   className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-                  placeholder="Optional"
+                  placeholder={i18n("Optional")}
                 />
               </Field>
             </div>
@@ -227,8 +229,7 @@ export default function PromoFormDrawer({
                   onClick={onClose}
                   className="h-10 rounded-xl border border-brand-border px-4 text-sm font-semibold text-foreground transition hover:bg-brand-light-bg"
                 >
-                  Cancel
-                </button>
+                  {i18n("Cancel")}</button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
@@ -236,11 +237,11 @@ export default function PromoFormDrawer({
                   className="inline-flex h-10 items-center gap-2 rounded-xl bg-brand-red px-4 text-sm font-semibold text-white transition hover:bg-brand-red-hover disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSubmitting ? (
-                    <ButtonLoader label={mode === "create" ? "Creating..." : "Saving..."} />
+                    <ButtonLoader label={mode === "create" ? i18n("Creating...") : i18n("Saving...")} />
                   ) : mode === "create" ? (
-                    "Create"
+                    i18n("Create")
                   ) : (
-                    "Save changes"
+                    i18n("Save changes")
                   )}
                 </button>
               </div>

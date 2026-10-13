@@ -1,6 +1,10 @@
 "use client";
+import { useLocale } from "next-intl";
 
-import Link from "next/link";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
+
+import Link from "@/lib/i18n/navigation";
 import { ArrowRight, ShoppingBag } from "lucide-react";
 
 import type {
@@ -25,21 +29,21 @@ type RecentOrdersProps = {
 };
 
 export default function RecentOrders({ orders, loading }: RecentOrdersProps) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminComponentsRecentOrders");
   return (
     <section className="overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm">
       <header className="flex items-center justify-between border-b border-brand-border px-4 py-3 sm:px-5">
         <div>
-          <h2 className="text-sm font-bold text-gray-900">Recent Orders</h2>
+          <h2 className="text-sm font-bold text-gray-900">{i18n("Recent Orders")}</h2>
           <p className="text-xs text-gray-500">
-            Latest activity from your store
-          </p>
+            {i18n("Latest activity from your store")}</p>
         </div>
         <Link
           href="/admin/orders"
           className="group inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold text-brand-red transition-colors duration-200 hover:bg-brand-light-bg"
         >
-          View all
-          <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+          {i18n("View all")}<ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
         </Link>
       </header>
 
@@ -56,22 +60,20 @@ export default function RecentOrders({ orders, loading }: RecentOrdersProps) {
         <div className="grid place-items-center px-6 py-12 text-center">
           <ShoppingBag className="h-7 w-7 text-brand-text-muted" />
           <p className="mt-2 text-sm font-semibold text-gray-700">
-            No orders yet
-          </p>
+            {i18n("No orders yet")}</p>
           <p className="mt-1 max-w-xs text-xs text-gray-500">
-            New orders will show up here as soon as customers check out.
-          </p>
+            {i18n("New orders will show up here as soon as customers check out.")}</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-brand-light-bg text-left">
+            <thead className="bg-brand-light-bg text-start">
               <tr className="text-[11px] font-bold uppercase tracking-wide text-gray-500">
-                <th className="px-4 py-2.5 sm:px-5">Order</th>
-                <th className="px-4 py-2.5">Customer</th>
-                <th className="px-4 py-2.5">Total</th>
-                <th className="px-4 py-2.5">Status</th>
-                <th className="px-4 py-2.5">Placed</th>
+                <th className="px-4 py-2.5 sm:px-5">{i18n("Order")}</th>
+                <th className="px-4 py-2.5">{i18n("Customer")}</th>
+                <th className="px-4 py-2.5">{i18n("Total")}</th>
+                <th className="px-4 py-2.5">{i18n("Status")}</th>
+                <th className="px-4 py-2.5">{i18n("Placed")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -99,10 +101,10 @@ export default function RecentOrders({ orders, loading }: RecentOrdersProps) {
                     )}
                   </td>
                   <td className="px-4 py-3 font-semibold text-gray-800">
-                    BDT {Math.round(order.totalAmount).toLocaleString()}
-                    <span className="ml-1 text-xs font-normal text-gray-500">
+                    BDT {Math.round(order.totalAmount).toLocaleString(locale)}
+                    <span className="ms-1 text-xs font-normal text-gray-500">
                       · {order.itemsCount}{" "}
-                      {order.itemsCount === 1 ? "item" : "items"}
+                      {order.itemsCount === 1 ? i18n("item") : i18n("items")}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -113,7 +115,7 @@ export default function RecentOrders({ orders, loading }: RecentOrdersProps) {
                           ORDER_STATUS_META[order.status].tone.ring,
                         )}
                       >
-                        {ORDER_STATUS_META[order.status].label}
+                        {i18n(ORDER_STATUS_META[order.status].label)}
                       </span>
                       <span
                         className={cn(
@@ -121,12 +123,12 @@ export default function RecentOrders({ orders, loading }: RecentOrdersProps) {
                           PAYMENT_STYLES[order.paymentStatus],
                         )}
                       >
-                        {PAYMENT_STATUS_META[order.paymentStatus].label}
+                        {i18n(PAYMENT_STATUS_META[order.paymentStatus].label)}
                       </span>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500">
-                    {formatRelative(order.createdAt)}
+                    {formatRelative(order.createdAt, locale)}
                   </td>
                 </tr>
               ))}
@@ -144,7 +146,7 @@ export default function RecentOrders({ orders, loading }: RecentOrdersProps) {
  * Falls back to the absolute date string for anything older than a
  * week, since "12 days ago" is harder to scan than the actual date.
  */
-function formatRelative(iso: string): string {
+function formatRelative(iso: string, locale = "en"): string {
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return iso;
 
@@ -158,7 +160,7 @@ function formatRelative(iso: string): string {
   if (diff < day) return `${Math.floor(diff / hour)}h ago`;
   if (diff < 7 * day) return `${Math.floor(diff / day)}d ago`;
   try {
-    return new Date(iso).toLocaleDateString();
+    return new Date(iso).toLocaleDateString(locale);
   } catch {
     return iso;
   }

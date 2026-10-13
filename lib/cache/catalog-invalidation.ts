@@ -3,6 +3,7 @@ import "server-only";
 import { revalidatePath, revalidateTag } from "next/cache";
 
 import { prisma } from "@/lib/db/prisma";
+import { schedulePublicTranslationStaleness } from "@/lib/translations/invalidation";
 import {
   CATALOG_LISTING_TAGS,
   catalogCacheTags,
@@ -136,6 +137,7 @@ export function invalidateProductSnapshots(
     categoryTree?: boolean;
   },
 ): void {
+  schedulePublicTranslationStaleness("product",snapshots.map(snapshot=>snapshot.id));
   const tags = new Set<string>([
     ...CATALOG_LISTING_TAGS,
     catalogCacheTags.brandDirectory,
@@ -218,6 +220,7 @@ export function invalidateCategoryMutation(input: {
   oldPaths?: readonly string[];
   newPaths?: readonly string[];
 }): void {
+  schedulePublicTranslationStaleness("category",input.categoryIds??[]);
   const tags = new Set<string>([
     ...CATALOG_LISTING_TAGS,
     catalogCacheTags.categoryTree,
@@ -260,6 +263,7 @@ export async function invalidateBrandMutation(input: {
   slugs: readonly string[];
   reason: string;
 }): Promise<void> {
+  schedulePublicTranslationStaleness("brand",[input.id]);
   let productIds: string[] = [];
   try {
     productIds = (
@@ -297,6 +301,7 @@ export async function invalidateManufacturerMutation(input: {
   id: string;
   reason: string;
 }): Promise<void> {
+  schedulePublicTranslationStaleness("manufacturer",[input.id]);
   let productIds: string[] = [];
   try {
     productIds = (

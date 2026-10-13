@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import type { JSONContent } from "@tiptap/core";
 import type { RichTextBlock } from "@/lib/types/product-description-blocks";
@@ -12,6 +14,7 @@ type Props = {
 };
 
 export default function RichTextBlockForm({ block, onChange, disabled }: Props) {
+  const i18n = useInterfaceTranslations("InterfaceProductDescriptionBlocksRichTextBlockForm");
   const patch = (fields: Partial<RichTextBlock>) =>
     onChange({ ...block, ...fields });
 
@@ -20,7 +23,7 @@ export default function RichTextBlockForm({ block, onChange, disabled }: Props) 
       <RichTextEditor
         value={block.content as JSONContent}
         onChange={(content) => patch({ content })}
-        placeholder="Type your content here…"
+        placeholder={i18n("Type your content here…")}
         disabled={disabled}
       />
       <BlockCommonControls

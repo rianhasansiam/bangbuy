@@ -1,3 +1,5 @@
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 import { Building2, Mail, MapPin, Phone } from "lucide-react";
 
 import { siteConfig } from "@/lib/seo/site";
@@ -38,6 +40,7 @@ const cards = [
 ];
 
 export default function ContactInfoCards() {
+  const i18n = useInterfaceTranslations("InterfaceContactComponentsContactInfoCards");
   return (
     <section>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
@@ -55,15 +58,15 @@ export default function ContactInfoCards() {
                 <Icon className="h-6 w-6" />
               </div>
               <p className="text-xs font-bold uppercase tracking-wide text-brand-red">
-                {c.title}
+                {i18n(c.title)}
               </p>
               <p className="mt-1 text-base font-black text-foreground sm:text-lg">
                 {c.value}
               </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">{c.helper}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{i18n(c.helper)}</p>
 
               {/* Decorative corner */}
-              <div className="absolute -right-6 -top-6 h-16 w-16 rounded-full bg-brand-red/10 transition-transform duration-500 group-hover:scale-150" />
+              <div className="absolute -end-6 -top-6 h-16 w-16 rounded-full bg-brand-red/10 transition-transform duration-500 group-hover:scale-150" />
             </a>
           );
         })}

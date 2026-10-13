@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import {
   Boxes,
@@ -72,27 +76,29 @@ export default function CapitalCostSummaryCards({
   currency: string;
   loading: boolean;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminCapitalCostsComponentsCapitalCostSummaryCards");
   const remaining = summary?.remainingBalance ?? 0;
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
       <SummaryCard
         icon={<Wallet className="h-4 w-4" />}
-        label="Total Capital"
-        value={formatCurrency(summary?.totalCapital ?? 0, currency)}
-        hint="Capital input by admin"
+        label={i18n("Total Capital")}
+        value={formatCurrency(summary?.totalCapital ?? 0, currency, locale)}
+        hint={i18n("Capital input by admin")}
         loading={loading}
       />
 
 
       <SummaryCard
         icon={<Boxes className="h-4 w-4" />}
-        label="Product Costs"
-        value={formatCurrency(summary?.productCosts ?? 0, currency)}
+        label={i18n("Product Costs")}
+        value={formatCurrency(summary?.productCosts ?? 0, currency, locale)}
         hint={
           productCost
             ? `${productCost.productCount} products · ${productCost.totalUnits} units`
-            : "Admin-selected products only"
+            : i18n("Admin-selected products only")
         }
         loading={loading}
       />
@@ -100,23 +106,23 @@ export default function CapitalCostSummaryCards({
 
       <SummaryCard
         icon={<Receipt className="h-4 w-4" />}
-        label="Other Costs"
-        value={formatCurrency(summary?.otherCosts ?? 0, currency)}
-        hint="Manually added costs"
+        label={i18n("Other Costs")}
+        value={formatCurrency(summary?.otherCosts ?? 0, currency, locale)}
+        hint={i18n("Manually added costs")}
         loading={loading}
       />
       <SummaryCard
         icon={<Layers className="h-4 w-4" />}
-        label="All Costs"
-        value={formatCurrency(summary?.allCosts ?? 0, currency)}
-        hint="Product + other costs"
+        label={i18n("All Costs")}
+        value={formatCurrency(summary?.allCosts ?? 0, currency, locale)}
+        hint={i18n("Product + other costs")}
         loading={loading}
       />
       <SummaryCard
         icon={<Scale className="h-4 w-4" />}
-        label="Remaining Balance"
-        value={formatCurrency(remaining, currency)}
-        hint="Capital − all costs"
+        label={i18n("Remaining Balance")}
+        value={formatCurrency(remaining, currency, locale)}
+        hint={i18n("Capital − all costs")}
         tone={remaining < 0 ? "negative" : "positive"}
         loading={loading}
       />

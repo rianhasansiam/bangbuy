@@ -1,4 +1,7 @@
+"use client";
+
 import type { ComponentPropsWithoutRef } from "react";
+import { useLocale } from "next-intl";
 
 import type { CurrencyCode } from "@/lib/currency/config";
 import { formatMoney } from "@/lib/currency/format-money";
@@ -19,7 +22,8 @@ export function FormattedCurrencyAmount({
   currency,
   ...props
 }: FormattedCurrencyAmountProps) {
-  return <span {...props}>{formatMoney(amount, currency)}</span>;
+  const locale = useLocale();
+  return <span dir="auto" {...props}>{formatMoney(amount, currency, { locale })}</span>;
 }
 
 export default FormattedCurrencyAmount;

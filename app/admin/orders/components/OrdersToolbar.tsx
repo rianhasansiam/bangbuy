@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { PackagePlus, RotateCcw, Search } from "lucide-react";
 
@@ -46,6 +48,7 @@ export default function OrdersToolbar({
   onRefresh: () => void;
   onCreate: () => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminOrdersComponentsOrdersToolbar");
   return (
     <div className="rounded-2xl border border-brand-border bg-brand-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -56,8 +59,8 @@ export default function OrdersToolbar({
               type="text"
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
-              placeholder="Search by order #, customer, phone, email..."
-              className="h-10 w-full rounded-xl border border-brand-border pl-9 pr-3 text-sm outline-none transition focus:border-brand-red"
+              placeholder={i18n("Search by order #, customer, phone, email...")}
+              className="h-10 w-full rounded-xl border border-brand-border ps-9 pe-3 text-sm outline-none transition focus:border-brand-red"
             />
           </label>
 
@@ -66,10 +69,10 @@ export default function OrdersToolbar({
             onChange={(event) => onStatusChange(event.target.value as StatusFilter)}
             className="h-10 rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
           >
-            <option value="ALL">All status</option>
+            <option value="ALL">{i18n("All status")}</option>
             {ORDER_STATUS_VALUES.map((status) => (
               <option key={status} value={status}>
-                {ORDER_STATUS_META[status].label}
+                {i18n(ORDER_STATUS_META[status].label)}
               </option>
             ))}
           </select>
@@ -79,23 +82,23 @@ export default function OrdersToolbar({
             onChange={(event) => onPaymentChange(event.target.value as PaymentFilter)}
             className="h-10 rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
           >
-            <option value="ALL">All payments</option>
+            <option value="ALL">{i18n("All payments")}</option>
             {PAYMENT_STATUS_VALUES.map((status) => (
               <option key={status} value={status}>
-                {PAYMENT_STATUS_META[status].label}
+                {i18n(PAYMENT_STATUS_META[status].label)}
               </option>
             ))}
           </select>
 
           <select
-            aria-label="Customer type"
+            aria-label={i18n("Customer type")}
             value={customerFilter}
             onChange={(event) => onCustomerChange(event.target.value as CustomerFilter)}
             className="h-10 rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
           >
-            <option value="ALL">All customers</option>
-            <option value="GUEST">Guest</option>
-            <option value="REGISTERED">Registered</option>
+            <option value="ALL">{i18n("All customers")}</option>
+            <option value="GUEST">{i18n("Guest")}</option>
+            <option value="REGISTERED">{i18n("Registered")}</option>
           </select>
         </div>
 
@@ -112,7 +115,7 @@ export default function OrdersToolbar({
             ) : (
               <RotateCcw className="h-4 w-4" />
             )}
-            {isLoading ? "Refreshing..." : "Refresh"}
+            {isLoading ? i18n("Refreshing...") : i18n("Refresh")}
           </button>
           <button
             type="button"
@@ -120,20 +123,17 @@ export default function OrdersToolbar({
             className="inline-flex h-10 items-center gap-2 rounded-xl bg-brand-red px-4 text-sm font-semibold text-brand-white transition hover:bg-brand-red-hover"
           >
             <PackagePlus className="h-4 w-4" />
-            Place order
-          </button>
+            {i18n("Place order")}</button>
         </div>
       </div>
 
       <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
         <span>
-          {visibleCount} / {totalCount} orders
-        </span>
+          {visibleCount} / {totalCount} {i18n("orders")}</span>
         {isLoading && (
           <span className="inline-flex items-center gap-1.5">
             <LoadingSpinner decorative size="xs" />
-            Syncing orders...
-          </span>
+            {i18n("Syncing orders...")}</span>
         )}
       </div>
     </div>

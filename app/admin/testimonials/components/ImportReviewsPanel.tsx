@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle, Download, Search, X } from "lucide-react";
@@ -33,6 +35,7 @@ export default function ImportReviewsPanel({
   onImported: (row: AdminTestimonialRow) => void;
   onError: (message: string) => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminTestimonialsComponentsImportReviewsPanel");
   const [reviews, setReviews] = useState<AdminReviewRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -117,18 +120,15 @@ export default function ImportReviewsPanel({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-sm font-bold text-gray-900">
-            Import from customer reviews
-          </h2>
+            {i18n("Import from customer reviews")}</h2>
           <p className="mt-0.5 text-xs text-gray-500">
-            Promote a real product review to the About page. Already-added
-            reviews are hidden.
-          </p>
+            {i18n("Promote a real product review to the About page. Already-added reviews are hidden.")}</p>
         </div>
         <button
           type="button"
           onClick={onClose}
           className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100"
-          aria-label="Close import panel"
+          aria-label={i18n("Close import panel")}
         >
           <X className="h-4 w-4" />
         </button>
@@ -140,18 +140,17 @@ export default function ImportReviewsPanel({
           type="text"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Search reviews by author, product, text..."
-          className="h-10 w-full rounded-xl border border-brand-border pl-9 pr-3 text-sm outline-none transition focus:border-brand-red"
+          placeholder={i18n("Search reviews by author, product, text...")}
+          className="h-10 w-full rounded-xl border border-brand-border ps-9 pe-3 text-sm outline-none transition focus:border-brand-red"
         />
       </label>
 
-      <div className="mt-4 max-h-96 space-y-3 overflow-y-auto pr-1">
+      <div className="mt-4 max-h-96 space-y-3 overflow-y-auto pe-1">
         {loading ? (
-          <SectionLoader title="Loading reviews" rows={4} />
+          <SectionLoader title={i18n("Loading reviews")} rows={4} />
         ) : candidates.length === 0 ? (
           <div className="rounded-xl border border-brand-border bg-brand-light-bg p-8 text-center text-sm text-gray-600">
-            No reviews available to import.
-          </div>
+            {i18n("No reviews available to import.")}</div>
         ) : (
           candidates.map((review) => {
             const text = (review.comment ?? review.title ?? "").trim();
@@ -169,12 +168,11 @@ export default function ImportReviewsPanel({
                   {review.verified && (
                     <span className="inline-flex items-center gap-1 text-xs text-emerald-600">
                       <CheckCircle className="h-3 w-3" />
-                      Verified
-                    </span>
+                      {i18n("Verified")}</span>
                   )}
                   {review.product?.name && (
                     <span className="text-xs text-gray-400">
-                      on {review.product.name}
+                      {i18n("on")}{" "}{review.product.name}
                     </span>
                   )}
                 </div>
@@ -191,7 +189,7 @@ export default function ImportReviewsPanel({
                         [review.id]: event.target.value,
                       }))
                     }
-                    placeholder="Location (optional, e.g. Dhaka)"
+                    placeholder={i18n("Location (optional, e.g. Dhaka)")}
                     className="h-9 flex-1 rounded-lg border border-brand-border px-3 text-xs outline-none transition focus:border-brand-red"
                   />
                   <button
@@ -204,12 +202,11 @@ export default function ImportReviewsPanel({
                     className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-brand-red px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-red-hover disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isBusy ? (
-                      <ButtonLoader label="Adding..." />
+                      <ButtonLoader label={i18n("Adding...")} />
                     ) : (
                       <>
                         <Download className="h-3.5 w-3.5" />
-                        Add to testimonials
-                      </>
+                        {i18n("Add to testimonials")}</>
                     )}
                   </button>
                 </div>

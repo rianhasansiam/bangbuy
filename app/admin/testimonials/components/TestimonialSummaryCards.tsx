@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { cn } from "@/lib/utils";
 
@@ -43,20 +47,22 @@ export default function TestimonialSummaryCards({
   total: number;
   activeCount: number;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminTestimonialsComponentsTestimonialSummaryCards");
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       <SummaryCard
-        label="Total testimonials"
-        value={total.toLocaleString()}
+        label={i18n("Total testimonials")}
+        value={total.toLocaleString(locale)}
         accent="violet"
       />
       <SummaryCard
-        label="Active (shown on site)"
-        value={activeCount.toLocaleString()}
+        label={i18n("Active (shown on site)")}
+        value={activeCount.toLocaleString(locale)}
         accent="emerald"
       />
       <SummaryCard
-        label="Layout"
+        label={i18n("Layout")}
         value={activeCount > 3 ? "Auto-scrolling" : "Static grid"}
         accent="amber"
       />

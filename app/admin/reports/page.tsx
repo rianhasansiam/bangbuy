@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useCallback, useState } from "react";
 import { AlertCircle } from "lucide-react";
@@ -41,6 +43,7 @@ import ReportTypePicker from "./components/ReportTypePicker";
  * page within the same session.
  */
 export default function AdminReportsPage() {
+  const i18n = useInterfaceTranslations("AdminAdminReportsPage");
   const dispatch = useDispatch<AppDispatch>();
   const reportState = useSelector((state: RootState) => state.adminReports);
 
@@ -124,22 +127,18 @@ export default function AdminReportsPage() {
       {/* Hero */}
       <header className="rounded-2xl border border-brand-border bg-brand-black p-5 text-white shadow-sm">
         <p className="text-[11px] font-bold uppercase tracking-widest text-white/70">
-          Reports
-        </p>
-        <h1 className="mt-1 text-xl font-extrabold">Generate &amp; download reports</h1>
+          {i18n("Reports")}</p>
+        <h1 className="mt-1 text-xl font-extrabold">{i18n("Generate & download reports")}</h1>
         <p className="mt-1 text-sm text-white/70">
-          Pick a report, set the window, preview the data, and export a
-          polished PDF for sharing with the team.
-        </p>
+          {i18n("Pick a report, set the window, preview the data, and export a polished PDF for sharing with the team.")}</p>
         <p className="mt-3 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-bold ring-1 ring-white/30">
-          Currently selected · {activeDef.label}
+          {i18n("Currently selected ·")}{" "}{activeDef.label}
         </p>
       </header>
 
       <div>
         <h2 className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500">
-          Choose a report
-        </h2>
+          {i18n("Choose a report")}</h2>
         <ReportTypePicker
           value={reportState.type}
           onChange={handleTypeChange}
@@ -167,8 +166,8 @@ export default function AdminReportsPage() {
         <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
-            <p className="font-bold">Couldn&apos;t generate the report</p>
-            <p className="mt-0.5">{reportState.error}</p>
+            <p className="font-bold">{i18n("Couldn't generate the report")}</p>
+            <p className="mt-0.5">{i18n(reportState.error)}</p>
           </div>
         </div>
       )}
@@ -177,7 +176,7 @@ export default function AdminReportsPage() {
         <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
-            <p className="font-bold">Couldn&apos;t build the PDF</p>
+            <p className="font-bold">{i18n("Couldn't build the PDF")}</p>
             <p className="mt-0.5">{downloadError}</p>
           </div>
         </div>

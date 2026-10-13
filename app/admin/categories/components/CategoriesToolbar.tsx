@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { ChevronsDownUp, ChevronsUpDown, Plus, RotateCcw, Search } from "lucide-react";
 
@@ -35,6 +37,7 @@ export default function CategoriesToolbar({
   onExpandAll: () => void;
   onCollapseAll: () => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminCategoriesComponentsCategoriesToolbar");
   return (
     <div className="rounded-2xl border border-brand-border bg-brand-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -45,8 +48,8 @@ export default function CategoriesToolbar({
               type="text"
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
-              placeholder="Search by name, slug, description..."
-              className="h-10 w-full rounded-xl border border-brand-border pl-9 pr-3 text-sm outline-none transition focus:border-brand-red"
+              placeholder={i18n("Search by name, slug, description...")}
+              className="h-10 w-full rounded-xl border border-brand-border ps-9 pe-3 text-sm outline-none transition focus:border-brand-red"
             />
           </label>
 
@@ -55,7 +58,7 @@ export default function CategoriesToolbar({
             onChange={(event) => onStatusChange(event.target.value as StatusFilter)}
             className="h-10 rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
           >
-            <option value="ALL">All status</option>
+            <option value="ALL">{i18n("All status")}</option>
             {STATUS_VALUES.map((status) => (
               <option key={status} value={status}>
                 {status}
@@ -68,20 +71,20 @@ export default function CategoriesToolbar({
           <button
             type="button"
             onClick={onExpandAll}
-            title="Expand all categories"
+            title={i18n("Expand all categories")}
             className="inline-flex h-10 items-center gap-2 rounded-xl border border-brand-border px-3 text-sm font-semibold text-brand-black transition hover:bg-brand-light-bg"
           >
             <ChevronsUpDown className="h-4 w-4" />
-            <span className="hidden xl:inline">Expand</span>
+            <span className="hidden xl:inline">{i18n("Expand")}</span>
           </button>
           <button
             type="button"
             onClick={onCollapseAll}
-            title="Collapse all categories"
+            title={i18n("Collapse all categories")}
             className="inline-flex h-10 items-center gap-2 rounded-xl border border-brand-border px-3 text-sm font-semibold text-brand-black transition hover:bg-brand-light-bg"
           >
             <ChevronsDownUp className="h-4 w-4" />
-            <span className="hidden xl:inline">Collapse</span>
+            <span className="hidden xl:inline">{i18n("Collapse")}</span>
           </button>
           <button
             type="button"
@@ -95,7 +98,7 @@ export default function CategoriesToolbar({
             ) : (
               <RotateCcw className="h-4 w-4" />
             )}
-            {isLoading ? "Refreshing..." : "Refresh"}
+            {isLoading ? i18n("Refreshing...") : i18n("Refresh")}
           </button>
 
           <button
@@ -104,20 +107,17 @@ export default function CategoriesToolbar({
             className="inline-flex h-10 items-center gap-2 rounded-xl bg-brand-red px-4 text-sm font-semibold text-brand-white transition hover:bg-brand-red-hover"
           >
             <Plus className="h-4 w-4" />
-            Add root category
-          </button>
+            {i18n("Add root category")}</button>
         </div>
       </div>
 
       <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
         <span>
-          {visibleCount} / {totalCount} categories
-        </span>
+          {visibleCount} / {totalCount} {i18n("categories")}</span>
         {isLoading && (
           <span className="inline-flex items-center gap-1.5">
             <LoadingSpinner decorative size="xs" />
-            Syncing categories...
-          </span>
+            {i18n("Syncing categories...")}</span>
         )}
       </div>
     </div>

@@ -1,5 +1,6 @@
+
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/lib/i18n/navigation";
 
 import type { ImageTextBlock } from "@/lib/types/product-description-blocks";
 import { cn } from "@/lib/utils";

@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "@/lib/auth/use-app-session";
@@ -27,6 +29,7 @@ import UsersTable from "./components/UsersTable";
 type RoleFilter = "ALL" | Role;
 
 export default function AdminCustomersPage() {
+  const i18n = useInterfaceTranslations("AdminAdminUsersPage");
   const dispatch = useDispatch<AppDispatch>();
   const users = useSelector((state: RootState) => state.adminUsers.items);
   const isLoading = useSelector(
@@ -106,7 +109,7 @@ export default function AdminCustomersPage() {
   const handleToggleRole = async (user: AdminCustomerRow) => {
     if (user.customerType === "GUEST") return;
     if (user.id === currentUserId) {
-      const message = "You can't change your own role.";
+      const message = i18n("You can't change your own role.");
       setMutationError(message);
       notifyActionError(message, message);
       return;
@@ -168,7 +171,7 @@ export default function AdminCustomersPage() {
 
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {error}
+          {i18n(error)}
         </div>
       )}
 

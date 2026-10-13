@@ -1,34 +1,46 @@
+
+import { getInterfaceTranslations } from "@/components/i18n/server";
 import type { Metadata } from "next";
 import { ArrowRight, Tags } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/lib/i18n/navigation";
 
 import JsonLd from "@/components/seo/JsonLd";
 import { breadcrumbJsonLd, collectionPageJsonLd } from "@/lib/seo/json-ld";
-import { buildMetadata } from "@/lib/seo/metadata";
+import { buildLocalizedMetadata } from "@/lib/seo/localized-metadata";
 import { siteConfig } from "@/lib/seo/site";
 import { getPublicBrands } from "@/lib/services/brand.service";
+import { getRequestLocale } from "@/lib/i18n/server";
+import { localizeBrandSnapshots } from "@/lib/translations/public";
+import PublicContentNotice from "@/components/i18n/PublicContentNotice";
+import { getTranslations } from "next-intl/server";
 
 export const revalidate = 1800;
 
-export const metadata: Metadata = buildMetadata({
+export async function generateMetadata(): Promise<Metadata> {
+  return buildLocalizedMetadata({
   title: "Shop by Brand",
   description: `Browse active brands at ${siteConfig.name} and discover their latest available products in one place.`,
   path: "/brands",
   keywords: ["shop by brand", "product brands", "brand directory"],
-});
+}, "InterfaceBrandsPage");
+}
 
 export default async function BrandDirectoryPage() {
-  const brands = await getPublicBrands();
+  const locale = await getRequestLocale();
+  const translate = await getTranslations("Seo");
+  const i18n = await getInterfaceTranslations("InterfaceBrandsPage");
+  const brands = await localizeBrandSnapshots(await getPublicBrands(), locale);
   const schemas = [
     breadcrumbJsonLd([
-      { name: "Home", path: "/" },
-      { name: "Brands", path: "/brands" },
-    ]),
+      { name: i18n("Home"), path: "/" },
+      { name: i18n("Brands"), path: "/brands" },
+    ], locale),
     collectionPageJsonLd({
-      name: "Product brands",
-      description: `Browse active brands available at ${siteConfig.name}.`,
+      name: i18n("Product brands"),
+      description: translate("brandDirectoryDescription", { brand: siteConfig.name }),
       path: "/brands",
+      locale,
     }),
   ];
 
@@ -36,43 +48,36 @@ export default async function BrandDirectoryPage() {
     <main className="min-h-screen bg-brand-light-bg">
       <JsonLd data={schemas} />
       <div className="mx-auto max-w-7xl px-3 py-8 sm:px-4 lg:px-6 lg:py-12">
-        <nav aria-label="Breadcrumb" className="mb-5 text-sm text-gray-500">
+        <PublicContentNotice available={!brands.some(brand=>!brand.translationAvailable)}/>
+        <nav aria-label={i18n("Breadcrumb")} className="mb-5 text-sm text-gray-500">
           <Link href="/" className="hover:text-brand-red">
-            Home
-          </Link>
+            {i18n("Home")}</Link>
           <span aria-hidden className="mx-2">
             /
           </span>
           <span aria-current="page" className="font-medium text-gray-800">
-            Brands
-          </span>
+            {i18n("Brands")}</span>
         </nav>
 
         <header className="mb-8 max-w-3xl">
           <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-brand-red/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-brand-red">
             <Tags className="h-4 w-4" aria-hidden="true" />
-            Brand directory
-          </div>
+            {i18n("Brand directory")}</div>
           <h1 className="text-3xl font-black tracking-tight text-gray-950 sm:text-4xl">
-            Shop by brand
-          </h1>
+            {i18n("Shop by brand")}</h1>
           <p className="mt-3 text-sm leading-6 text-gray-600 sm:text-base">
-            Explore every active brand and go straight to its currently
-            available products.
-          </p>
+            {i18n("Explore every active brand and go straight to its currently available products.")}</p>
         </header>
 
         {brands.length === 0 ? (
           <div className="rounded-2xl border border-brand-border bg-white p-10 text-center shadow-sm">
             <p className="font-semibold text-gray-900">
-              No brands are available yet.
-            </p>
+              {i18n("No brands are available yet.")}</p>
             <Link
               href="/products"
               className="mt-3 inline-flex text-sm font-semibold text-brand-red"
             >
-              Browse all products
-            </Link>
+              {i18n("Browse all products")}</Link>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -86,7 +91,7 @@ export default async function BrandDirectoryPage() {
                     {brand.logo ? (
                       <Image
                         src={brand.logo}
-                        alt={`${brand.name} logo`}
+                        alt={i18n("{value0} logo", { value0: brand.name })}
                         width={64}
                         height={64}
                         className="h-full w-full object-contain p-1.5"
@@ -104,10 +109,10 @@ export default async function BrandDirectoryPage() {
                       </h2>
                       <p className="mt-1 text-xs font-medium text-gray-500">
                         {brand.productCount}{" "}
-                        {brand.productCount === 1 ? "product" : "products"}
+                        {brand.productCount === 1 ? i18n("product") : i18n("products")}
                       </p>
                     </div>
-                    <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-brand-red transition group-hover:translate-x-1" />
+                    <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-brand-red transition group-hover:translate-x-1 rtl:rotate-180" />
                   </div>
                   {brand.description && (
                     <p className="mt-3 line-clamp-2 text-sm leading-6 text-gray-600">

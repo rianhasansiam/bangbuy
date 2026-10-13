@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { ShoppingCart, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -16,12 +18,13 @@ export default function BulkActionsBar({
   onMoveAllToCart,
   onRemoveAll,
 }: BulkActionsBarProps) {
+  const i18n = useInterfaceTranslations("InterfaceWishlistComponentsBulkActionsBar");
   const visible = selectedCount > 0;
 
   return (
     <div
       role="region"
-      aria-label="Bulk actions"
+      aria-label={i18n("Bulk actions")}
       aria-hidden={!visible}
       className={cn(
         "pointer-events-none fixed inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-40 flex justify-center px-3 transition-all duration-300 ease-out min-[360px]:px-4",
@@ -36,19 +39,18 @@ export default function BulkActionsBar({
             {selectedCount}
           </span>
           <p className="hidden text-sm font-medium min-[360px]:block">
-            {selectedCount === 1 ? "item" : "items"} selected
-          </p>
+            {selectedCount === 1 ? i18n("item") : i18n("items")} {i18n("selected")}</p>
         </div>
 
-        <div className="ml-auto flex shrink-0 items-center gap-1.5 min-[360px]:gap-2">
+        <div className="ms-auto flex shrink-0 items-center gap-1.5 min-[360px]:gap-2">
           <button
             type="button"
             onClick={onMoveAllToCart}
             className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-brand-red px-2.5 py-2 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover min-[360px]:px-3"
           >
             <ShoppingCart className="h-4 w-4" />
-            <span className="hidden sm:inline">Move to cart</span>
-            <span className="sm:hidden">Cart</span>
+            <span className="hidden sm:inline">{i18n("Move to cart")}</span>
+            <span className="sm:hidden">{i18n("Cart")}</span>
           </button>
           <button
             type="button"
@@ -56,12 +58,12 @@ export default function BulkActionsBar({
             className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-xl bg-white/10 px-2.5 py-2 text-sm font-semibold text-rose-200 transition-colors hover:bg-rose-500/30 hover:text-white min-[360px]:px-3"
           >
             <Trash2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Remove</span>
+            <span className="hidden sm:inline">{i18n("Remove")}</span>
           </button>
           <button
             type="button"
             onClick={onClear}
-            aria-label="Clear selection"
+            aria-label={i18n("Clear selection")}
             className="grid h-11 w-11 place-items-center rounded-xl bg-white/10 transition-colors hover:bg-white/20"
           >
             <X className="h-4 w-4" />

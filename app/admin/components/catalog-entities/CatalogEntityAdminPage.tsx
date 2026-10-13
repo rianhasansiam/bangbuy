@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Factory, Tags } from "lucide-react";
@@ -44,6 +46,7 @@ export default function CatalogEntityAdminPage({
 }: {
   kind: CatalogEntityKind;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminComponentsCatalogEntitiesCatalogEntityAdminPage");
   const isBrand = kind === "brand";
   const singularLabel = isBrand ? "Brand" : "Manufacturer";
   const pluralLabel = isBrand ? "brands" : "manufacturers";
@@ -152,7 +155,7 @@ export default function CatalogEntityAdminPage({
     if (!isValidWebsite(form.website)) {
       setMutationNote({
         tone: "error",
-        message: "Enter a valid http:// or https:// website.",
+        message: i18n("Enter a valid http:// or https:// website."),
       });
       return;
     }
@@ -163,7 +166,7 @@ export default function CatalogEntityAdminPage({
     ) {
       setMutationNote({
         tone: "error",
-        message: "Use a lowercase slug with letters, numbers, and single hyphens.",
+        message: i18n("Use a lowercase slug with letters, numbers, and single hyphens."),
       });
       return;
     }
@@ -281,12 +284,10 @@ export default function CatalogEntityAdminPage({
           </span>
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/60">
-              Catalog
-            </p>
-            <h1 className="text-xl font-black sm:text-2xl">{singularLabel}s</h1>
+              {i18n("Catalog")}</p>
+            <h1 className="text-xl font-black sm:text-2xl">{i18n(isBrand ? "Brands" : "Manufacturers")}</h1>
             <p className="mt-0.5 text-xs text-white/70 sm:text-sm">
-              Manage reusable product {pluralLabel} and storefront visibility.
-            </p>
+              {i18n("Manage reusable product")}{" "}{pluralLabel} {i18n("and storefront visibility.")}</p>
           </div>
         </div>
       </div>

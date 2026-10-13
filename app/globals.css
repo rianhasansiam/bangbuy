@@ -18,6 +18,14 @@
 @custom-variant dark (&:is(.dark *));
 @custom-variant can-hover (@media (hover: hover));
 
+/* Native system fonts provide script coverage without loading all locale fonts. */
+html:lang(bn) { font-family: var(--font-geist-sans), "Noto Sans Bengali", "Kohinoor Bangla", sans-serif; }
+html:lang(ar), html:lang(ur), html:lang(fa) { font-family: var(--font-geist-sans), "Noto Sans Arabic", "Geeza Pro", Arial, sans-serif; }
+html:lang(he) { font-family: var(--font-geist-sans), "Noto Sans Hebrew", Arial, sans-serif; }
+html:lang(zh) { font-family: var(--font-geist-sans), "PingFang SC", "PingFang TC", "Microsoft YaHei", sans-serif; }
+input[type="email"], input[type="tel"], input[autocomplete^="cc-"], [data-product-code] { direction: ltr; unicode-bidi: isolate; }
+
+
 @theme inline {
   /*
    * BangBuy brand color utilities.

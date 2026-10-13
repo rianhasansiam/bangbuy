@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Archive, Inbox, MailOpen } from "lucide-react";
 
@@ -50,24 +54,26 @@ export default function MessageSummaryCards({
   readCount: number;
   archivedCount: number;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminMessagesComponentsMessageSummaryCards");
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       <SummaryCard
         icon={<Inbox className="h-4 w-4" />}
-        label="New"
-        value={newCount.toLocaleString()}
+        label={i18n("New")}
+        value={newCount.toLocaleString(locale)}
         accent="violet"
       />
       <SummaryCard
         icon={<MailOpen className="h-4 w-4" />}
-        label="Read"
-        value={readCount.toLocaleString()}
+        label={i18n("Read")}
+        value={readCount.toLocaleString(locale)}
         accent="emerald"
       />
       <SummaryCard
         icon={<Archive className="h-4 w-4" />}
-        label="Archived"
-        value={archivedCount.toLocaleString()}
+        label={i18n("Archived")}
+        value={archivedCount.toLocaleString(locale)}
         accent="amber"
       />
     </div>

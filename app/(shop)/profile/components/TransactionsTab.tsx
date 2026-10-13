@@ -1,6 +1,9 @@
 "use client";
+import { useLocale } from "next-intl";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 
-import Link from "next/link";
+
+import Link from "@/lib/i18n/navigation";
 import { useEffect, useState } from "react";
 import {
   AlertCircle,
@@ -48,6 +51,7 @@ const STATUS_FILTERS: ReadonlyArray<{
 ];
 
 export default function TransactionsTab() {
+  const i18n = useInterfaceTranslations("InterfaceProfileComponentsTransactionsTab");
   const [statusFilter, setStatusFilter] = useState<TransactionStatus | "ALL">(
     "ALL",
   );
@@ -110,18 +114,15 @@ export default function TransactionsTab() {
             </span>
             <div className="min-w-0">
               <h2 className="text-base font-bold text-gray-900 sm:text-lg">
-                Payment transactions
-              </h2>
+                {i18n("Payment transactions")}</h2>
               <p className="text-xs text-gray-500">
-                Payment attempts recorded for orders on this account.
-              </p>
+                {i18n("Payment attempts recorded for orders on this account.")}</p>
             </div>
           </div>
           {state.status === "ready" && (
             <p className="text-xs font-medium text-gray-500">
               {state.meta.total}{" "}
-              {state.meta.total === 1 ? "transaction" : "transactions"} total
-            </p>
+              {state.meta.total === 1 ? i18n("transaction") : i18n("transactions")} {i18n("total")}</p>
           )}
         </div>
 
@@ -140,7 +141,7 @@ export default function TransactionsTab() {
                     : "inline-flex shrink-0 snap-start rounded-xl border border-brand-border bg-brand-white px-3 py-1.5 text-xs font-bold text-foreground transition hover:border-brand-red hover:text-brand-red"
                 }
               >
-                {filter.label}
+                {i18n(filter.label)}
               </button>
             );
           })}
@@ -151,7 +152,7 @@ export default function TransactionsTab() {
         <TableSkeleton
           rows={5}
           columns={4}
-          ariaLabel="Loading payment transactions"
+          ariaLabel={i18n("Loading payment transactions")}
         />
       )}
 
@@ -162,14 +163,13 @@ export default function TransactionsTab() {
         >
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <div className="flex-1">
-            <p>{state.message}</p>
+            <p>{i18n(state.message)}</p>
             <button
               type="button"
               onClick={() => setRefreshKey((value) => value + 1)}
               className="mt-2 rounded-lg border border-rose-200 bg-white px-2.5 py-1 text-xs font-bold text-rose-700 transition hover:bg-rose-100"
             >
-              Try again
-            </button>
+              {i18n("Try again")}</button>
           </div>
         </div>
       )}
@@ -180,12 +180,11 @@ export default function TransactionsTab() {
             <ReceiptText className="h-6 w-6" />
           </div>
           <h3 className="mt-4 text-lg font-extrabold text-gray-900">
-            No transactions found
-          </h3>
+            {i18n("No transactions found")}</h3>
           <p className="mt-1 text-sm text-gray-600">
             {statusFilter === "ALL"
-              ? "Your recorded payment attempts will appear here."
-              : `There are no ${TRANSACTION_STATUS_META[statusFilter].label.toLowerCase()} transactions.`}
+              ? i18n("Your recorded payment attempts will appear here.")
+              : i18n("There are no {value0} transactions.", { value0: i18n(TRANSACTION_STATUS_META[statusFilter].label) })}
           </p>
         </div>
       )}
@@ -214,12 +213,14 @@ function TransactionCard({
 }: {
   transaction: CustomerTransaction;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("InterfaceProfileComponentsTransactionsTab");
   const status = getTransactionStatusMeta(transaction.status);
   const reference = transaction.transactionId ?? transaction.id;
   const completion = transaction.paidAt
-    ? { label: "Paid", value: transaction.paidAt }
+    ? { label: i18n("Paid"), value: transaction.paidAt }
     : transaction.status === "SUCCESS"
-      ? { label: "Recorded", value: transaction.createdAt }
+      ? { label: i18n("Recorded"), value: transaction.createdAt }
       : null;
 
   return (
@@ -235,13 +236,12 @@ function TransactionCard({
                 <span
                   className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold ring-1 ring-inset ${status.pill}`}
                 >
-                  {status.label}
+                  {i18n(status.label)}
                 </span>
                 {transaction.requiresReview && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-800 ring-1 ring-inset ring-amber-200">
                     <ShieldCheck className="h-3 w-3" />
-                    Verification pending
-                  </span>
+                    {i18n("Verification pending")}</span>
                 )}
               </div>
               <p
@@ -257,10 +257,11 @@ function TransactionCard({
             </div>
           </div>
 
-          <p className="text-left text-lg font-extrabold text-brand-red sm:text-right">
+          <p className="text-start text-lg font-extrabold text-brand-red sm:text-end">
             {formatTransactionAmount(
               transaction.amount,
               transaction.currency,
+              locale,
             )}
           </p>
         </div>
@@ -268,8 +269,7 @@ function TransactionCard({
         <div className="grid gap-3 border-t border-brand-border pt-3 text-xs sm:grid-cols-3">
           <div>
             <p className="font-semibold uppercase tracking-wide text-gray-400">
-              Order
-            </p>
+              {i18n("Order")}</p>
             <Link
               href={`/orders/${transaction.order.id}`}
               className="mt-1 inline-flex font-bold text-brand-red hover:underline"
@@ -279,25 +279,24 @@ function TransactionCard({
           </div>
           <div>
             <p className="font-semibold uppercase tracking-wide text-gray-400">
-              Initiated
-            </p>
+              {i18n("Initiated")}</p>
             <p className="mt-1 font-medium text-gray-700">
-              {formatTransactionDate(transaction.createdAt)}
+              {formatTransactionDate(transaction.createdAt, locale)}
             </p>
           </div>
           <div>
             <p className="font-semibold uppercase tracking-wide text-gray-400">
-              {completion?.label ?? "Paid"}
+              {completion?.label ?? i18n("Paid")}
             </p>
             <p className="mt-1 font-medium text-gray-700">
-              {formatTransactionDate(completion?.value ?? null)}
+              {formatTransactionDate(completion?.value ?? null, locale)}
             </p>
           </div>
         </div>
 
         {transaction.bankTransactionId && (
           <p className="break-all rounded-xl bg-brand-light-bg px-3 py-2 font-mono text-[11px] text-gray-600">
-            Bank reference: {transaction.bankTransactionId}
+            {i18n("Bank reference:")}{transaction.bankTransactionId}
           </p>
         )}
       </div>
@@ -314,30 +313,31 @@ function TransactionPagination({
   totalPages: number;
   onChange: (next: number) => void;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceProfileComponentsTransactionsTab");
   return (
     <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-2xl border border-brand-border bg-brand-white p-2.5 text-xs font-semibold text-gray-600 shadow-sm sm:p-3">
       <button
         type="button"
         onClick={() => onChange(Math.max(1, page - 1))}
         disabled={page <= 1}
-        aria-label="Previous transaction page"
+        aria-label={i18n("Previous transaction page")}
         className="inline-flex items-center gap-1 rounded-xl border border-brand-border px-3 py-1.5 transition hover:border-brand-red hover:text-brand-red disabled:cursor-not-allowed disabled:opacity-50"
       >
-        <ChevronLeft className="h-3.5 w-3.5" />
-        <span className="hidden min-[380px]:inline">Previous</span>
+        <ChevronLeft className="h-3.5 w-3.5 rtl:rotate-180" />
+        <span className="hidden min-[380px]:inline">{i18n("Previous")}</span>
       </button>
       <span className="text-center">
-        Page {page} of {totalPages}
+        {i18n("Page {current, number} of {total, number}", { current: page, total: totalPages })}
       </span>
       <button
         type="button"
         onClick={() => onChange(Math.min(totalPages, page + 1))}
         disabled={page >= totalPages}
-        aria-label="Next transaction page"
+        aria-label={i18n("Next transaction page")}
         className="inline-flex items-center gap-1 rounded-xl border border-brand-border px-3 py-1.5 transition hover:border-brand-red hover:text-brand-red disabled:cursor-not-allowed disabled:opacity-50"
       >
-        <span className="hidden min-[380px]:inline">Next</span>
-        <ChevronRight className="h-3.5 w-3.5" />
+        <span className="hidden min-[380px]:inline">{i18n("Next")}</span>
+        <ChevronRight className="h-3.5 w-3.5 rtl:rotate-180" />
       </button>
     </div>
   );

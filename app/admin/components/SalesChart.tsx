@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useMemo, useState } from "react";
 import { TrendingUp } from "lucide-react";
@@ -33,6 +37,8 @@ const CHART_PAD = { l: 44, r: 16, t: 16, b: 28 } as const;
  * days because that's the largest range the chart can show.
  */
 export default function SalesChart({ sales, loading }: SalesChartProps) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminComponentsSalesChart");
   const [range, setRange] = useState<Range>("14d");
 
   const series = sales ?? FALLBACK_SERIES;
@@ -99,33 +105,30 @@ export default function SalesChart({ sales, loading }: SalesChartProps) {
         <div>
           <div className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-brand-red" />
-            <h2 className="text-sm font-bold text-gray-900">Sales Overview</h2>
+            <h2 className="text-sm font-bold text-gray-900">{i18n("Sales Overview")}</h2>
             <span className="text-[11px] font-medium text-gray-500">
-              · last {range === "7d" ? "7" : "14"} days
-            </span>
+              {i18n("· last")}{" "}{range === "7d" ? "7" : "14"} {i18n("days")}</span>
           </div>
           <div className="mt-2 flex items-end gap-4">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-                Revenue
-              </p>
+                {i18n("Revenue")}</p>
               {loading ? (
                 <div className="mt-1 h-7 w-32 animate-pulse rounded-md bg-brand-light-bg" />
               ) : (
                 <p className="text-xl font-extrabold text-gray-900">
-                  BDT {Math.round(totalRevenue).toLocaleString()}
+                  BDT {Math.round(totalRevenue).toLocaleString(locale)}
                 </p>
               )}
             </div>
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-                Orders
-              </p>
+                {i18n("Orders")}</p>
               {loading ? (
                 <div className="mt-1 h-7 w-16 animate-pulse rounded-md bg-brand-light-bg" />
               ) : (
                 <p className="text-xl font-extrabold text-gray-900">
-                  {totalOrders.toLocaleString()}
+                  {totalOrders.toLocaleString(locale)}
                 </p>
               )}
             </div>
@@ -145,7 +148,7 @@ export default function SalesChart({ sales, loading }: SalesChartProps) {
                   : "text-gray-600 hover:text-brand-red",
               )}
             >
-              {r === "7d" ? "7 days" : "14 days"}
+              {r === "7d" ? i18n("7 days") : i18n("14 days")}
             </button>
           ))}
         </div>
@@ -156,14 +159,13 @@ export default function SalesChart({ sales, loading }: SalesChartProps) {
           <div className="h-56 w-full animate-pulse rounded-xl bg-brand-light-bg" />
         ) : !hasData ? (
           <div className="grid h-56 w-full place-items-center text-sm text-gray-500">
-            No orders yet in this window.
-          </div>
+            {i18n("No orders yet in this window.")}</div>
         ) : (
           <svg
             viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
             className="h-56 w-full"
             role="img"
-            aria-label="Revenue trend"
+            aria-label={i18n("Revenue trend")}
           >
             <defs>
               <linearGradient id="salesArea" x1="0" y1="0" x2="0" y2="1">
@@ -192,7 +194,7 @@ export default function SalesChart({ sales, loading }: SalesChartProps) {
                     className="fill-gray-400"
                     fontSize="10"
                   >
-                    {formatTick(value)}
+                    {formatTick(value, locale)}
                   </text>
                 </g>
               );
@@ -212,7 +214,7 @@ export default function SalesChart({ sales, loading }: SalesChartProps) {
             {/* Points */}
             {plotted.map((p, i) => (
               <g key={`point-${i}`}>
-                <title>{`${p.label} · BDT ${p.revenue.toLocaleString()} · ${p.orders} orders`}</title>
+                <title>{`${p.label} · BDT ${p.revenue.toLocaleString(locale)} · ${p.orders} orders`}</title>
                 <circle
                   cx={p.x}
                   cy={p.y}
@@ -239,12 +241,6 @@ export default function SalesChart({ sales, loading }: SalesChartProps) {
   );
 }
 
-function formatTick(value: number): string {
-  if (value >= 1_000_000) {
-    return `BDT ${(value / 1_000_000).toFixed(1)}m`;
-  }
-  if (value >= 1_000) {
-    return `BDT ${Math.round(value / 1_000)}k`;
-  }
-  return `BDT ${Math.round(value)}`;
+function formatTick(value: number, locale = "en"): string {
+  return `BDT ${new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }).format(value)}`;
 }

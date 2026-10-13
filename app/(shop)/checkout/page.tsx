@@ -1,4 +1,7 @@
 "use client";
+import { useLocaleDraft, useLocaleSwitchGuard } from "@/components/i18n/useLocaleDraft";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import {
   Suspense,
@@ -8,8 +11,9 @@ import {
   useRef,
   useState,
 } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import Link from "@/lib/i18n/navigation";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "@/lib/i18n/navigation";
 import { useSession } from "@/lib/auth/use-app-session";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -96,6 +100,7 @@ function parseBuyNowParam(raw: string | null): CheckoutItemInput[] | null {
 }
 
 function CheckoutPageInner() {
+  const i18n = useInterfaceTranslations("InterfaceCheckoutPage");
   const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useDispatch<AppDispatch>();
@@ -132,10 +137,20 @@ function CheckoutPageInner() {
   );
 
   const [form, setForm] = useState<CustomerFormState>(EMPTY_FORM);
+  useLocaleDraft("checkout-delivery", form, setForm, [
+    "customerName", "customerPhone", "customerEmail", "customerAddress",
+    "customerCity", "deliveryZone", "customerPostalCode", "customerNote",
+  ]);
   const [paymentMethod, setPaymentMethod] =
     useState<CheckoutPaymentMethod>("CASH_ON_DELIVERY");
   const [promoCode, setPromoCode] = useState<string>(carriedPromo ?? "");
   const [appliedPromo, setAppliedPromo] = useState<string | null>(carriedPromo);
+  const checkoutChoices = { paymentMethod, promoCode, appliedPromo: appliedPromo ?? "" };
+  useLocaleDraft("checkout-choices", checkoutChoices, (update) => {
+    const next = typeof update === "function" ? update(checkoutChoices) : update;
+    if (["CASH_ON_DELIVERY", "AIRWALLEX", "SSLCOMMERZ"].includes(next.paymentMethod)) setPaymentMethod(next.paymentMethod);
+    setPromoCode(next.promoCode); setAppliedPromo(next.appliedPromo || null);
+  }, ["paymentMethod", "promoCode", "appliedPromo"]);
   const [promoFeedback, setPromoFeedback] = useState<{
     tone: "success" | "error";
     message: string;
@@ -149,10 +164,20 @@ function CheckoutPageInner() {
   const [previewToken, setPreviewToken] = useState(0);
 
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  useLocaleSwitchGuard(isPlacingOrder);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const submitInFlightRef = useRef(false);
   const checkoutIdempotencyAttemptRef =
     useRef<CheckoutIdempotencyAttempt | null>(null);
+  const [savedCheckoutAttempt, setSavedCheckoutAttempt] = useState<CheckoutIdempotencyAttempt | null>(null);
+  const attemptDraft = savedCheckoutAttempt ?? { fingerprint: "", key: "" };
+  useLocaleDraft("checkout-idempotency", attemptDraft, (update) => {
+    const next = typeof update === "function" ? update(attemptDraft) : update;
+    if (next.fingerprint && /^[0-9a-f-]{36}$/i.test(next.key)) {
+      checkoutIdempotencyAttemptRef.current = next;
+      setSavedCheckoutAttempt(next);
+    }
+  }, ["fingerprint", "key"]);
 
   const [fieldErrors, setFieldErrors] = useState<
     Partial<Record<keyof CustomerFormState, string>>
@@ -320,11 +345,11 @@ function CheckoutPageInner() {
               tone: "success",
               message: `${next.promo.code} applied.`,
             });
-            toast.success(`Promo code ${next.promo.code} applied`);
+            toast.success(i18n(`Promo code ${next.promo.code} applied`));
           } else {
             setAppliedPromo(null);
             setPromoFeedback({ tone: "error", message: next.promo.reason });
-            toast.error(next.promo.reason);
+            toast.error(i18n(next.promo.reason));
           }
         }
       } catch (error) {
@@ -344,6 +369,7 @@ function CheckoutPageInner() {
       ignore = true;
     };
   }, [
+    i18n,
     authStatus,
     cartError,
     cartIsHydrated,
@@ -369,7 +395,7 @@ function CheckoutPageInner() {
     setAppliedPromo(null);
     setPromoCode("");
     setPromoFeedback(null);
-    toast.info("Promo code removed");
+    toast.info(i18n("Promo code removed"));
   };
 
   const handleRetry = () => setPreviewToken((token) => token + 1);
@@ -377,44 +403,44 @@ function CheckoutPageInner() {
   const validateForm = (): boolean => {
     const errors: typeof fieldErrors = {};
     if (form.customerName.trim().length < 2) {
-      errors.customerName = "Enter your full name.";
+      errors.customerName = i18n("Enter your full name.");
     }
     if (form.customerPhone.trim().length < 7) {
-      errors.customerPhone = "Enter a valid phone number.";
+      errors.customerPhone = i18n("Enter a valid phone number.");
     }
     if (
       authStatus === "unauthenticated" &&
       paymentMethod === "SSLCOMMERZ" &&
       !form.customerEmail.trim()
     ) {
-      errors.customerEmail = "Enter your email address for online payment.";
+      errors.customerEmail = i18n("Enter your email address for online payment.");
     } else if (
       authStatus === "unauthenticated" &&
       form.customerEmail.trim() &&
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customerEmail.trim())
     ) {
-      errors.customerEmail = "Enter a valid email address.";
+      errors.customerEmail = i18n("Enter a valid email address.");
     } else if (
       authStatus === "unauthenticated" &&
       paymentMethod === "SSLCOMMERZ" &&
       form.customerEmail.trim().length > 50
     ) {
-      errors.customerEmail = "Online payment accepts an email address up to 50 characters.";
+      errors.customerEmail = i18n("Online payment accepts an email address up to 50 characters.");
     }
     if (form.customerAddress.trim().length < 5) {
-      errors.customerAddress = "Enter your delivery address.";
+      errors.customerAddress = i18n("Enter your delivery address.");
     }
     if (form.customerCity.trim() && form.customerCity.trim().length < 2) {
-      errors.customerCity = "City / district is too short.";
+      errors.customerCity = i18n("City / district is too short.");
     }
     if (
       form.customerPostalCode.trim() &&
       form.customerPostalCode.trim().length < 3
     ) {
-      errors.customerPostalCode = "Postal code is too short.";
+      errors.customerPostalCode = i18n("Postal code is too short.");
     }
     if (form.customerNote.length > 1000) {
-      errors.customerNote = "Note is too long.";
+      errors.customerNote = i18n("Note is too long.");
     }
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -474,28 +500,28 @@ function CheckoutPageInner() {
     const deliveryZone = form.deliveryZone;
     if (!deliveryZone) {
       setFieldErrors((current) => ({ ...current, deliveryZone: "Select a delivery area." }));
-      toast.warning("Select a delivery area.");
+      toast.warning(i18n("Select a delivery area."));
       return;
     }
 
     if (!preview || preview.items.length === 0) {
-      const msg = "Your cart is empty. Add items before checking out.";
+      const msg = i18n("Your cart is empty. Add items before checking out.");
       setSubmitError(msg);
-      toast.error(msg);
+      toast.error(i18n(msg));
       return;
     }
     if (
       paymentMethod === "AIRWALLEX" &&
       !preview.airwallexPaymentQuote?.quoteToken
     ) {
-      const msg = "Refresh checkout to obtain a secure payment quote.";
+      const msg = i18n("Refresh checkout to obtain a secure payment quote.");
       setSubmitError(msg);
-      toast.error(msg);
+      toast.error(i18n(msg));
       return;
     }
 
     if (!validateForm()) {
-      toast.warning("Please fill in all required fields.");
+      toast.warning(i18n("Please fill in all required fields."));
       return;
     }
 
@@ -540,6 +566,7 @@ function CheckoutPageInner() {
         () => window.crypto.randomUUID(),
       );
       checkoutIdempotencyAttemptRef.current = attempt;
+      setSavedCheckoutAttempt(attempt);
       checkoutRequest.idempotencyKey = attempt.key;
 
       const result = await placeCheckoutOrder(checkoutRequest);
@@ -547,7 +574,7 @@ function CheckoutPageInner() {
         paymentMethod === "SSLCOMMERZ" ? result.paymentUrl : undefined;
       if (paymentMethod === "SSLCOMMERZ" && !paymentUrl) {
         throw new Error(
-          "The secure payment session could not be started. Please try again.",
+          i18n("The secure payment session could not be started. Please try again."),
         );
       }
 
@@ -556,7 +583,7 @@ function CheckoutPageInner() {
       await syncCartAfterOrder();
 
       if (paymentMethod === "SSLCOMMERZ" && paymentUrl) {
-        toast.info("Redirecting to secure payment...");
+        toast.info(i18n("Redirecting to secure payment..."));
         window.location.assign(paymentUrl);
         leavingCheckout = true;
         return;
@@ -564,19 +591,19 @@ function CheckoutPageInner() {
 
       if (paymentMethod === "AIRWALLEX") {
         reservedAirwallexOrderId = result.order.id;
-        toast.info("Opening Airwallex secure checkout...");
+        toast.info(i18n("Opening Airwallex secure checkout..."));
         await startAirwallexHostedCheckout(result.order.id);
         leavingCheckout = true;
         return;
       }
 
-      toast.success("Order placed successfully!");
+      toast.success(i18n("Order placed successfully!"));
       leavingCheckout = true;
       router.push(`/orders/${result.order.id}?just-placed=1`);
     } catch (error) {
       if (reservedAirwallexOrderId) {
         toast.info(
-          "Your order is reserved. Open it to retry the secure payment.",
+          i18n("Your order is reserved. Open it to retry the secure payment."),
         );
         leavingCheckout = true;
         router.push(
@@ -596,9 +623,9 @@ function CheckoutPageInner() {
             ? "processing"
             : "failed";
         toast.info(
-          outcome === "processing"
+          i18n(outcome === "processing"
             ? "Your order is safe while payment status is checked."
-            : "The payment attempt ended. Review the order for details.",
+            : "The payment attempt ended. Review the order for details."),
         );
         leavingCheckout = true;
         router.push(`/orders/${error.orderId}?payment=${outcome}`);
@@ -616,7 +643,7 @@ function CheckoutPageInner() {
         );
       }
       setSubmitError(message);
-      toast.error(message);
+      toast.error(i18n(message));
     } finally {
       if (!leavingCheckout) {
         submitInFlightRef.current = false;
@@ -635,8 +662,8 @@ function CheckoutPageInner() {
   if (authStatus === "loading") {
     return (
       <FullPageLoader
-        title="Loading checkout..."
-        message="One moment while we prepare your checkout."
+        title={i18n("Loading checkout...")}
+        message={i18n("One moment while we prepare your checkout.")}
       />
     );
   }
@@ -660,35 +687,32 @@ function CheckoutPageInner() {
 
         {previewError && (
           <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            <span>{previewError}</span>
+            <span>{i18n(previewError)}</span>
             <button
               type="button"
               onClick={handleRetry}
               className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700"
             >
-              Retry
-            </button>
+              {i18n("Retry")}</button>
           </div>
         )}
 
         {isEmpty ? (
           <div className="mt-8 rounded-3xl border border-brand-border bg-brand-white p-10 text-center shadow-sm">
             <p className="text-lg font-semibold text-gray-900">
-              Nothing to check out yet
-            </p>
+              {i18n("Nothing to check out yet")}</p>
             <p className="mt-2 text-sm text-gray-600">
-              Add a few products to your cart, then come back to complete the order.
-            </p>
+              {i18n("Add a few products to your cart, then come back to complete the order.")}</p>
             <Link
               href="/products"
               className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-brand-red px-5 py-2.5 text-sm font-bold text-brand-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl"
             >
-              Browse products
-            </Link>
+              {i18n("Browse products")}</Link>
           </div>
         ) : (
           <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-8">
             <fieldset
+              data-locale-recoverable
               disabled={isPlacingOrder}
               className="flex min-w-0 flex-col gap-5"
             >
@@ -715,8 +739,9 @@ function CheckoutPageInner() {
                 value={paymentMethod}
                 onChange={setPaymentMethod}
                 airwallexEnabled={
+                  // Show the payment choice while waiting for the first quote.
                   preview?.availablePaymentMethods.includes("AIRWALLEX") ??
-                  false
+                  true
                 }
               />
 

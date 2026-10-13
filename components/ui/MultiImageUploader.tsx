@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 /* eslint-disable @next/next/no-img-element */
 
@@ -37,6 +39,7 @@ export default function MultiImageUploader({
   max = 20,
   className,
 }: MultiImageUploaderProps) {
+  const i18n = useInterfaceTranslations("InterfaceUiMultiImageUploader");
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState(0);
@@ -103,7 +106,7 @@ export default function MultiImageUploader({
     <div className={cn("space-y-2", className)}>
       {label && (
         <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-          {label}
+          {i18n(label)}
         </span>
       )}
 
@@ -116,15 +119,15 @@ export default function MultiImageUploader({
             >
               <img
                 src={url}
-                alt={`Image ${index + 1}`}
+                alt={i18n("Image {value0}", { value0: index + 1 })}
                 className="h-full w-full object-cover"
               />
               <button
                 type="button"
                 onClick={() => removeAt(index)}
                 disabled={disabled}
-                className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-gray-900/60 text-white opacity-0 transition hover:bg-rose-600 group-hover:opacity-100 disabled:opacity-50"
-                aria-label={`Remove image ${index + 1}`}
+                className="absolute end-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-gray-900/60 text-white opacity-0 transition hover:bg-rose-600 group-hover:opacity-100 disabled:opacity-50"
+                aria-label={i18n("Remove image {value0}", { value0: index + 1 })}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -156,11 +159,11 @@ export default function MultiImageUploader({
             )}
           </span>
           <span className="text-sm font-semibold text-brand-red">
-            {isUploading ? `Uploading ${pending}...` : "Add images"}
+            {isUploading ? i18n("Uploading {value0}...", { value0: pending }) : i18n("Add images")}
           </span>
           <span className="flex items-center gap-1 text-[11px] text-gray-500">
             <UploadCloud className="h-3 w-3" />
-            select multiple or drag &amp; drop ({value.length}/{max})
+            {i18n("select multiple or drag & drop (")}{value.length}/{max})
           </span>
 
           <input
@@ -176,7 +179,7 @@ export default function MultiImageUploader({
         </label>
       )}
 
-      {error && <p className="text-xs font-semibold text-rose-600">{error}</p>}
+      {error && <p className="text-xs font-semibold text-rose-600">{i18n(error)}</p>}
     </div>
   );
 }

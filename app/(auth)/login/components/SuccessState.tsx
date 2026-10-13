@@ -1,6 +1,8 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 
-import Link from "next/link";
+
+import Link from "@/lib/i18n/navigation";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 
 type SuccessStateProps = {
@@ -8,6 +10,7 @@ type SuccessStateProps = {
 };
 
 export default function SuccessState({ email }: SuccessStateProps) {
+  const i18n = useInterfaceTranslations("InterfaceLoginComponentsSuccessState");
   return (
     <div
       className="flex flex-col items-center py-8 text-center"
@@ -22,13 +25,12 @@ export default function SuccessState({ email }: SuccessStateProps) {
       </div>
 
       <h3 className="mt-6 text-2xl font-black tracking-tight text-brand-text-dark">
-        You&apos;re signed in
-      </h3>
+        {i18n("You're signed in")}</h3>
 
       <p className="mt-2 max-w-sm text-sm text-brand-text-muted">
         {email
-          ? `Welcome back, ${email}. Pick up right where you left off.`
-          : "Welcome back. Pick up right where you left off."}
+          ? i18n("Welcome back, {value0}. Pick up right where you left off.", { value0: email })
+          : i18n("Welcome back. Pick up right where you left off.")}
       </p>
 
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
@@ -36,16 +38,14 @@ export default function SuccessState({ email }: SuccessStateProps) {
           href="/products"
           className="inline-flex items-center gap-2 rounded-full bg-brand-red px-6 py-2.5 text-sm font-bold text-brand-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-lg"
         >
-          Continue shopping
-          <ArrowRight className="h-4 w-4" />
+          {i18n("Continue shopping")}<ArrowRight className="h-4 w-4 rtl:rotate-180" />
         </Link>
 
         <Link
           href="/"
           className="inline-flex items-center gap-2 rounded-full border border-brand-border bg-white px-6 py-2.5 text-sm font-bold text-brand-text-dark transition-all hover:-translate-y-0.5 hover:border-brand-red hover:text-brand-red"
         >
-          Go home
-        </Link>
+          {i18n("Go home")}</Link>
       </div>
     </div>
   );

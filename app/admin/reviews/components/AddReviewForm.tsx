@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useEffect, useState } from "react";
 
@@ -18,6 +20,7 @@ export default function AddReviewForm({
   onCreated: (review: Awaited<ReturnType<typeof createAdminReview>>) => void;
   onError: (message: string) => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminReviewsComponentsAddReviewForm");
   const [products, setProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productId, setProductId] = useState("");
@@ -87,22 +90,20 @@ export default function AddReviewForm({
       onSubmit={handleSubmit}
       className="rounded-2xl border border-brand-border bg-brand-white p-4 shadow-sm sm:p-5"
     >
-      <h2 className="text-sm font-bold text-gray-900">Add a review</h2>
+      <h2 className="text-sm font-bold text-gray-900">{i18n("Add a review")}</h2>
       <p className="mt-0.5 text-xs text-gray-500">
-        Seed a review on a product. These are tagged as admin-added.
-      </p>
+        {i18n("Seed a review on a product. These are tagged as admin-added.")}</p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-xs font-semibold text-gray-700">
-          Product
-          <select
+          {i18n("Product")}<select
             value={productId}
             onChange={(event) => setProductId(event.target.value)}
             disabled={productsLoading}
             className="h-10 rounded-xl border border-brand-border px-3 text-sm font-normal text-gray-900 outline-none transition focus:border-brand-red disabled:opacity-60"
           >
             <option value="">
-              {productsLoading ? "Loading products..." : "Select a product"}
+              {productsLoading ? i18n("Loading products...") : i18n("Select a product")}
             </option>
             {products.map((product) => (
               <option key={product.id} value={product.id}>
@@ -114,48 +115,44 @@ export default function AddReviewForm({
         </label>
 
         <label className="flex flex-col gap-1 text-xs font-semibold text-gray-700">
-          Author name
-          <input
+          {i18n("Author name")}<input
             type="text"
             value={authorName}
             onChange={(event) => setAuthorName(event.target.value)}
-            placeholder="e.g. Rahim Uddin"
+            placeholder={i18n("e.g. Rahim Uddin")}
             className="h-10 rounded-xl border border-brand-border px-3 text-sm font-normal text-gray-900 outline-none transition focus:border-brand-red"
           />
         </label>
 
         <label className="flex flex-col gap-1 text-xs font-semibold text-gray-700">
-          Rating
-          <select
+          {i18n("Rating")}<select
             value={String(rating)}
             onChange={(event) => setRating(Number(event.target.value))}
             className="h-10 rounded-xl border border-brand-border px-3 text-sm font-normal text-gray-900 outline-none transition focus:border-brand-red"
           >
             {[5, 4, 3, 2, 1].map((star) => (
               <option key={star} value={star}>
-                {star} star{star === 1 ? "" : "s"}
+                {i18n("{count, plural, one {# star} other {# stars}}", { count: star })}
               </option>
             ))}
           </select>
         </label>
 
         <label className="flex flex-col gap-1 text-xs font-semibold text-gray-700">
-          Title (optional)
-          <input
+          {i18n("Title (optional)")}<input
             type="text"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
-            placeholder="Short summary"
+            placeholder={i18n("Short summary")}
             className="h-10 rounded-xl border border-brand-border px-3 text-sm font-normal text-gray-900 outline-none transition focus:border-brand-red"
           />
         </label>
 
         <label className="flex flex-col gap-1 text-xs font-semibold text-gray-700 sm:col-span-2">
-          Comment (optional)
-          <textarea
+          {i18n("Comment (optional)")}<textarea
             value={comment}
             onChange={(event) => setComment(event.target.value)}
-            placeholder="What did the customer say?"
+            placeholder={i18n("What did the customer say?")}
             rows={3}
             className="rounded-xl border border-brand-border px-3 py-2 text-sm font-normal text-gray-900 outline-none transition focus:border-brand-red"
           />
@@ -168,15 +165,14 @@ export default function AddReviewForm({
           onClick={onCancel}
           className="inline-flex h-10 items-center rounded-xl border border-gray-200 px-4 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
         >
-          Cancel
-        </button>
+          {i18n("Cancel")}</button>
         <button
           type="submit"
           disabled={submitting}
           aria-busy={submitting}
           className="inline-flex h-10 items-center gap-2 rounded-xl bg-brand-red px-4 text-sm font-semibold text-brand-white shadow-sm transition hover:bg-brand-red-hover disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {submitting ? <ButtonLoader label="Adding..." /> : "Add review"}
+          {submitting ? <ButtonLoader label={i18n("Adding...")} /> : i18n("Add review")}
         </button>
       </div>
     </form>

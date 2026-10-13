@@ -1,5 +1,7 @@
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 import { ChevronRight } from "lucide-react";
-import Link from "next/link";
+import Link from "@/lib/i18n/navigation";
 
 import ProductCard from "@/components/product/ProductCard";
 import type { HomeCategory } from "@/lib/services/home-categories.service";
@@ -11,13 +13,13 @@ type CategoriesProps = {
 };
 
 export default function Categories({ initialCategories }: CategoriesProps) {
+  const i18n = useInterfaceTranslations("InterfaceComponentsCategories");
   const categories = initialCategories;
 
   if (categories.length === 0) {
     return (
       <div className="rounded-2xl border border-brand-border bg-brand-white p-6 text-center text-sm text-brand-text-muted shadow-sm">
-        No categories available right now.
-      </div>
+        {i18n("No categories available right now.")}</div>
     );
   }
 
@@ -37,8 +39,7 @@ export default function Categories({ initialCategories }: CategoriesProps) {
                   </Link>
                 </h2>
                 <p className="hidden text-xs text-brand-text-muted sm:block">
-                  {category.totalProductCount} products across this department
-                </p>
+                  {category.totalProductCount} {i18n("products across this department")}</p>
               </div>
             </div>
 
@@ -46,8 +47,7 @@ export default function Categories({ initialCategories }: CategoriesProps) {
               href={`/categories/${category.path}`}
               className="group flex shrink-0 items-center gap-1 text-sm font-semibold text-brand-red transition-colors hover:text-brand-red-hover"
             >
-              View All
-              <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              {i18n("View All")}<ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 rtl:rotate-180" />
             </Link>
           </div>
 
@@ -100,8 +100,7 @@ export default function Categories({ initialCategories }: CategoriesProps) {
               href={`/categories/${category.path}`}
               className="inline-block max-w-full rounded-full bg-brand-red px-6 py-2.5 text-sm font-semibold text-brand-white shadow-md [overflow-wrap:anywhere] transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-lg"
             >
-              View all {category.totalProductCount} products
-            </Link>
+              {i18n("View all {count, plural, one {# product} other {# products}}", { count: category.totalProductCount })}</Link>
           </div>
 
           {index < categories.length - 1 && (

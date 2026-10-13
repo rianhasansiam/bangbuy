@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -83,6 +85,7 @@ import {
 import type { EditingState } from "./components/constants";
 
 export default function AdminBannersPage() {
+  const i18n = useInterfaceTranslations("AdminAdminBannersPage");
   const dispatch = useDispatch<AppDispatch>();
   const carousel = useSelector((s: RootState) => s.adminBanners.carousel);
   const categoryBanners = useSelector(
@@ -298,7 +301,7 @@ export default function AdminBannersPage() {
         }
       } else if (editing.kind === "category") {
         if (!categoryForm.categoryId) {
-          throw new Error("Category is required.");
+          throw new Error(i18n("Category is required."));
         }
         const body = {
           image: categoryForm.image.trim(),
@@ -406,8 +409,8 @@ export default function AdminBannersPage() {
 
   const handleDeleteCarousel = async (banner: CarouselBannerRow) => {
     const confirmed = await confirmMajorAction({
-      title: "Delete this carousel slide?",
-      description: "This action cannot be undone.",
+      title: i18n("Delete this carousel slide?"),
+      description: i18n("This action cannot be undone."),
       confirmLabel: "Delete",
       variant: "danger",
     });
@@ -440,8 +443,8 @@ export default function AdminBannersPage() {
 
   const handleDeleteCategory = async (banner: CategoryBannerRow) => {
     const confirmed = await confirmMajorAction({
-      title: "Delete this category banner?",
-      description: "This action cannot be undone.",
+      title: i18n("Delete this category banner?"),
+      description: i18n("This action cannot be undone."),
       confirmLabel: "Delete",
       variant: "danger",
     });
@@ -474,8 +477,8 @@ export default function AdminBannersPage() {
 
   const handleDeleteTop = async (banner: TopBannerRow) => {
     const confirmed = await confirmMajorAction({
-      title: "Delete this top strip?",
-      description: "This action cannot be undone.",
+      title: i18n("Delete this top strip?"),
+      description: i18n("This action cannot be undone."),
       confirmLabel: "Delete",
       variant: "danger",
     });
@@ -508,8 +511,8 @@ export default function AdminBannersPage() {
 
   const handleDeleteDeal = async (banner: DealBannerRow) => {
     const confirmed = await confirmMajorAction({
-      title: "Delete this deal banner?",
-      description: "This action cannot be undone.",
+      title: i18n("Delete this deal banner?"),
+      description: i18n("This action cannot be undone."),
       confirmLabel: "Delete",
       variant: "danger",
     });
@@ -542,8 +545,8 @@ export default function AdminBannersPage() {
 
   const handleDeletePromo = async (banner: PromoBannerRow) => {
     const confirmed = await confirmMajorAction({
-      title: "Delete this promo banner?",
-      description: "This action cannot be undone.",
+      title: i18n("Delete this promo banner?"),
+      description: i18n("This action cannot be undone."),
       confirmLabel: "Delete",
       variant: "danger",
     });
@@ -591,7 +594,7 @@ export default function AdminBannersPage() {
 
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {error}
+          {i18n(error)}
         </div>
       )}
 

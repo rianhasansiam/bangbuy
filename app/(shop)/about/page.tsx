@@ -9,17 +9,19 @@ import Testimonials from "./components/Testimonials";
 import AboutCTA from "./components/AboutCTA";
 
 import { getActiveTestimonials } from "@/lib/services/testimonial.service";
-import { buildMetadata } from "@/lib/seo/metadata";
+import { buildLocalizedMetadata } from "@/lib/seo/localized-metadata";
 import { siteConfig } from "@/lib/seo/site";
 
 export const revalidate = 3600;
 
-export const metadata: Metadata = buildMetadata({
+export async function generateMetadata(): Promise<Metadata> {
+  return buildLocalizedMetadata({
   title: "About Us",
   description: `Learn about ${siteConfig.name} — our story, values, and the team behind your trusted online shopping destination for quality products at great prices.`,
   path: "/about",
   keywords: [`about ${siteConfig.name}`, "our story", "company", siteConfig.name],
-});
+}, "InterfaceAboutPage");
+}
 
 export default async function AboutPage() {
   const testimonials = await getActiveTestimonials();

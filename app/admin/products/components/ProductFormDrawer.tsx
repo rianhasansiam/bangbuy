@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useEffect, useRef, lazy, Suspense } from "react";
 import { Boxes, Plus, Trash2, X } from "lucide-react";
@@ -68,6 +70,7 @@ function KeyValueEditor({
   valuePlaceholder: string;
   addLabel: string;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminProductsComponentsProductFormDrawer");
   return (
     <div className="space-y-2">
       {rows.map((row, index) => (
@@ -110,7 +113,7 @@ function KeyValueEditor({
         className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-brand-border bg-white px-3 text-xs font-semibold text-gray-700 hover:border-brand-red/40 hover:text-brand-red"
       >
         <Plus className="h-3.5 w-3.5" />
-        Add {addLabel.toLowerCase()}
+        {i18n("Add")}{" "}{addLabel.toLowerCase()}
       </button>
     </div>
   );
@@ -145,6 +148,7 @@ export default function ProductFormDrawer({
   onClose: () => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminProductsComponentsProductFormDrawer");
   const closeRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
@@ -176,7 +180,7 @@ export default function ProductFormDrawer({
     <>
       <button
         type="button"
-        aria-label="Close product editor"
+        aria-label={i18n("Close product editor")}
         aria-hidden={!open}
         inert={!open}
         tabIndex={open ? 0 : -1}
@@ -193,15 +197,15 @@ export default function ProductFormDrawer({
         aria-hidden={!open}
         inert={!open}
         className={cn(
-          "fixed inset-y-0 right-0 z-70 flex w-full max-w-3xl flex-col border-l border-brand-border bg-white shadow-2xl transition-transform duration-300",
+          "fixed inset-y-0 right-0 z-70 flex w-full max-w-3xl flex-col border-s border-brand-border bg-white shadow-2xl transition-transform duration-300",
           open ? "translate-x-0" : "translate-x-full",
         )}
       >
         <header className="flex items-start justify-between border-b border-brand-border px-5 py-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-brand-red">Catalog product</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-brand-red">{i18n("Catalog product")}</p>
             <h2 id="product-drawer-title" className="mt-1 text-xl font-black text-gray-950">
-              {mode === "create" ? "Create product" : "Edit product"}
+              {mode === "create" ? i18n("Create product") : i18n("Edit product")}
             </h2>
           </div>
           <button
@@ -210,7 +214,7 @@ export default function ProductFormDrawer({
             onClick={onClose}
             disabled={isSubmitting}
             className="rounded-xl p-2 text-gray-500 hover:bg-brand-light-bg hover:text-brand-red disabled:opacity-50"
-            aria-label="Close product editor"
+            aria-label={i18n("Close product editor")}
           >
             <X className="h-5 w-5" />
           </button>
@@ -220,25 +224,25 @@ export default function ProductFormDrawer({
           <div className="flex-1 space-y-4 overflow-y-auto p-5">
             {error && (
               <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                {error}
+                {i18n(error)}
               </div>
             )}
 
-            <Section title="Classification" description="Place the product in the catalog and record its technical identity.">
+            <Section title={i18n("Classification")} description={i18n("Place the product in the catalog and record its technical identity.")}>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="sm:col-span-2">
-                  <Field label="Product name" required>
+                  <Field label={i18n("Product name")} required>
                     <input
                       value={form.name}
                       onChange={(event) => onChange((current) => ({ ...current, name: event.target.value }))}
                       className={inputClass}
-                      placeholder="Industrial air compressor"
+                      placeholder={i18n("Industrial air compressor")}
                     />
                   </Field>
                 </div>
                 {mode === "edit" && (
                   <div className="sm:col-span-2">
-                    <Field label="Canonical URL slug" required>
+                    <Field label={i18n("Canonical URL slug")} required>
                       <input
                         value={form.slug}
                         onChange={(event) => onChange((current) => ({
@@ -254,23 +258,22 @@ export default function ProductFormDrawer({
                       />
                     </Field>
                     <p className="mt-1 text-xs text-gray-500">
-                      Changing this moves the product URL and keeps the previous URL as a permanent redirect.
-                    </p>
+                      {i18n("Changing this moves the product URL and keeps the previous URL as a permanent redirect.")}</p>
                   </div>
                 )}
-                <Field label="Category" required>
+                <Field label={i18n("Category")} required>
                   <select
                     value={form.categoryId}
                     onChange={(event) => onChange((current) => ({ ...current, categoryId: event.target.value }))}
                     className={inputClass}
                   >
-                    <option value="">Select category</option>
+                    <option value="">{i18n("Select category")}</option>
                     {currentCategory &&
                       !categories.some(
                         (category) => category.id === currentCategory.id,
                       ) && (
                         <option value={currentCategory.id} disabled>
-                          Current hidden category — {currentCategory.label}
+                          {i18n("Current hidden category —")}{" "}{currentCategory.label}
                         </option>
                       )}
                     {categories.map((category) => (
@@ -278,7 +281,7 @@ export default function ProductFormDrawer({
                     ))}
                   </select>
                 </Field>
-                <Field label="Status" required>
+                <Field label={i18n("Status")} required>
                   <select
                     value={form.status}
                     onChange={(event) => onChange((current) => ({
@@ -287,52 +290,52 @@ export default function ProductFormDrawer({
                     }))}
                     className={inputClass}
                   >
-                    <option value="ACTIVE">Active</option>
-                    <option value="INACTIVE">Inactive</option>
+                    <option value="ACTIVE">{i18n("Active")}</option>
+                    <option value="INACTIVE">{i18n("Inactive")}</option>
                   </select>
                 </Field>
-                <Field label="Brand">
+                <Field label={i18n("Brand")}>
                   <select
                     value={form.brandId}
                     onChange={(event) => onChange((current) => ({ ...current, brandId: event.target.value }))}
                     className={inputClass}
                   >
-                    <option value="">No brand</option>
+                    <option value="">{i18n("No brand")}</option>
                     {form.brandId && !brands.some((brand) => brand.value === form.brandId) && (
-                      <option value={form.brandId} disabled>Current inactive brand</option>
+                      <option value={form.brandId} disabled>{i18n("Current inactive brand")}</option>
                     )}
                     {brands.map((brand) => <option key={brand.value} value={brand.value}>{brand.label}</option>)}
                   </select>
                 </Field>
-                <Field label="Manufacturer">
+                <Field label={i18n("Manufacturer")}>
                   <select
                     value={form.manufacturerId}
                     onChange={(event) => onChange((current) => ({ ...current, manufacturerId: event.target.value }))}
                     className={inputClass}
                   >
-                    <option value="">No manufacturer</option>
+                    <option value="">{i18n("No manufacturer")}</option>
                     {form.manufacturerId && !manufacturers.some((manufacturer) => manufacturer.value === form.manufacturerId) && (
-                      <option value={form.manufacturerId} disabled>Current inactive manufacturer</option>
+                      <option value={form.manufacturerId} disabled>{i18n("Current inactive manufacturer")}</option>
                     )}
                     {manufacturers.map((manufacturer) => (
                       <option key={manufacturer.value} value={manufacturer.value}>{manufacturer.label}</option>
                     ))}
                   </select>
                 </Field>
-                <Field label="Model number">
+                <Field label={i18n("Model number")}>
                   <input
                     value={form.modelNumber}
                     onChange={(event) => onChange((current) => ({ ...current, modelNumber: event.target.value }))}
                     className={inputClass}
-                    placeholder="AC-2200"
+                    placeholder={i18n("AC-2200")}
                   />
                 </Field>
-                <Field label="Series">
+                <Field label={i18n("Series")}>
                   <input
                     value={form.series}
                     onChange={(event) => onChange((current) => ({ ...current, series: event.target.value }))}
                     className={inputClass}
-                    placeholder="ProLine"
+                    placeholder={i18n("ProLine")}
                   />
                 </Field>
                 <Field label="GTIN">
@@ -348,7 +351,7 @@ export default function ProductFormDrawer({
                     inputMode="numeric"
                   />
                 </Field>
-                <Field label="Item condition">
+                <Field label={i18n("Item condition")}>
                   <select
                     value={form.itemCondition}
                     onChange={(event) => onChange((current) => ({
@@ -357,29 +360,29 @@ export default function ProductFormDrawer({
                     }))}
                     className={inputClass}
                   >
-                    <option value="NEW">New</option>
-                    <option value="REFURBISHED">Refurbished</option>
-                    <option value="USED">Used</option>
+                    <option value="NEW">{i18n("New")}</option>
+                    <option value="REFURBISHED">{i18n("Refurbished")}</option>
+                    <option value="USED">{i18n("Used")}</option>
                   </select>
                 </Field>
               </div>
             </Section>
 
-            <Section title="Pricing" description="Buying price stays admin-only; sale and discount prices are customer-facing.">
+            <Section title={i18n("Pricing")} description={i18n("Buying price stays admin-only; sale and discount prices are customer-facing.")}>
               <div className="grid gap-3 sm:grid-cols-3">
-                <Field label="Buying price" required>
+                <Field label={i18n("Buying price")} required>
                   <input type="number" min="0" step="0.01" value={form.buyingPrice} onChange={(event) => onChange((current) => ({ ...current, buyingPrice: event.target.value }))} className={inputClass} />
                 </Field>
-                <Field label="Sale price" required>
+                <Field label={i18n("Sale price")} required>
                   <input type="number" min="0" step="0.01" value={form.salePrice} onChange={(event) => onChange((current) => ({ ...current, salePrice: event.target.value }))} className={inputClass} />
                 </Field>
-                <Field label="Discount price">
+                <Field label={i18n("Discount price")}>
                   <input type="number" min="0" step="0.01" value={form.discountPrice} onChange={(event) => onChange((current) => ({ ...current, discountPrice: event.target.value }))} className={inputClass} />
                 </Field>
               </div>
             </Section>
 
-            <Section title="Specifications" description="Flexible technical facts shown as a table on the product page.">
+            <Section title={i18n("Specifications")} description={i18n("Flexible technical facts shown as a table on the product page.")}>
               <KeyValueEditor
                 rows={form.specifications}
                 onChange={(specifications) => onChange((current) => ({ ...current, specifications }))}
@@ -389,7 +392,7 @@ export default function ProductFormDrawer({
               />
             </Section>
 
-            <Section title="Variants" description="Each row is one purchasable option combination. Leave all option fields blank only for a single default variant.">
+            <Section title={i18n("Variants")} description={i18n("Each row is one purchasable option combination. Leave all option fields blank only for a single default variant.")}>
               <div className="space-y-3">
                 {form.variants.map((variant, index) => {
                   const variantId = variant.id;
@@ -420,8 +423,8 @@ export default function ProductFormDrawer({
                       <div className="flex items-center gap-2">
                         <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-red/10 text-brand-red"><Boxes className="h-4 w-4" /></span>
                         <div>
-                          <h4 className="text-sm font-bold text-gray-900">Variant {index + 1}</h4>
-                          <p className="text-[11px] text-gray-500">SKU, stock and any option attributes</p>
+                          <h4 className="text-sm font-bold text-gray-900">{i18n("Variant")}{" "}{index + 1}</h4>
+                          <p className="text-[11px] text-gray-500">{i18n("SKU, stock and any option attributes")}</p>
                         </div>
                       </div>
                       <button
@@ -438,15 +441,14 @@ export default function ProductFormDrawer({
                       </button>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      <Field label="Option name"><input value={variant.name} onChange={(event) => updateVariant(index, { name: event.target.value })} className={inputClass} placeholder="220 V / Single phase" /></Field>
-                      <Field label="SKU"><input value={variant.sku} onChange={(event) => updateVariant(index, { sku: event.target.value })} className={inputClass} placeholder="Optional unique SKU" /></Field>
-                      <Field label="Variant model"><input value={variant.modelNumber} onChange={(event) => updateVariant(index, { modelNumber: event.target.value })} className={inputClass} placeholder="Optional" /></Field>
-                      <Field label="Stock" required><input type="number" min="0" step="1" value={variant.stock} onChange={(event) => updateVariant(index, { stock: event.target.value })} className={inputClass} /></Field>
-                      <Field label="Size shortcut"><input value={variant.size} onChange={(event) => updateVariant(index, { size: event.target.value })} className={inputClass} placeholder="Optional" /></Field>
+                      <Field label={i18n("Option name")}><input value={variant.name} onChange={(event) => updateVariant(index, { name: event.target.value })} className={inputClass} placeholder={i18n("220 V / Single phase")} /></Field>
+                      <Field label="SKU"><input value={variant.sku} onChange={(event) => updateVariant(index, { sku: event.target.value })} className={inputClass} placeholder={i18n("Optional unique SKU")} /></Field>
+                      <Field label={i18n("Variant model")}><input value={variant.modelNumber} onChange={(event) => updateVariant(index, { modelNumber: event.target.value })} className={inputClass} placeholder={i18n("Optional")} /></Field>
+                      <Field label={i18n("Stock")} required><input type="number" min="0" step="1" value={variant.stock} onChange={(event) => updateVariant(index, { stock: event.target.value })} className={inputClass} /></Field>
+                      <Field label={i18n("Size shortcut")}><input value={variant.size} onChange={(event) => updateVariant(index, { size: event.target.value })} className={inputClass} placeholder={i18n("Optional")} /></Field>
                       <div className="space-y-1.5 sm:col-span-2">
                         <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">
-                          Color shortcut (name or HEX)
-                        </span>
+                          {i18n("Color shortcut (name or HEX)")}</span>
                         <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem]">
                           <AdvancedColorPicker
                             label={`Variant ${index + 1} HEX color picker`}
@@ -492,7 +494,7 @@ export default function ProductFormDrawer({
                               hasInvalidColor &&
                                 "border-red-300 focus:border-red-500",
                             )}
-                            placeholder="Black or #112233"
+                            placeholder={i18n("Black or #112233")}
                           />
                         </div>
                         {hasInvalidColor && (
@@ -506,16 +508,14 @@ export default function ProductFormDrawer({
                         )}
                         {hasUnchangedLegacyColor && (
                           <p id={colorHelpId} className="text-[11px] text-amber-700">
-                            Existing color format preserved. Leave it unchanged or replace it with a name or #RRGGBB.
-                          </p>
+                            {i18n("Existing color format preserved. Leave it unchanged or replace it with a name or #RRGGBB.")}</p>
                         )}
                       </div>
                       <label className="flex items-center gap-2 self-end pb-2 text-sm font-semibold text-gray-700">
-                        <input type="checkbox" checked={variant.isActive} onChange={(event) => updateVariant(index, { isActive: event.target.checked })} className="h-4 w-4 accent-brand-red" /> Active
-                      </label>
+                        <input type="checkbox" checked={variant.isActive} onChange={(event) => updateVariant(index, { isActive: event.target.checked })} className="h-4 w-4 accent-brand-red" /> {i18n("Active")}</label>
                     </div>
                     <div className="mt-3">
-                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">Custom option attributes</p>
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-600">{i18n("Custom option attributes")}</p>
                       <KeyValueEditor
                         rows={variant.attributes}
                         onChange={(attributes) => updateVariant(index, { attributes })}
@@ -525,7 +525,7 @@ export default function ProductFormDrawer({
                       />
                     </div>
                     <div className="mt-3">
-                      <Field label="Variant image"><ImageUploader category="products" value={variant.image} onChange={(image) => updateVariant(index, { image })} disabled={isSubmitting} /></Field>
+                      <Field label={i18n("Variant image")}><ImageUploader category="products" value={variant.image} onChange={(image) => updateVariant(index, { image })} disabled={isSubmitting} /></Field>
                     </div>
                     </article>
                   );
@@ -535,15 +535,14 @@ export default function ProductFormDrawer({
                   onClick={() => onChange((current) => ({ ...current, variants: [...current.variants, makeEmptyVariant()] }))}
                   className="inline-flex h-10 items-center gap-2 rounded-xl border border-brand-border bg-white px-4 text-sm font-semibold text-gray-700 hover:border-brand-red/40 hover:text-brand-red"
                 >
-                  <Plus className="h-4 w-4" /> Add variant
-                </button>
+                  <Plus className="h-4 w-4" /> {i18n("Add variant")}</button>
               </div>
             </Section>
 
-            <Section title="Media" description="The first gallery image is used as the storefront card image.">
+            <Section title={i18n("Media")} description={i18n("The first gallery image is used as the storefront card image.")}>
               <div className="space-y-4">
-                <Field label="Primary image"><ImageUploader category="products" value={form.image} onChange={(image) => onChange((current) => ({ ...current, image }))} disabled={isSubmitting} /></Field>
-                <Field label="Primary image alt text">
+                <Field label={i18n("Primary image")}><ImageUploader category="products" value={form.image} onChange={(image) => onChange((current) => ({ ...current, image }))} disabled={isSubmitting} /></Field>
+                <Field label={i18n("Primary image alt text")}>
                   <input
                     value={form.primaryImageAlt}
                     onChange={(event) => onChange((current) => ({
@@ -551,18 +550,18 @@ export default function ProductFormDrawer({
                       primaryImageAlt: event.target.value,
                     }))}
                     className={inputClass}
-                    placeholder="Industrial air compressor viewed from the front"
+                    placeholder={i18n("Industrial air compressor viewed from the front")}
                     maxLength={250}
                   />
                 </Field>
-                <Field label="Gallery images"><MultiImageUploader category="products" value={normalizeImagesInput(form.images)} onChange={(images) => onChange((current) => ({ ...current, images: images.join("\n") }))} disabled={isSubmitting} /></Field>
+                <Field label={i18n("Gallery images")}><MultiImageUploader category="products" value={normalizeImagesInput(form.images)} onChange={(images) => onChange((current) => ({ ...current, images: images.join("\n") }))} disabled={isSubmitting} /></Field>
               </div>
             </Section>
 
-            <Section title="Search and sharing" description="Optional overrides for search result snippets and social previews.">
+            <Section title={i18n("Search and sharing")} description={i18n("Optional overrides for search result snippets and social previews.")}>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="sm:col-span-2">
-                  <Field label="SEO title">
+                  <Field label={i18n("SEO title")}>
                     <input
                       value={form.seoTitle}
                       onChange={(event) => onChange((current) => ({
@@ -570,13 +569,13 @@ export default function ProductFormDrawer({
                         seoTitle: event.target.value,
                       }))}
                       className={inputClass}
-                      placeholder="Industrial Air Compressor | BangBuy"
+                      placeholder={i18n("Industrial Air Compressor | BangBuy")}
                       maxLength={70}
                     />
                   </Field>
                 </div>
                 <div className="sm:col-span-2">
-                  <Field label="Meta description">
+                  <Field label={i18n("Meta description")}>
                     <textarea
                       value={form.metaDescription}
                       onChange={(event) => onChange((current) => ({
@@ -584,13 +583,13 @@ export default function ProductFormDrawer({
                         metaDescription: event.target.value,
                       }))}
                       className="min-h-24 w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-red"
-                      placeholder="Summarize the product for search results."
+                      placeholder={i18n("Summarize the product for search results.")}
                       maxLength={320}
                     />
                   </Field>
                 </div>
                 <div className="sm:col-span-2">
-                  <Field label="Social preview image">
+                  <Field label={i18n("Social preview image")}>
                     <ImageUploader
                       category="products"
                       value={form.ogImage}
@@ -605,10 +604,10 @@ export default function ProductFormDrawer({
               </div>
             </Section>
 
-            <Section title="Description" description="Build the product description by adding, editing, and reordering content blocks. Blocks are stored as structured data — not raw HTML.">
+            <Section title={i18n("Description")} description={i18n("Build the product description by adding, editing, and reordering content blocks. Blocks are stored as structured data — not raw HTML.")}>
               <Suspense fallback={
                 <div className="flex h-32 items-center justify-center rounded-2xl border border-brand-border bg-brand-light-bg">
-                  <span className="text-sm text-gray-400">Loading editor…</span>
+                  <span className="text-sm text-gray-400">{"Loading editor…"}</span>
                 </div>
               }>
                 <ProductDescriptionBuilder
@@ -624,9 +623,9 @@ export default function ProductFormDrawer({
 
           <footer className="border-t border-brand-border bg-white px-5 py-4">
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={onClose} disabled={isSubmitting} className="h-10 rounded-xl border border-brand-border px-4 text-sm font-semibold text-gray-700 hover:bg-brand-light-bg disabled:opacity-50">Cancel</button>
+              <button type="button" onClick={onClose} disabled={isSubmitting} className="h-10 rounded-xl border border-brand-border px-4 text-sm font-semibold text-gray-700 hover:bg-brand-light-bg disabled:opacity-50">{i18n("Cancel")}</button>
               <button type="submit" disabled={isSubmitting} aria-busy={isSubmitting} className="inline-flex h-10 items-center rounded-xl bg-brand-red px-4 text-sm font-semibold text-white hover:bg-brand-red-hover disabled:opacity-60">
-                {isSubmitting ? <ButtonLoader label="Saving..." /> : mode === "create" ? "Create product" : "Save changes"}
+                {isSubmitting ? <ButtonLoader label={i18n("Saving...")} /> : mode === "create" ? i18n("Create product") : i18n("Save changes")}
               </button>
             </div>
           </footer>

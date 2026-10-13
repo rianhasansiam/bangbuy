@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Download, Plus, RotateCcw, Search } from "lucide-react";
 
@@ -33,6 +35,7 @@ export default function TestimonialsToolbar({
   onCreate: () => void;
   onRefresh: () => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminTestimonialsComponentsTestimonialsToolbar");
   return (
     <div className="rounded-2xl border border-brand-border bg-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -43,8 +46,8 @@ export default function TestimonialsToolbar({
               type="text"
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
-              placeholder="Search by name, location, text..."
-              className="h-10 w-full rounded-xl border border-brand-border pl-9 pr-3 text-sm outline-none transition focus:border-brand-red"
+              placeholder={i18n("Search by name, location, text...")}
+              className="h-10 w-full rounded-xl border border-brand-border ps-9 pe-3 text-sm outline-none transition focus:border-brand-red"
             />
           </label>
 
@@ -53,7 +56,7 @@ export default function TestimonialsToolbar({
             onChange={(event) => onStatusChange(event.target.value as StatusFilter)}
             className="h-10 rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
           >
-            <option value="ALL">All status</option>
+            <option value="ALL">{i18n("All status")}</option>
             {STATUS_VALUES.map((status) => (
               <option key={status} value={status}>
                 {status}
@@ -69,16 +72,14 @@ export default function TestimonialsToolbar({
             className="inline-flex h-10 items-center gap-2 rounded-xl border border-brand-border px-3 text-sm font-semibold text-brand-black transition hover:bg-brand-light-bg"
           >
             <Download className="h-4 w-4" />
-            Import from reviews
-          </button>
+            {i18n("Import from reviews")}</button>
           <button
             type="button"
             onClick={onCreate}
             className="inline-flex h-10 items-center gap-2 rounded-xl bg-brand-red px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-red-hover"
           >
             <Plus className="h-4 w-4" />
-            Add testimonial
-          </button>
+            {i18n("Add testimonial")}</button>
           <button
             type="button"
             onClick={onRefresh}
@@ -91,20 +92,18 @@ export default function TestimonialsToolbar({
             ) : (
               <RotateCcw className="h-4 w-4" />
             )}
-            {isLoading ? "Refreshing..." : "Refresh"}
+            {isLoading ? i18n("Refreshing...") : i18n("Refresh")}
           </button>
         </div>
       </div>
 
       <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
         <span>
-          {visibleCount} / {totalCount} testimonials
-        </span>
+          {visibleCount} / {totalCount} {i18n("testimonials")}</span>
         {isLoading && (
           <span className="inline-flex items-center gap-1.5">
             <LoadingSpinner decorative size="xs" />
-            Syncing testimonials...
-          </span>
+            {i18n("Syncing testimonials...")}</span>
         )}
       </div>
     </div>

@@ -1,3 +1,4 @@
+
 import { siteConfig } from "@/lib/seo/site";
 
 /**
@@ -6,12 +7,13 @@ import { siteConfig } from "@/lib/seo/site";
  * phone, and address inside a violet/pink gradient card.
  */
 export default function PolicyContactBlock() {
+  const i18n = (source: string) => source;
   return (
     <div className="rounded-2xl bg-brand-light-bg p-4 ring-1 ring-brand-border sm:p-5">
-      <p className="text-sm font-bold text-gray-900 sm:text-base">{siteConfig.name} Customer Support</p>
+      <p className="text-sm font-bold text-gray-900 sm:text-base">{siteConfig.name} {i18n("Customer Support")}</p>
       <ul className="mt-2 space-y-1 text-sm text-gray-700 sm:text-base">
         <li>
-          <span className="font-semibold text-gray-900">Email:</span>{" "}
+          <span className="font-semibold text-gray-900">{i18n("Email:")}</span>{" "}
           <a
             href={`mailto:${siteConfig.contact.email}`}
             className="text-brand-red hover:text-brand-red-hover hover:underline"
@@ -20,7 +22,7 @@ export default function PolicyContactBlock() {
           </a>
         </li>
         <li>
-          <span className="font-semibold text-gray-900">Phone:</span>{" "}
+          <span className="font-semibold text-gray-900">{i18n("Phone:")}</span>{" "}
           <a
             href={`tel:${siteConfig.contact.phoneIntl}`}
             className="text-brand-red hover:text-brand-red-hover hover:underline"
@@ -29,7 +31,7 @@ export default function PolicyContactBlock() {
           </a>
         </li>
         <li>
-          <span className="font-semibold text-gray-900">Address:</span> {siteConfig.contact.address}
+          <span className="font-semibold text-gray-900">{i18n("Address:")}</span> {siteConfig.contact.address}
         </li>
       </ul>
     </div>

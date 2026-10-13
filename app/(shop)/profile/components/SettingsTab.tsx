@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 import { toast } from "@/lib/feedback";
 
 import { useMemo, useState } from "react";
@@ -26,6 +28,7 @@ import {
 import FloatField from "@/app/(auth)/_components/FloatField";
 import ImageUploader from "@/components/ui/ImageUploader";
 import { ButtonLoader } from "@/components/ui/loading";
+import { useLocaleDraft, useLocaleSwitchGuard } from "@/components/i18n/useLocaleDraft";
 
 type SettingsTabProps = {
   user: ProfileUser;
@@ -112,10 +115,13 @@ function validate(form: FormState): Record<keyof FormState, boolean | null> {
  * use, so the styling and accessibility behaviour stay consistent.
  */
 export default function SettingsTab({ user, onUpdated }: SettingsTabProps) {
+  const i18n = useInterfaceTranslations("InterfaceProfileComponentsSettingsTab");
   const [form, setForm] = useState<FormState>(() => toFormState(user));
+  useLocaleDraft("profile-settings", form, setForm, ["name", "phone", "city", "image"]);
   const [submitState, setSubmitState] = useState<SubmitState>({
     status: "idle",
   });
+  useLocaleSwitchGuard(submitState.status === "saving");
 
   const validity = useMemo(() => validate(form), [form]);
   const patch = useMemo(() => buildPatch(user, form), [user, form]);
@@ -148,12 +154,12 @@ export default function SettingsTab({ user, onUpdated }: SettingsTabProps) {
       const updated = await updateProfileOnServer(patch);
       onUpdated(updated);
       setSubmitState({ status: "success" });
-      toast.success("Profile updated successfully");
+      toast.success(i18n("Profile updated successfully"));
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to save changes.";
       setSubmitState({ status: "error", message });
-      toast.error(message);
+      toast.error(i18n(message));
     }
   };
 
@@ -168,6 +174,7 @@ export default function SettingsTab({ user, onUpdated }: SettingsTabProps) {
 
   return (
     <form
+      data-locale-recoverable
       onSubmit={handleSubmit}
       className="rounded-2xl border border-brand-border bg-brand-white p-4 shadow-sm sm:rounded-3xl sm:p-6"
     >
@@ -177,18 +184,16 @@ export default function SettingsTab({ user, onUpdated }: SettingsTabProps) {
         </span>
         <div className="min-w-0">
           <h2 className="text-base font-bold text-gray-900 sm:text-lg">
-            Personal info
-          </h2>
+            {i18n("Personal info")}</h2>
           <p className="text-xs text-gray-500">
-            Update the details we use for your account and checkout.
-          </p>
+            {i18n("Update the details we use for your account and checkout.")}</p>
         </div>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <FloatField
           icon={<User className="h-4 w-4" />}
-          label="Full name"
+          label={i18n("Full name")}
           value={form.name}
           onChange={handleChange("name")}
           autoComplete="name"
@@ -197,14 +202,14 @@ export default function SettingsTab({ user, onUpdated }: SettingsTabProps) {
         />
         <ReadOnlyField
           icon={<Mail className="h-4 w-4" />}
-          label="Email address"
+          label={i18n("Email address")}
           value={user.email}
           help="Email is locked. Contact support to change it."
           valid={emailLooksValid}
         />
         <FloatField
           icon={<Phone className="h-4 w-4" />}
-          label="Phone number"
+          label={i18n("Phone number")}
           value={form.phone}
           onChange={handleChange("phone")}
           autoComplete="tel"
@@ -213,7 +218,7 @@ export default function SettingsTab({ user, onUpdated }: SettingsTabProps) {
         />
         <FloatField
           icon={<MapPin className="h-4 w-4" />}
-          label="City"
+          label={i18n("City")}
           value={form.city}
           onChange={handleChange("city")}
           autoComplete="address-level2"
@@ -223,29 +228,27 @@ export default function SettingsTab({ user, onUpdated }: SettingsTabProps) {
         <div className="sm:col-span-2">
           <ImageUploader
             category="users"
-            label="Profile picture"
+            label={i18n("Profile picture")}
             value={form.image}
             onChange={handleChange("image")}
             disabled={submitState.status === "saving"}
           />
           <p className="mt-1 text-[11px] text-gray-500">
-            Upload a photo, or leave blank to use your initials.
-          </p>
+            {i18n("Upload a photo, or leave blank to use your initials.")}</p>
         </div>
       </div>
 
       {submitState.status === "error" && (
         <div className="mt-5 flex items-start gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          {submitState.message}
+          {i18n(submitState.message)}
         </div>
       )}
 
       {submitState.status === "success" && (
         <div className="mt-5 flex items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-          Profile updated successfully.
-        </div>
+          {i18n("Profile updated successfully.")}</div>
       )}
 
       {blockingError && submitState.status !== "saving" && (
@@ -257,8 +260,8 @@ export default function SettingsTab({ user, onUpdated }: SettingsTabProps) {
       <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-gray-500">
           {dirty
-            ? `${dirtyKeys.length} pending ${dirtyKeys.length === 1 ? "change" : "changes"}.`
-            : "All changes saved."}
+            ? i18n("{count, plural, one {# pending change.} other {# pending changes.}}", { count: dirtyKeys.length })
+            : i18n("All changes saved.")}
         </p>
         <div className="grid w-full grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:flex sm:w-auto sm:items-center">
           <button
@@ -267,8 +270,7 @@ export default function SettingsTab({ user, onUpdated }: SettingsTabProps) {
             disabled={!dirty || submitState.status === "saving"}
             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl border border-brand-border bg-brand-white px-4 text-sm font-bold text-brand-black transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-red hover:bg-brand-light-bg disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 sm:w-auto"
           >
-            Reset
-          </button>
+            {i18n("Reset")}</button>
           <button
             type="submit"
             disabled={
@@ -278,12 +280,11 @@ export default function SettingsTab({ user, onUpdated }: SettingsTabProps) {
             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-brand-red px-5 text-sm font-bold text-brand-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl disabled:cursor-not-allowed disabled:bg-gray-300 disabled:hover:translate-y-0 sm:w-auto"
           >
             {submitState.status === "saving" ? (
-              <ButtonLoader label="Saving..." />
+              <ButtonLoader label={i18n("Saving...")} />
             ) : (
               <>
                 <Save className="h-4 w-4" />
-                Save changes
-              </>
+                {i18n("Save changes")}</>
             )}
           </button>
         </div>
@@ -311,20 +312,21 @@ function ReadOnlyField({
   help?: string;
   valid?: boolean;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceProfileComponentsSettingsTab");
   return (
     <div>
       <div className="relative rounded-xl border border-brand-border bg-brand-light-bg shadow-sm">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-brand-text-muted">
+        <span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-brand-text-muted">
           {icon}
         </span>
-        <span className="absolute -top-2 left-3 bg-brand-white px-1.5 text-[11px] font-bold uppercase tracking-wide text-brand-black">
-          {label}
+        <span className="absolute -top-2 start-3 bg-brand-white px-1.5 text-[11px] font-bold uppercase tracking-wide text-brand-black">
+          {i18n(label)}
         </span>
-        <div className="flex h-12 items-center pl-9 pr-9 text-sm font-medium text-gray-700">
-          <span className="truncate">{value}</span>
+        <div className="flex h-12 items-center ps-9 pe-9 text-sm font-medium text-gray-700">
+          <bdi className="truncate" dir="ltr">{value}</bdi>
         </div>
         {valid && (
-          <CheckCircle2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-500" />
+          <CheckCircle2 className="absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-500" />
         )}
       </div>
       {help && <p className="mt-1 text-[11px] text-gray-500">{help}</p>}

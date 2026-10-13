@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import {
   X,
@@ -11,7 +13,7 @@ import {
   Percent,
   type LucideIcon,
 } from "lucide-react";
-import Link from "next/link";
+import Link from "@/lib/i18n/navigation";
 import React, { useEffect, useRef, useState } from "react";
 
 export type TopBannerSlide = {
@@ -57,6 +59,7 @@ function BannerIcon({
 }
 
 const TopBannerClient = ({ slides }: { slides: TopBannerSlide[] }) => {
+  const i18n = useInterfaceTranslations("InterfaceLayoutTopBannerClient");
   const [isVisible, setIsVisible] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -113,7 +116,7 @@ const TopBannerClient = ({ slides }: { slides: TopBannerSlide[] }) => {
                 className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4 md:h-5 md:w-5"
               />
               <span className="min-w-0 truncate font-bold text-[11px] tracking-wide sm:text-sm md:text-base">
-                {currentSale.badge}
+                {i18n(currentSale.badge)}
               </span>
             </div>
 
@@ -123,7 +126,7 @@ const TopBannerClient = ({ slides }: { slides: TopBannerSlide[] }) => {
               <span className="mx-1 font-extrabold text-xs text-brand-gold sm:text-base md:text-lg">
                 {currentSale.discount}
               </span>
-              <span className="hidden sm:inline">{currentSale.description}</span>
+              <span className="hidden sm:inline">{i18n(currentSale.description)}</span>
             </p>
 
             <div className="hidden h-4 w-px shrink-0 bg-white/40 md:block"></div>
@@ -141,17 +144,17 @@ const TopBannerClient = ({ slides }: { slides: TopBannerSlide[] }) => {
 
         <Link
           href={currentSale.link || "/products"}
-          aria-label="Shop now"
+          aria-label={i18n("Shop now")}
           className="hidden shrink-0 items-center justify-center gap-1.5 rounded-md bg-brand-white text-brand-red sm:flex
             text-xs font-semibold shadow-sm transition-colors duration-200 hover:bg-brand-light-bg sm:h-auto sm:w-auto sm:px-3 sm:py-1 md:text-sm"
         >
-          <span>Shop Now</span>
-          <ArrowRight className="h-3.5 w-3.5" />
+          <span>{i18n("Shop Now")}</span>
+          <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
         </Link>
 
         <button
           type="button"
-          aria-label="Close Banner"
+          aria-label={i18n("Close Banner")}
           onClick={() => setIsVisible(false)}
           className="order-first flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-white/15 transition-colors hover:bg-white/25 sm:order-none sm:h-8 sm:w-8 sm:bg-transparent"
         >
@@ -159,7 +162,7 @@ const TopBannerClient = ({ slides }: { slides: TopBannerSlide[] }) => {
         </button>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-white/40"></div>
+      <div className="absolute bottom-0 start-0 end-0 h-px bg-white/40"></div>
     </div>
   );
 };

@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import * as React from "react";
 import { Dialog as SheetPrimitive } from "radix-ui";
@@ -54,9 +56,9 @@ const sheetVariants = cva(
         top: "inset-x-0 top-0 border-b border-gray-200 data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
         bottom:
           "inset-x-0 bottom-0 border-t border-gray-200 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
-        left: "inset-y-0 left-0 h-full w-3/4 max-w-sm border-r border-gray-200 data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
+        left: "inset-y-0 start-0 h-full w-3/4 max-w-sm border-e border-gray-200 data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
         right:
-          "inset-y-0 right-0 h-full w-3/4 max-w-sm border-l border-gray-200 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
+          "inset-y-0 end-0 h-full w-3/4 max-w-sm border-s border-gray-200 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
       },
     },
     defaultVariants: {
@@ -78,6 +80,7 @@ function SheetContent({
   hideClose,
   ...props
 }: SheetContentProps) {
+  const i18n = useInterfaceTranslations("InterfaceUiSheet");
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -89,8 +92,8 @@ function SheetContent({
         {children}
         {!hideClose && (
           <SheetPrimitive.Close
-            className="absolute right-3 top-3 rounded-full p-1.5 text-white/90 transition hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/40"
-            aria-label="Close"
+            className="absolute end-3 top-3 rounded-full p-1.5 text-white/90 transition hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/40"
+            aria-label={i18n("Close")}
           >
             <X className="h-5 w-5" />
           </SheetPrimitive.Close>

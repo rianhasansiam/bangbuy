@@ -1,4 +1,7 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+import { useLocale } from "next-intl";
+
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -42,6 +45,7 @@ const PROVIDER_OPTIONS = [
 type ReviewFilter = "" | "OPEN" | "RESOLVED";
 
 export default function TransactionsClient() {
+  const i18n = useInterfaceTranslations("AdminAdminTransactionsTransactionsClient");
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState<TransactionStatus | "">("");
@@ -145,11 +149,9 @@ export default function TransactionsClient() {
         <div>
           <h1 className="flex items-center gap-2 text-lg font-extrabold text-gray-900 sm:text-xl">
             <ReceiptText className="h-5 w-5 text-brand-red" />
-            Transaction history
-          </h1>
+            {i18n("Transaction history")}</h1>
           <p className="text-xs text-gray-500">
-            Every recorded payment record across customer and guest orders.
-          </p>
+            {i18n("Every recorded payment record across customer and guest orders.")}</p>
         </div>
         <button
           type="button"
@@ -163,7 +165,7 @@ export default function TransactionsClient() {
           ) : (
             <RotateCcw className="h-3.5 w-3.5" />
           )}
-          {loading ? "Refreshing..." : "Refresh"}
+          {loading ? i18n("Refreshing...") : i18n("Refresh")}
         </button>
       </header>
 
@@ -173,8 +175,8 @@ export default function TransactionsClient() {
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search transaction, order, or customer..."
-            aria-label="Search transactions"
+            placeholder={i18n("Search transaction, order, or customer...")}
+            aria-label={i18n("Search transactions")}
             className={inputClass}
           />
           <select
@@ -182,10 +184,10 @@ export default function TransactionsClient() {
             onChange={(event) =>
               updateStatus(event.target.value as TransactionStatus | "")
             }
-            aria-label="Filter by transaction status"
+            aria-label={i18n("Filter by transaction status")}
             className={inputClass}
           >
-            <option value="">All statuses</option>
+            <option value="">{i18n("All statuses")}</option>
             {TRANSACTION_STATUS_VALUES.map((value) => (
               <option key={value} value={value}>
                 {TRANSACTION_STATUS_META[value].label}
@@ -195,13 +197,13 @@ export default function TransactionsClient() {
           <select
             value={provider}
             onChange={(event) => updateProvider(event.target.value)}
-            aria-label="Filter by provider"
+            aria-label={i18n("Filter by provider")}
             className={inputClass}
           >
-            <option value="">All providers</option>
+            <option value="">{i18n("All providers")}</option>
             {PROVIDER_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {i18n(option.label)}
               </option>
             ))}
           </select>
@@ -210,12 +212,12 @@ export default function TransactionsClient() {
             onChange={(event) =>
               updateReview(event.target.value as ReviewFilter)
             }
-            aria-label="Filter by review state"
+            aria-label={i18n("Filter by review state")}
             className={inputClass}
           >
-            <option value="">All review states</option>
-            <option value="OPEN">Open review</option>
-            <option value="RESOLVED">Resolved review</option>
+            <option value="">{i18n("All review states")}</option>
+            <option value="OPEN">{i18n("Open review")}</option>
+            <option value="RESOLVED">{i18n("Resolved review")}</option>
           </select>
           {hasFilters && (
             <button
@@ -224,8 +226,7 @@ export default function TransactionsClient() {
               className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-brand-border px-3 text-sm font-semibold text-gray-700 transition hover:bg-brand-light-bg"
             >
               <RotateCcw className="h-4 w-4" />
-              Reset
-            </button>
+              {i18n("Reset")}</button>
           )}
         </div>
       </div>
@@ -237,16 +238,15 @@ export default function TransactionsClient() {
         >
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <div className="flex-1">
-            <p className="font-semibold">Couldn&apos;t load transactions.</p>
-            <p className="text-xs">{error}</p>
+            <p className="font-semibold">{i18n("Couldn't load transactions.")}</p>
+            <p className="text-xs">{i18n(error)}</p>
           </div>
           <button
             type="button"
             onClick={() => setRefreshKey((value) => value + 1)}
             className="rounded-lg border border-rose-200 bg-white px-2 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100"
           >
-            Try again
-          </button>
+            {i18n("Try again")}</button>
         </div>
       )}
 
@@ -264,10 +264,9 @@ export default function TransactionsClient() {
       {!error && meta && meta.total > 0 && (
         <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
           <p className="text-xs text-gray-500">
-            Showing <span className="font-semibold">{range.start}</span>-
-            <span className="font-semibold">{range.end}</span> of{" "}
-            <span className="font-semibold">{meta.total}</span> transactions
-          </p>
+            {i18n("Showing")}{" "}<span className="font-semibold">{range.start}</span>-
+            <span className="font-semibold">{range.end}</span> {i18n("of")}{" "}
+            <span className="font-semibold">{meta.total}</span> {i18n("transactions")}</p>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -276,10 +275,9 @@ export default function TransactionsClient() {
               className="inline-flex h-9 items-center gap-1 rounded-xl border border-brand-border bg-white px-3 text-xs font-bold text-gray-700 transition hover:bg-brand-light-bg disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ChevronLeft className="h-4 w-4" />
-              Previous
-            </button>
+              {i18n("Previous")}</button>
             <span className="text-xs font-semibold text-gray-600">
-              Page {meta.page} of {meta.totalPages}
+              {i18n("Page")}{" "}{meta.page} {i18n("of")}{" "}{meta.totalPages}
             </span>
             <button
               type="button"
@@ -289,8 +287,7 @@ export default function TransactionsClient() {
               disabled={meta.page >= meta.totalPages || loading}
               className="inline-flex h-9 items-center gap-1 rounded-xl border border-brand-border bg-white px-3 text-xs font-bold text-gray-700 transition hover:bg-brand-light-bg disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Next
-              <ChevronRight className="h-4 w-4" />
+              {i18n("Next")}<ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -300,16 +297,15 @@ export default function TransactionsClient() {
 }
 
 function TransactionTable({ items }: { items: AdminTransaction[] }) {
+  const i18n = useInterfaceTranslations("AdminAdminTransactionsTransactionsClient");
   if (items.length === 0) {
     return (
       <div className="grid place-items-center rounded-2xl border border-brand-border bg-white px-4 py-16 text-center shadow-sm">
         <Inbox className="h-8 w-8 text-brand-text-muted" />
         <p className="mt-2 text-sm font-semibold text-gray-700">
-          No transactions found
-        </p>
+          {i18n("No transactions found")}</p>
         <p className="mt-1 text-xs text-gray-500">
-          Recorded payment attempts will appear here.
-        </p>
+          {i18n("Recorded payment attempts will appear here.")}</p>
       </div>
     );
   }
@@ -317,15 +313,15 @@ function TransactionTable({ items }: { items: AdminTransaction[] }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm">
       <div className="hidden overflow-x-auto lg:block">
-        <table className="min-w-full text-left text-sm">
+        <table className="min-w-full text-start text-sm">
           <thead className="border-b border-brand-border bg-brand-light-bg/60 text-xs uppercase tracking-wide text-gray-500">
             <tr>
-              <th className="px-4 py-3 font-semibold">Transaction</th>
-              <th className="px-4 py-3 font-semibold">Order & customer</th>
-              <th className="px-4 py-3 font-semibold">Provider</th>
-              <th className="px-4 py-3 font-semibold">Status</th>
-              <th className="px-4 py-3 text-right font-semibold">Amount</th>
-              <th className="px-4 py-3 text-right font-semibold">Date</th>
+              <th className="px-4 py-3 font-semibold">{i18n("Transaction")}</th>
+              <th className="px-4 py-3 font-semibold">{i18n("Order & customer")}</th>
+              <th className="px-4 py-3 font-semibold">{i18n("Provider")}</th>
+              <th className="px-4 py-3 font-semibold">{i18n("Status")}</th>
+              <th className="px-4 py-3 text-end font-semibold">{i18n("Amount")}</th>
+              <th className="px-4 py-3 text-end font-semibold">{i18n("Date")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-brand-border">
@@ -356,6 +352,8 @@ function TransactionDesktopRow({
 }: {
   transaction: AdminTransaction;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminTransactionsTransactionsClient");
   const reference = transaction.transactionId ?? transaction.id;
   const completion = transactionCompletion(transaction);
 
@@ -370,7 +368,7 @@ function TransactionDesktopRow({
             className="mt-1 truncate font-mono text-[11px] text-gray-500"
             title={transaction.bankTransactionId}
           >
-            Bank: {transaction.bankTransactionId}
+            {i18n("Bank:")}{" "}{transaction.bankTransactionId}
           </p>
         )}
       </td>
@@ -398,14 +396,14 @@ function TransactionDesktopRow({
       <td className="px-4 py-3">
         <TransactionState transaction={transaction} />
       </td>
-      <td className="px-4 py-3 text-right font-extrabold text-gray-900">
-        {formatTransactionAmount(transaction.amount, transaction.currency)}
+      <td className="px-4 py-3 text-end font-extrabold text-gray-900">
+        {formatTransactionAmount(transaction.amount, transaction.currency, locale)}
       </td>
-      <td className="whitespace-nowrap px-4 py-3 text-right text-xs text-gray-500">
-        {formatTransactionDate(transaction.createdAt)}
+      <td className="whitespace-nowrap px-4 py-3 text-end text-xs text-gray-500">
+        {formatTransactionDate(transaction.createdAt, locale)}
         {completion && (
           <p className="mt-1 text-emerald-700">
-            {completion.label} {formatTransactionDate(completion.value)}
+            {completion.label} {formatTransactionDate(completion.value, locale)}
           </p>
         )}
       </td>
@@ -418,6 +416,8 @@ function TransactionMobileCard({
 }: {
   transaction: AdminTransaction;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminTransactionsTransactionsClient");
   const reference = transaction.transactionId ?? transaction.id;
   const completion = transactionCompletion(transaction);
   const customerContact =
@@ -450,6 +450,7 @@ function TransactionMobileCard({
               {formatTransactionAmount(
                 transaction.amount,
                 transaction.currency,
+                locale,
               )}
             </p>
           </div>
@@ -461,16 +462,16 @@ function TransactionMobileCard({
             {transaction.cardType ? ` · ${transaction.cardType}` : ""}
           </p>
           <p className="mt-1 text-[11px] text-gray-500">
-            {formatTransactionDate(transaction.createdAt)}
+            {formatTransactionDate(transaction.createdAt, locale)}
           </p>
           {completion && (
             <p className="mt-1 text-[11px] font-medium text-emerald-700">
-              {completion.label} {formatTransactionDate(completion.value)}
+              {completion.label} {formatTransactionDate(completion.value, locale)}
             </p>
           )}
           {transaction.bankTransactionId && (
             <p className="mt-2 break-all rounded-lg bg-brand-light-bg px-2 py-1.5 font-mono text-[10px] text-gray-600">
-              Bank: {transaction.bankTransactionId}
+              {i18n("Bank:")}{" "}{transaction.bankTransactionId}
             </p>
           )}
         </div>
@@ -484,6 +485,7 @@ function TransactionState({
 }: {
   transaction: AdminTransaction;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminTransactionsTransactionsClient");
   const status = getTransactionStatusMeta(transaction.status);
   const reviewCode = transaction.requiresReview
     ? transaction.reviewReason || "Review required"
@@ -531,7 +533,7 @@ function TransactionState({
       )}
       {transaction.riskLevel != null && (
         <p className="text-[10px] text-gray-500">
-          Risk level {transaction.riskLevel}
+          {i18n("Risk level")}{" "}{transaction.riskLevel}
         </p>
       )}
     </div>

@@ -1,5 +1,9 @@
+
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 import { Building2, Factory, Star } from "lucide-react";
-import Link from "next/link";
+import Link from "@/lib/i18n/navigation";
 
 type CatalogEntity = {
   name: string;
@@ -9,6 +13,7 @@ type CatalogEntity = {
 
 type ProductInfoProps = {
   name: string;
+  nameLocale?: string;
   productCode?: string | null;
   modelNumber?: string | null;
   gtin?: string | null;
@@ -22,6 +27,7 @@ type ProductInfoProps = {
 
 const ProductInfo = ({
   name,
+  nameLocale,
   productCode,
   modelNumber,
   gtin,
@@ -32,29 +38,31 @@ const ProductInfo = ({
   rating,
   reviewCount,
 }: ProductInfoProps) => {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("InterfaceProductsSlugComponentsProductInfo");
   return (
     <div className="min-w-0 space-y-5">
       <div className="min-w-0">
-        <h1 className="text-xl font-bold leading-tight text-gray-900 [overflow-wrap:anywhere] md:text-2xl">
+        <h1 lang={nameLocale} dir="auto" className="text-xl font-bold leading-tight text-gray-900 [overflow-wrap:anywhere] md:text-2xl">
           {name}
         </h1>
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
           {productCode && (
             <span className="min-w-0 font-mono [overflow-wrap:anywhere]">
-              Product code: {productCode}
+              {i18n("Product code:")}{productCode}
             </span>
           )}
           {reviewCount > 0 && (
             <a
               href="#reviews"
               className="inline-flex items-center gap-1 font-medium text-gray-700 hover:text-brand-red"
-              aria-label={`${rating.toFixed(1)} out of 5 from ${reviewCount} reviews`}
+              aria-label={i18n("{value0} out of 5 from {value1} reviews", { value0: rating.toFixed(1), value1: reviewCount })}
             >
               <Star
                 className="h-3.5 w-3.5 fill-brand-gold text-brand-gold"
                 aria-hidden="true"
               />
-              {rating.toFixed(1)} ({reviewCount.toLocaleString()})
+              {rating.toFixed(1)} ({reviewCount.toLocaleString(locale)})
             </a>
           )}
         </div>
@@ -74,9 +82,8 @@ const ProductInfo = ({
                   className="h-4 w-4 shrink-0 text-brand-red"
                   aria-hidden="true"
                 />
-                Brand
-              </dt>
-              <dd className="min-w-0 truncate pl-6 font-semibold text-gray-900">
+                {i18n("Brand")}</dt>
+              <dd className="min-w-0 truncate ps-6 font-semibold text-gray-900">
                 {brand.status === "ACTIVE" ? (
                   <Link
                     href={`/brands/${encodeURIComponent(brand.slug)}`}
@@ -97,9 +104,8 @@ const ProductInfo = ({
                   className="h-4 w-4 shrink-0 text-brand-red"
                   aria-hidden="true"
                 />
-                Manufacturer
-              </dt>
-              <dd className="min-w-0 truncate pl-6 font-semibold text-gray-900">
+                {i18n("Manufacturer")}</dt>
+              <dd className="min-w-0 truncate ps-6 font-semibold text-gray-900">
                 {manufacturer.status === "ACTIVE" ? (
                   <Link
                     href={`/products?manufacturerSlug=${encodeURIComponent(manufacturer.slug)}`}
@@ -115,7 +121,7 @@ const ProductInfo = ({
           )}
           {modelNumber && (
             <div className="min-w-0">
-              <dt className="text-xs text-gray-500">Model number</dt>
+              <dt className="text-xs text-gray-500">{i18n("Model number")}</dt>
               <dd className="font-semibold text-gray-900 [overflow-wrap:anywhere]">
                 {modelNumber}
               </dd>
@@ -123,7 +129,7 @@ const ProductInfo = ({
           )}
           {series && (
             <div className="min-w-0">
-              <dt className="text-xs text-gray-500">Series</dt>
+              <dt className="text-xs text-gray-500">{i18n("Series")}</dt>
               <dd className="font-semibold text-gray-900 [overflow-wrap:anywhere]">
                 {series}
               </dd>
@@ -138,7 +144,7 @@ const ProductInfo = ({
             </div>
           )}
           <div>
-            <dt className="text-xs text-gray-500">Condition</dt>
+            <dt className="text-xs text-gray-500">{i18n("Condition")}</dt>
             <dd className="font-semibold capitalize text-gray-900">
               {condition}
             </dd>

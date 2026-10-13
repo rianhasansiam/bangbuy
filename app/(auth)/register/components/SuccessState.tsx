@@ -1,6 +1,8 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 
-import Link from "next/link";
+
+import Link from "@/lib/i18n/navigation";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 
 type SuccessStateProps = {
@@ -8,6 +10,7 @@ type SuccessStateProps = {
 };
 
 export default function SuccessState({ name }: SuccessStateProps) {
+  const i18n = useInterfaceTranslations("InterfaceRegisterComponentsSuccessState");
   const firstName = name.trim().split(" ")[0];
 
   return (
@@ -24,29 +27,25 @@ export default function SuccessState({ name }: SuccessStateProps) {
       </div>
 
       <h3 className="mt-6 text-2xl font-black tracking-tight text-brand-text-dark">
-        Welcome aboard{firstName ? `, ${firstName}` : ""}!
+        {i18n("Welcome aboard")}{firstName ? `, ${firstName}` : ""}!
       </h3>
 
       <p className="mt-2 max-w-sm text-sm text-brand-text-muted">
-        Your account is ready. Let&apos;s find some great deals from stores near
-        you.
-      </p>
+        {i18n("Your account is ready. Let's find some great deals from stores near you.")}</p>
 
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
         <Link
           href="/products"
           className="inline-flex items-center gap-2 rounded-full bg-brand-red px-6 py-2.5 text-sm font-bold text-brand-white shadow-md transition-all hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-lg"
         >
-          Start shopping
-          <ArrowRight className="h-4 w-4" />
+          {i18n("Start shopping")}<ArrowRight className="h-4 w-4 rtl:rotate-180" />
         </Link>
 
         <Link
           href="/"
           className="inline-flex items-center gap-2 rounded-full border border-brand-border bg-white px-6 py-2.5 text-sm font-bold text-brand-text-dark transition-all hover:-translate-y-0.5 hover:border-brand-red hover:text-brand-red"
         >
-          Go home
-        </Link>
+          {i18n("Go home")}</Link>
       </div>
     </div>
   );

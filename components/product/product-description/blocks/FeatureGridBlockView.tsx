@@ -1,3 +1,5 @@
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 import * as LucideIcons from "lucide-react";
 
 import type { FeatureGridBlock } from "@/lib/types/product-description-blocks";
@@ -25,6 +27,7 @@ export default function FeatureGridBlockView({
 }: {
   block: FeatureGridBlock;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceProductProductDescriptionBlocksFeatureGridBlockView");
   if (block.items.length === 0) return null;
   return (
     <section
@@ -41,7 +44,7 @@ export default function FeatureGridBlockView({
       )}
       <ul
         className={cn("grid min-w-0 gap-4", GRID_COLS[block.columns])}
-        aria-label={block.heading?.trim() ? undefined : "Feature highlights"}
+        aria-label={block.heading?.trim() ? undefined : i18n("Feature highlights")}
       >
         {block.items.map((item) => (
           <li

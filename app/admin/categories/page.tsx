@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -39,6 +41,7 @@ import CategoryFormDrawer from "./components/CategoryFormDrawer";
 type StatusFilter = "ALL" | CategoryStatus;
 
 export default function AdminCategoriesPage() {
+  const i18n = useInterfaceTranslations("AdminAdminCategoriesPage");
   const dispatch = useDispatch<AppDispatch>();
   const categories = useSelector((state: RootState) => state.adminCategories.items);
   const isLoading = useSelector((state: RootState) => state.adminCategories.isLoading);
@@ -192,7 +195,7 @@ export default function AdminCategoriesPage() {
         notifyActionSuccess("Category created successfully.");
         setSuccessNote("Category created successfully.");
       } else {
-        if (!editing) throw new Error("No category selected for editing.");
+        if (!editing) throw new Error(i18n("No category selected for editing."));
         const patch: Partial<typeof body> = {};
         if (body.name !== editing.name) patch.name = body.name;
         if (body.description !== editing.description) patch.description = body.description;
@@ -246,14 +249,14 @@ export default function AdminCategoriesPage() {
 
   const handleDelete = async (category: AdminCategoryRow) => {
     if (category.childCount > 0 || category.directProductCount > 0) {
-      const message = "Only empty leaf categories can be deleted. Move or hide its children and products first.";
+      const message = i18n("Only empty leaf categories can be deleted. Move or hide its children and products first.");
       setMutationError(message);
       notifyActionError(new Error(message), "Category cannot be deleted.");
       return;
     }
     const confirmed = await confirmMajorAction({
       title: `Delete "${category.name}"?`,
-      description: "This permanently deletes this empty category.",
+      description: i18n("This permanently deletes this empty category."),
       confirmLabel: "Delete category",
       variant: "danger",
     });
@@ -321,7 +324,7 @@ export default function AdminCategoriesPage() {
         onCollapseAll={() => setExpandedIds(new Set())}
       />
 
-      {error && <Notice tone="error">{error}</Notice>}
+      {error && <Notice tone="error">{i18n(error)}</Notice>}
       {mutationError && <Notice tone="error">{mutationError}</Notice>}
       {successNote && <Notice tone="success">{successNote}</Notice>}
 

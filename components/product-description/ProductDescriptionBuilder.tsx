@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useCallback } from "react";
 import {
@@ -93,6 +95,7 @@ export default function ProductDescriptionBuilder({
   onChange,
   disabled,
 }: Props) {
+  const i18n = useInterfaceTranslations("InterfaceProductDescriptionProductDescriptionBuilder");
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
@@ -197,11 +200,9 @@ export default function ProductDescriptionBuilder({
       {value.length === 0 && (
         <div className="flex min-h-32 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-brand-border bg-brand-light-bg px-6 py-8 text-center">
           <p className="text-sm font-semibold text-gray-600">
-            No content blocks yet
-          </p>
+            {i18n("No content blocks yet")}</p>
           <p className="mt-1 text-xs text-gray-400">
-            Add your first block below to build the product description.
-          </p>
+            {i18n("Add your first block below to build the product description.")}</p>
         </div>
       )}
 
@@ -240,8 +241,7 @@ export default function ProductDescriptionBuilder({
         />
         {value.length > 0 && (
           <p className="text-xs text-gray-400">
-            {value.length}/{MAX_BLOCKS} blocks
-          </p>
+            {value.length}/{MAX_BLOCKS} {i18n("blocks")}</p>
         )}
       </div>
     </div>

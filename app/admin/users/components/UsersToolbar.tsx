@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { RotateCcw, Search } from "lucide-react";
 
@@ -34,6 +36,7 @@ export default function UsersToolbar({
   onCustomerTypeChange: (value: CustomerTypeFilter) => void;
   onRefresh: () => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminUsersComponentsUsersToolbar");
   return (
     <div className="rounded-2xl border border-brand-border bg-brand-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -44,33 +47,33 @@ export default function UsersToolbar({
               type="text"
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
-              aria-label="Search customers"
-              placeholder="Search by name, email, phone, city, or address..."
-              className="h-10 w-full rounded-xl border border-brand-border pl-9 pr-3 text-sm outline-none transition focus:border-brand-red"
+              aria-label={i18n("Search customers")}
+              placeholder={i18n("Search by name, email, phone, city, or address...")}
+              className="h-10 w-full rounded-xl border border-brand-border ps-9 pe-3 text-sm outline-none transition focus:border-brand-red"
             />
           </label>
 
           <select
-            aria-label="Customer type"
+            aria-label={i18n("Customer type")}
             value={customerTypeFilter}
             onChange={(event) =>
               onCustomerTypeChange(event.target.value as CustomerTypeFilter)
             }
             className="h-10 rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
           >
-            <option value="ALL">All customers</option>
-            <option value="REGISTERED">Registered</option>
-            <option value="GUEST">Guests</option>
+            <option value="ALL">{i18n("All customers")}</option>
+            <option value="REGISTERED">{i18n("Registered")}</option>
+            <option value="GUEST">{i18n("Guests")}</option>
           </select>
 
           <select
-            aria-label="Account role"
+            aria-label={i18n("Account role")}
             value={roleFilter}
             disabled={customerTypeFilter === "GUEST"}
             onChange={(event) => onRoleChange(event.target.value as RoleFilter)}
             className="h-10 rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red disabled:opacity-60"
           >
-            <option value="ALL">All roles</option>
+            <option value="ALL">{i18n("All roles")}</option>
             {ROLE_VALUES.map((role) => (
               <option key={role} value={role}>
                 {role}
@@ -91,19 +94,17 @@ export default function UsersToolbar({
           ) : (
             <RotateCcw className="h-4 w-4" />
           )}
-          {isLoading ? "Refreshing..." : "Refresh"}
+          {isLoading ? i18n("Refreshing...") : i18n("Refresh")}
         </button>
       </div>
 
       <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
         <span>
-          {visibleCount} / {totalCount} customers
-        </span>
+          {visibleCount} / {totalCount} {i18n("customers")}</span>
         {isLoading && (
           <span className="inline-flex items-center gap-1.5">
             <LoadingSpinner decorative size="xs" />
-            Syncing customers...
-          </span>
+            {i18n("Syncing customers...")}</span>
         )}
       </div>
     </div>

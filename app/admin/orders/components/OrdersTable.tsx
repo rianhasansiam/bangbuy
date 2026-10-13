@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Fragment, useState } from "react";
 import { ChevronDown, Eye, Package2 } from "lucide-react";
@@ -73,6 +77,8 @@ export default function OrdersTable({
     refundReference: string,
   ) => void;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminOrdersComponentsOrdersTable");
   const [refundReferences, setRefundReferences] = useState<
     Record<string, string>
   >({});
@@ -85,8 +91,7 @@ export default function OrdersTable({
     return (
       <div className="rounded-2xl border border-brand-border bg-white p-10 text-center text-sm text-gray-600 shadow-sm">
         <Package2 className="mx-auto mb-2 h-8 w-8 text-brand-text-muted" />
-        No orders match the current filters.
-      </div>
+        {i18n("No orders match the current filters.")}</div>
     );
   }
 
@@ -94,16 +99,16 @@ export default function OrdersTable({
     <div className="overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
-          <thead className="bg-brand-light-bg text-left text-xs uppercase tracking-wider text-brand-text-muted">
+          <thead className="bg-brand-light-bg text-start text-xs uppercase tracking-wider text-brand-text-muted">
             <tr>
-              <th className="px-4 py-3">Order</th>
-              <th className="px-4 py-3">Customer</th>
-              <th className="px-4 py-3">Items</th>
-              <th className="px-4 py-3">Total</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Payment</th>
-              <th className="px-4 py-3">Placed</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">{i18n("Order")}</th>
+              <th className="px-4 py-3">{i18n("Customer")}</th>
+              <th className="px-4 py-3">{i18n("Items")}</th>
+              <th className="px-4 py-3">{i18n("Total")}</th>
+              <th className="px-4 py-3">{i18n("Status")}</th>
+              <th className="px-4 py-3">{i18n("Payment")}</th>
+              <th className="px-4 py-3">{i18n("Placed")}</th>
+              <th className="px-4 py-3 text-end">{i18n("Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -135,7 +140,7 @@ export default function OrdersTable({
                         type="button"
                         onClick={() => onToggleExpand(isExpanded ? null : order.id)}
                         aria-expanded={isExpanded}
-                        className="inline-flex items-center gap-1 text-left font-semibold text-brand-red transition hover:text-brand-red-hover"
+                        className="inline-flex items-center gap-1 text-start font-semibold text-brand-red transition hover:text-brand-red-hover"
                       >
                         <ChevronDown
                           className={cn(
@@ -155,7 +160,7 @@ export default function OrdersTable({
                       </p>
                       {customerType && (
                         <span className="my-1 inline-flex rounded-full bg-brand-light-bg px-2 py-0.5 text-[11px] font-semibold text-brand-text-muted ring-1 ring-inset ring-brand-border">
-                          {customerType === "GUEST" ? "Guest" : "Registered"}
+                          {customerType === "GUEST" ? i18n("Guest") : i18n("Registered")}
                         </span>
                       )}
                       <p className="text-xs text-gray-500">
@@ -172,23 +177,20 @@ export default function OrdersTable({
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-semibold text-gray-900">
-                        {formatCurrency(order.totalAmount)}
+                        {formatCurrency(order.totalAmount, locale)}
                       </p>
                       {order.discountAmount > 0 && (
                         <p className="text-xs text-brand-red">
-                          -{formatCurrency(order.discountAmount)} discount
-                        </p>
+                          -{formatCurrency(order.discountAmount, locale)} {i18n("discount")}</p>
                       )}
                       {order.advancePayment > 0 && (
                         <>
                           <p className="text-xs text-emerald-700">
-                            {formatCurrency(order.advancePayment)} advance paid
-                          </p>
+                            {formatCurrency(order.advancePayment, locale)} {i18n("advance paid")}</p>
                           <p className="text-xs text-gray-500">
                             {formatCurrency(
-                              Math.max(order.totalAmount - order.advancePayment, 0),
-                            )} due
-                          </p>
+                              Math.max(order.totalAmount - order.advancePayment, 0), locale
+                            )} {i18n("due")}</p>
                         </>
                       )}
                     </td>
@@ -199,7 +201,7 @@ export default function OrdersTable({
                           ORDER_STATUS_META[order.status].tone.ring,
                         )}
                       >
-                        {ORDER_STATUS_META[order.status].label}
+                        {i18n(ORDER_STATUS_META[order.status].label)}
                       </span>
                     </td>
                     <td className="px-4 py-3">
@@ -209,14 +211,14 @@ export default function OrdersTable({
                           PAYMENT_BADGE[order.paymentStatus],
                         )}
                       >
-                        {PAYMENT_STATUS_META[order.paymentStatus].label}
+                        {i18n(PAYMENT_STATUS_META[order.paymentStatus].label)}
                       </span>
                       <p className="mt-1 text-xs text-gray-500">
                         {paymentMethodLabel(order.paymentMethod)}
                       </p>
                       {order.requiresPaymentReview && (
                         <div className="mt-1 text-xs text-rose-700">
-                          <p className="font-bold">Manual review required</p>
+                          <p className="font-bold">{i18n("Manual review required")}</p>
                           {order.paymentReviewReasons.map((reason) => (
                             <p key={reason} className="max-w-48">
                               {reason.replaceAll("_", " ").toLowerCase()}
@@ -226,7 +228,7 @@ export default function OrdersTable({
                       )}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">
-                      {formatDateTime(order.createdAt)}
+                      {formatDateTime(order.createdAt, locale)}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col items-end gap-2">
@@ -238,8 +240,7 @@ export default function OrdersTable({
                           className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border px-2.5 py-1.5 text-xs font-semibold text-brand-red transition hover:border-brand-red hover:bg-brand-light-bg"
                         >
                           <Eye aria-hidden="true" className="h-3.5 w-3.5" />
-                          View details
-                        </button>
+                          {i18n("View details")}</button>
                         {allowedNext.length > 0 ? (
                           <select
                             value=""
@@ -251,21 +252,19 @@ export default function OrdersTable({
                             }}
                             className="h-8 rounded-lg border border-brand-border px-2 text-xs font-semibold text-foreground transition hover:bg-brand-light-bg disabled:cursor-not-allowed disabled:opacity-60"
                           >
-                            <option value="">Change status</option>
+                            <option value="">{i18n("Change status")}</option>
                             {allowedNext.map((status) => (
                               <option key={status} value={status}>
-                                Move to {ORDER_STATUS_META[status].label}
+                                {i18n("Move to")}{" "}{i18n(ORDER_STATUS_META[status].label)}
                               </option>
                             ))}
                           </select>
                         ) : order.requiresPaymentReview ? (
                           <span className="text-[11px] font-semibold text-rose-700">
-                            Review hold
-                          </span>
+                            {i18n("Review hold")}</span>
                         ) : (
                           <span className="text-[11px] uppercase tracking-wide text-gray-400">
-                            Final
-                          </span>
+                            {i18n("Final")}</span>
                         )}
 
                         {isGatewayManaged ? (
@@ -282,16 +281,13 @@ export default function OrdersTable({
                                 {isBusy && (
                                   <LoadingSpinner decorative size="xs" />
                                 )}
-                                Approve payment review
-                              </button>
+                                {i18n("Approve payment review")}</button>
                             ) : order.requiresPaymentReview ? (
-                              <span className="text-right text-[11px] font-semibold text-rose-700">
-                                Gateway/refund investigation required
-                              </span>
+                              <span className="text-end text-[11px] font-semibold text-rose-700">
+                                {i18n("Gateway/refund investigation required")}</span>
                             ) : (
                               <span className="text-[11px] font-semibold text-sky-700">
-                                Gateway managed
-                              </span>
+                                {i18n("Gateway managed")}</span>
                             )}
 
                             {order.requiresPaymentReview &&
@@ -309,7 +305,7 @@ export default function OrdersTable({
                                     maxLength={200}
                                     autoComplete="off"
                                     aria-label={`Refund reference for ${order.orderNumber}`}
-                                    placeholder="Provider refund reference"
+                                    placeholder={i18n("Provider refund reference")}
                                     className="h-8 w-full rounded-lg border border-brand-border px-2 text-xs outline-none focus:border-brand-red"
                                   />
                                   <button
@@ -331,8 +327,7 @@ export default function OrdersTable({
                                     {isBusy && (
                                       <LoadingSpinner decorative size="xs" />
                                     )}
-                                    Record refund &amp; cancel
-                                  </button>
+                                    {i18n("Record refund & cancel")}</button>
                                 </>
                               )}
                           </div>
@@ -345,8 +340,8 @@ export default function OrdersTable({
                             className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-2.5 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {isBusy && <LoadingSpinner decorative size="xs" />}
-                            Mark{" "}
-                            {order.paymentStatus === "PAID" ? "unpaid" : "paid"}
+                            {i18n("Mark")}{" "}
+                            {order.paymentStatus === "PAID" ? i18n("unpaid") : i18n("paid")}
                           </button>
                         )}
                       </div>
@@ -357,30 +352,29 @@ export default function OrdersTable({
                     <tr className="border-t border-brand-border bg-brand-light-bg">
                       <td colSpan={8} className="px-4 py-3">
                         <div className="grid gap-3 sm:grid-cols-3">
-                          <DetailBlock label="Customer">
+                          <DetailBlock label={i18n("Customer")}>
                             {order.customerName}
-                            {customerType && <> · {customerType === "GUEST" ? "Guest" : "Registered"}</>}
+                            {customerType && <> · {customerType === "GUEST" ? i18n("Guest") : i18n("Registered")}</>}
                             <br />
                             {order.customerPhone}
                             {order.customerEmail && <><br />{order.customerEmail}</>}
                           </DetailBlock>
-                          <DetailBlock label="Shipping address">
+                          <DetailBlock label={i18n("Shipping address")}>
                             {order.customerAddress || "-"}
                             {[order.customerArea, order.customerCity, order.customerPostalCode].filter(Boolean).length > 0 && (
                               <><br />{[order.customerArea, order.customerCity, order.customerPostalCode].filter(Boolean).join(", ")}</>
                             )}
                           </DetailBlock>
                           {order.customerNote && (
-                            <DetailBlock label="Order note">
+                            <DetailBlock label={i18n("Order note")}>
                               <span className="whitespace-pre-wrap">{order.customerNote}</span>
                             </DetailBlock>
                           )}
-                          <DetailBlock label="Subtotal / delivery">
-                            {formatCurrency(order.subtotal)} +{" "}
-                            {formatCurrency(order.deliveryCharge)} delivery
-                          </DetailBlock>
-                          <DetailBlock label="Last update">
-                            {formatDateTime(order.updatedAt)}
+                          <DetailBlock label={i18n("Subtotal / delivery")}>
+                            {formatCurrency(order.subtotal, locale)} +{" "}
+                            {formatCurrency(order.deliveryCharge, locale)} {i18n("delivery")}</DetailBlock>
+                          <DetailBlock label={i18n("Last update")}>
+                            {formatDateTime(order.updatedAt, locale)}
                           </DetailBlock>
                         </div>
                       </td>

@@ -1,9 +1,15 @@
+
+import { getInterfaceTranslations } from "@/components/i18n/server";
 import type { Metadata } from "next";
 import { ArrowRight, Boxes } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/lib/i18n/navigation";
 import { notFound, permanentRedirect } from "next/navigation";
+
 import { cache } from "react";
+import { getRequestLocale } from "@/lib/i18n/server";
+import { localizeCategorySnapshots } from "@/lib/translations/public";
+import PublicContentNotice from "@/components/i18n/PublicContentNotice";
 
 import ProductCard from "@/components/product/ProductCard";
 import JsonLd from "@/components/seo/JsonLd";
@@ -12,7 +18,10 @@ import {
   categoryFallbackDescription,
   categoryFallbackTitle,
 } from "@/lib/seo/catalog-metadata";
-import { buildMetadata, noIndexMetadata } from "@/lib/seo/metadata";
+import { noIndexMetadata } from "@/lib/seo/metadata";
+import { buildLocalizedMetadata } from "@/lib/seo/localized-metadata";
+import { getPublishedEntityLocales } from "@/lib/translations/service";
+import { getTranslations } from "next-intl/server";
 import {
   getActiveCategoryByPath,
   getActiveCategoryTree,
@@ -33,7 +42,7 @@ const FALLBACK_PRODUCT_IMAGE =
   "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400";
 const CATEGORY_STATIC_PARAM_LIMIT = 100;
 
-const getCategoryPageData = cache(getActiveCategoryByPath);
+const getCategoryPageData = cache(async(path:string)=>{const category=await getActiveCategoryByPath(path);return category?(await localizeCategorySnapshots([category],await getRequestLocale()))[0]:null;});
 
 function pathFromSegments(segments: string[]): string {
   return normalizeCategoryPath(segments.join("/"));
@@ -59,6 +68,8 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const locale = await getRequestLocale();
+  const translate = await getTranslations("Seo");
   const { segments } = await params;
   const rawRequestedPath = segments.join("/");
   const requestedPath = pathFromSegments(segments);
@@ -84,24 +95,29 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       breadcrumb: category.breadcrumb,
       description: category.description,
       totalProductCount: category.totalProductCount,
-    });
+    }, locale, translate);
 
-  return buildMetadata({
+  const readyLocales = await getPublishedEntityLocales("category", [category.id], ["name", "description", "seoTitle", "metaDescription"]);
+  return buildLocalizedMetadata({
     title:
       category.seoTitle?.trim() ||
       categoryFallbackTitle({
         name: category.name,
         path: category.path,
         breadcrumb: category.breadcrumb,
-      }),
+      }, locale, translate),
     description,
     path: `/categories/${category.path}`,
     image: category.ogImage?.trim() || category.image,
     keywords: [category.name, ...category.breadcrumb.map((item) => item.name)],
-  });
+    preparedLocales: readyLocales.get(category.id) ?? [],
+    index: category.translationAvailable,
+  }, "InterfaceCategoriesSegmentsPage");
 }
 
 export default async function CategoryPage({ params }: Props) {
+  const locale = await getRequestLocale();
+  const i18n = await getInterfaceTranslations("InterfaceCategoriesSegmentsPage");
   const { segments } = await params;
   const rawRequestedPath = segments.join("/");
   const requestedPath = pathFromSegments(segments);
@@ -117,8 +133,8 @@ export default async function CategoryPage({ params }: Props) {
 
   const categoryPath = `/categories/${category.path}`;
   const crumbs = [
-    { name: "Home", path: "/" },
-    { name: "Categories", path: "/categories" },
+    { name: i18n("Home"), path: "/" },
+    { name: i18n("Categories"), path: "/categories" },
     ...category.breadcrumb.map((item) => ({
       name: item.name,
       path: `/categories/${item.path}`,
@@ -134,13 +150,15 @@ export default async function CategoryPage({ params }: Props) {
             name: category.name,
             description: category.description,
             path: categoryPath,
+            locale,
           }),
-          breadcrumbJsonLd(crumbs),
+          breadcrumbJsonLd(crumbs, locale),
         ]}
       />
 
       <div className="mx-auto max-w-7xl px-3 py-6 sm:px-4 sm:py-8 lg:px-6">
-        <nav aria-label="Breadcrumb" className="mb-5 text-sm text-gray-500">
+        <PublicContentNotice available={category.translationAvailable}/>
+        <nav aria-label={i18n("Breadcrumb")} className="mb-5 text-sm text-gray-500">
           <ol className="flex min-w-0 flex-wrap items-center gap-1.5">
             {crumbs.map((crumb, index) => {
               const current = index === crumbs.length - 1;
@@ -219,21 +237,20 @@ export default async function CategoryPage({ params }: Props) {
                 id="subcategory-heading"
                 className="min-w-0 flex-1 text-xl font-extrabold text-gray-950 [overflow-wrap:anywhere]"
               >
-                Explore {category.name}
+                {i18n("Explore")}{category.name}
               </h2>
               <Link
                 href={`/products?categoryPath=${encodeURIComponent(category.path)}`}
-                className="shrink-0 text-right text-sm font-semibold text-brand-red hover:text-brand-red-hover"
+                className="shrink-0 text-end text-sm font-semibold text-brand-red hover:text-brand-red-hover"
               >
-                Filter all products
-              </Link>
+                {i18n("Filter all products")}</Link>
             </div>
             <div className="-mx-3 flex snap-x snap-proximity gap-4 overflow-x-auto px-3 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3 xl:grid-cols-4">
               {category.children.map((child) => (
                 <Link
                   key={child.id}
                   href={`/categories/${child.path}`}
-                  className="group flex w-24 shrink-0 snap-start flex-col items-center text-center transition hover:-translate-y-0.5 sm:w-auto sm:min-w-0 sm:flex-row sm:gap-3 sm:rounded-xl sm:border sm:border-brand-border sm:bg-white sm:p-4 sm:text-left sm:shadow-sm sm:hover:border-brand-red/30 sm:hover:shadow-md"
+                  className="group flex w-24 shrink-0 snap-start flex-col items-center text-center transition hover:-translate-y-0.5 sm:w-auto sm:min-w-0 sm:flex-row sm:gap-3 sm:rounded-xl sm:border sm:border-brand-border sm:bg-white sm:p-4 sm:text-start sm:shadow-sm sm:hover:border-brand-red/30 sm:hover:shadow-md"
                 >
                   <span className="relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-brand-border bg-brand-light-bg shadow-sm transition-colors group-hover:border-brand-red/40 sm:size-16 sm:shadow-none">
                     {child.image ? (
@@ -255,10 +272,10 @@ export default async function CategoryPage({ params }: Props) {
                     </h3>
                     <p className="mt-2 text-[11px] text-gray-500 sm:mt-1 sm:text-xs">
                       {child.totalProductCount}{" "}
-                      {child.totalProductCount === 1 ? "product" : "products"}
+                      {child.totalProductCount === 1 ? i18n("product") : i18n("products")}
                     </p>
                   </div>
-                  <ArrowRight className="hidden h-4 w-4 shrink-0 text-brand-red transition group-hover:translate-x-1 sm:block" />
+                  <ArrowRight className="hidden h-4 w-4 shrink-0 text-brand-red transition group-hover:translate-x-1 sm:block rtl:rotate-180" />
                 </Link>
               ))}
             </div>
@@ -267,17 +284,14 @@ export default async function CategoryPage({ params }: Props) {
 
         {category.products.length === 0 ? (
           <div className="rounded-2xl border border-brand-border bg-white p-10 text-center shadow-sm">
-            <h2 className="text-lg font-bold text-gray-900">No products yet</h2>
+            <h2 className="text-lg font-bold text-gray-900">{i18n("No products yet")}</h2>
             <p className="mt-2 text-sm text-gray-600">
-              There are no visible products in this category or its
-              subcategories right now.
-            </p>
+              {i18n("There are no visible products in this category or its subcategories right now.")}</p>
             <Link
               href="/products"
               className="mt-5 inline-flex rounded-full bg-brand-red px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-red-hover"
             >
-              Browse all products
-            </Link>
+              {i18n("Browse all products")}</Link>
           </div>
         ) : (
           <section aria-labelledby="category-products-heading">
@@ -287,18 +301,16 @@ export default async function CategoryPage({ params }: Props) {
                   id="category-products-heading"
                   className="text-xl font-extrabold text-gray-950 [overflow-wrap:anywhere]"
                 >
-                  Products in {category.name}
+                  {i18n("Products in")}{category.name}
                 </h2>
                 <p className="mt-1 text-xs text-gray-500">
-                  Includes active descendant categories.
-                </p>
+                  {i18n("Includes active descendant categories.")}</p>
               </div>
               <Link
                 href={`/products?categoryPath=${encodeURIComponent(category.path)}`}
                 className="shrink-0 text-sm font-semibold text-brand-red"
               >
-                View with filters
-              </Link>
+                {i18n("View with filters")}</Link>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5">
               {category.products.map((product: PublicCategoryProduct) => (

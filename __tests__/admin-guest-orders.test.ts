@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkup } from "./helpers/intl";
 
 import OrdersTable from "@/app/admin/orders/components/OrdersTable";
 import {

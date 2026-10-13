@@ -20,6 +20,7 @@ import {
   createProductSchema,
   productQuerySchema,
 } from "@/lib/validations/product.validation";
+import { apiLocale, localizeProductSnapshots } from "@/lib/translations/public";
 
 /**
  * GET /api/products
@@ -48,12 +49,10 @@ export async function GET(request: NextRequest) {
     const { items, meta } = await listProducts(query, {
       publicOnly: !includeBuyingPrice,
     });
-    return ok(
-      items.map((item: ProductWithCategory) =>
+    const serialized=items.map((item: ProductWithCategory) =>
         serializeProduct(item, { includeBuyingPrice }),
-      ),
-      meta,
-    );
+      );
+    return ok(params.locale ? await localizeProductSnapshots(serialized,await apiLocale(request)) : serialized,meta);
   } catch (error) {
     console.error("[products.GET] failed", error);
     return jsonError(500, "Failed to fetch products.");

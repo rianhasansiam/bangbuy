@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import {
   BarChart3,
@@ -46,6 +48,7 @@ type Props = {
  * to match the rest of the admin console.
  */
 export default function ReportTypePicker({ value, onChange, disabled }: Props) {
+  const i18n = useInterfaceTranslations("AdminAdminReportsComponentsReportTypePicker");
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {TYPE_ORDER.map((type) => {
@@ -60,7 +63,7 @@ export default function ReportTypePicker({ value, onChange, disabled }: Props) {
             disabled={disabled}
             onClick={() => onChange(type)}
             className={cn(
-              "group relative overflow-hidden rounded-2xl border p-4 text-left transition-all duration-200",
+              "group relative overflow-hidden rounded-2xl border p-4 text-start transition-all duration-200",
               "shadow-sm hover:-translate-y-0.5 hover:shadow-md",
               active
                 ? "border-brand-red bg-brand-light-bg"
@@ -80,17 +83,16 @@ export default function ReportTypePicker({ value, onChange, disabled }: Props) {
                 <Icon className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-gray-900">{def.label}</p>
+                <p className="text-sm font-bold text-gray-900">{i18n(def.label)}</p>
                 <p className="mt-0.5 text-xs text-gray-500">
-                  {def.description}
+                  {i18n(def.description)}
                 </p>
               </div>
             </div>
 
             {active && (
               <span className="absolute right-3 top-3 rounded-full bg-brand-red px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                Selected
-              </span>
+                {i18n("Selected")}</span>
             )}
           </button>
         );

@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Eye, EyeOff } from "lucide-react";
 
@@ -11,10 +13,11 @@ export default function PasswordVisibilityButton({
   visible,
   onClick,
 }: PasswordVisibilityButtonProps) {
+  const i18n = useInterfaceTranslations("InterfaceComponentsPasswordVisibilityButton");
   return (
     <button
       type="button"
-      aria-label={visible ? "Hide password" : "Show password"}
+      aria-label={visible ? i18n("Hide password") : i18n("Show password")}
       onClick={onClick}
       className="p-1 text-brand-text-muted transition-colors hover:text-brand-red"
     >

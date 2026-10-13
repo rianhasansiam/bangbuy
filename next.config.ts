@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 
 /**
  * Parse UPLOAD_PUBLIC_URL at build/startup time so `next/image` can
@@ -25,6 +26,10 @@ function uploadRemotePattern():
 }
 
 const nextConfig: NextConfig = {
+  // Retain the request origin for internal locale rewrites. NextURL normalizes
+  // 127.0.0.1 to localhost, which otherwise becomes an external self-request
+  // when Next is bound to the loopback IP and causes locale redirect loops.
+  skipProxyUrlNormalize: true,
   turbopack: {
     root: process.cwd(),
   },
@@ -89,4 +94,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default createNextIntlPlugin("./lib/i18n/request.ts")(nextConfig);

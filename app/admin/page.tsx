@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useCallback, useEffect, useState } from "react";
 import { AlertCircle, RotateCw } from "lucide-react";
@@ -30,6 +34,8 @@ type LoadState =
  * so the page never flashes empty between reads.
  */
 export default function AdminDashboardPage() {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminPage");
   const [state, setState] = useState<LoadState>({
     status: "loading",
     previous: null,
@@ -94,12 +100,11 @@ export default function AdminDashboardPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-extrabold text-gray-900 sm:text-xl">
-            Dashboard
-          </h1>
+            {i18n("Dashboard")}</h1>
           <p className="text-xs text-gray-500">
             {overview
-              ? `Updated ${formatRelative(overview.generatedAt)}`
-              : "Loading the latest numbers from your store..."}
+              ? `Updated ${formatRelative(overview.generatedAt, locale)}`
+              : i18n("Loading the latest numbers from your store...")}
           </p>
         </div>
         <button
@@ -114,7 +119,7 @@ export default function AdminDashboardPage() {
           ) : (
             <RotateCw className="h-3.5 w-3.5" />
           )}
-          {loading ? "Refreshing..." : "Refresh"}
+          {loading ? i18n("Refreshing...") : i18n("Refresh")}
         </button>
       </div>
 
@@ -122,16 +127,15 @@ export default function AdminDashboardPage() {
         <div className="flex items-start gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <div className="flex-1">
-            <p className="font-semibold">Couldn&apos;t refresh dashboard.</p>
-            <p className="text-xs">{errorMessage}</p>
+            <p className="font-semibold">{i18n("Couldn't refresh dashboard.")}</p>
+            <p className="text-xs">{i18n(errorMessage)}</p>
           </div>
           <button
             type="button"
             onClick={() => void load("refresh")}
             className="rounded-lg border border-rose-200 bg-white px-2 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100"
           >
-            Try again
-          </button>
+            {i18n("Try again")}</button>
         </div>
       )}
 
@@ -166,7 +170,7 @@ export default function AdminDashboardPage() {
   );
 }
 
-function formatRelative(iso: string): string {
+function formatRelative(iso: string, locale = "en"): string {
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return iso;
 
@@ -178,7 +182,7 @@ function formatRelative(iso: string): string {
   if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
   if (diff < 24 * hour) return `${Math.floor(diff / hour)}h ago`;
   try {
-    return new Date(iso).toLocaleString();
+    return new Date(iso).toLocaleString(locale);
   } catch {
     return iso;
   }

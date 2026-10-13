@@ -205,21 +205,21 @@ export function fromDateTimeLocal(value: string): string | null {
   return date.toISOString();
 }
 
-export function formatCurrency(value: number, currency = "BDT"): string {
+export function formatCurrency(value: number, currency = "BDT", locale = "en"): string {
   const safe = Number.isFinite(value) ? value : 0;
   const rounded = Math.round((safe + Number.EPSILON) * 100) / 100;
   const hasFraction = Math.abs(rounded % 1) > 0.0001;
-  return `${currency} ${rounded.toLocaleString("en-US", {
+  return `${currency} ${rounded.toLocaleString(locale, {
     minimumFractionDigits: hasFraction ? 2 : 0,
     maximumFractionDigits: 2,
   })}`;
 }
 
-export function formatDateTime(value: string | null | undefined): string {
+export function formatDateTime(value: string | null | undefined, locale = "en"): string {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString(undefined, {
+  return date.toLocaleString(locale, {
     year: "numeric",
     month: "short",
     day: "2-digit",

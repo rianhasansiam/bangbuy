@@ -1,9 +1,11 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Heart, ListFilter, ShoppingCart, Star } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/lib/i18n/navigation";
+import { useRouter } from "@/lib/i18n/navigation";
 import { useSession } from "@/lib/auth/use-app-session";
 import {
   useState,
@@ -70,6 +72,7 @@ type ProductCardProps = {
   variantCount?: number;
   /** Known catalog availability; omitted for historical callers. */
   inStock?: boolean;
+  nameLocale?: string;
 };
 
 const subscribeToHydration = () => () => {};
@@ -89,7 +92,9 @@ export default function ProductCard({
   badge,
   variantCount = 1,
   inStock,
+  nameLocale,
 }: ProductCardProps) {
+  const i18n = useInterfaceTranslations("InterfaceProductProductCard");
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -147,7 +152,7 @@ export default function ProductCard({
       const nextLocal = localBefore.filter((item) => item.id !== id);
       writeLocalWishlist(nextLocal);
       dispatch(removeWishlistItem(id));
-      toast.success("Removed from wishlist");
+      toast.success(i18n("Removed from wishlist"));
 
       if (!canUseServer) return;
 
@@ -162,7 +167,7 @@ export default function ProductCard({
             ? error.message
             : "Failed to remove item from wishlist.";
         dispatch(setWishlistError(message));
-        toast.error(message);
+        toast.error(i18n(message));
       } finally {
         setIsBusy(false);
       }
@@ -172,7 +177,7 @@ export default function ProductCard({
     const nextLocal = upsertLocalWishlistItem(localBefore, optimisticItem);
     writeLocalWishlist(nextLocal);
     dispatch(upsertWishlistItem(optimisticItem));
-    toast.success("Added to wishlist");
+    toast.success(i18n("Added to wishlist"));
 
     if (!canUseServer) return;
 
@@ -190,7 +195,7 @@ export default function ProductCard({
           ? error.message
           : "Failed to add item to wishlist.";
       dispatch(setWishlistError(message));
-      toast.error(message);
+      toast.error(i18n(message));
     } finally {
       setIsBusy(false);
     }
@@ -217,12 +222,12 @@ export default function ProductCard({
         const snapshot = await fetchServerCartSnapshot();
         writeLocalCart(snapshot.items);
         dispatch(setCartData(snapshot));
-        toast.success("Added to cart");
+        toast.success(i18n("Added to cart"));
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to add item to cart.";
         dispatch(setCartErrorAction(message));
-        toast.error(message);
+        toast.error(i18n(message));
       } finally {
         setIsCartBusy(false);
       }
@@ -250,7 +255,7 @@ export default function ProductCard({
     if (inStock !== false && variantCount > 0) {
       trackLocalCartAddition(localBefore, nextLocal, createEventId());
     }
-    toast.success("Added to cart");
+    toast.success(i18n("Added to cart"));
   };
 
   const handleWishlistClick = (event: MouseEvent<HTMLButtonElement>) => {
@@ -270,7 +275,7 @@ export default function ProductCard({
       <div className="relative aspect-4/3 shrink-0 overflow-hidden bg-brand-light-bg">
         <Link
           href={productHref}
-          aria-label={`View ${name}`}
+          aria-label={i18n("View {value0}", { value0: name })}
           className="absolute inset-0 z-0"
         >
           <Image
@@ -283,13 +288,13 @@ export default function ProductCard({
         </Link>
 
         {badge && (
-          <span className="absolute left-2 top-2 z-10 max-w-[calc(100%-1rem)] truncate rounded-full bg-brand-red px-2 py-0.5 text-[10px] font-semibold text-brand-white sm:max-w-[calc(100%-3.75rem)]">
-            {badge}
+          <span className="absolute start-2 top-2 z-10 max-w-[calc(100%-1rem)] truncate rounded-full bg-brand-red px-2 py-0.5 text-[10px] font-semibold text-brand-white sm:max-w-[calc(100%-3.75rem)]">
+            {i18n(badge)}
           </span>
         )}
 
         {discount > 0 && !badge && (
-          <span className="absolute left-2 top-2 z-10 rounded-full bg-brand-red px-2 py-0.5 text-[10px] font-semibold text-brand-white">
+          <span className="absolute start-2 top-2 z-10 rounded-full bg-brand-red px-2 py-0.5 text-[10px] font-semibold text-brand-white">
             -{discount}%
           </span>
         )}
@@ -299,9 +304,9 @@ export default function ProductCard({
           onClick={handleWishlistClick}
           disabled={isBusy}
           aria-busy={isBusy}
-          aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+          aria-label={isWishlisted ? i18n("Remove from wishlist") : i18n("Add to wishlist")}
           aria-pressed={isWishlisted}
-          className="absolute right-2 top-2 z-20 hidden h-9 w-9 items-center justify-center rounded-full bg-brand-white/90 p-0 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-brand-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 sm:can-hover:flex"
+          className="absolute end-2 top-2 z-20 hidden h-9 w-9 items-center justify-center rounded-full bg-brand-white/90 p-0 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-brand-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 sm:can-hover:flex"
         >
           {isBusy ? (
             <LoadingSpinner decorative size="sm" className="text-brand-red" />
@@ -322,14 +327,14 @@ export default function ProductCard({
           disabled={isCartBusy}
           aria-busy={isCartBusy}
           aria-label={
-            requiresOptionSelection ? "Select product options" : "Add to cart"
+            requiresOptionSelection ? i18n("Select product options") : i18n("Add to cart")
           }
           className="absolute bottom-2 left-1/2 z-20 hidden -translate-x-1/2 items-center justify-center gap-1.5 rounded-full bg-brand-white/95 px-3 py-1.5 text-xs font-semibold text-brand-red opacity-100 shadow-md backdrop-blur-sm transition-all duration-300 hover:bg-brand-red hover:text-brand-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 sm:can-hover:flex sm:can-hover:translate-y-2 sm:can-hover:opacity-0 sm:can-hover:group-hover:translate-y-0 sm:can-hover:group-hover:opacity-100 sm:can-hover:focus-visible:translate-y-0 sm:can-hover:focus-visible:opacity-100 disabled:cursor-not-allowed disabled:opacity-60 "
         >
           {isCartBusy ? (
             <>
               <LoadingSpinner decorative size="sm" />
-              <span>Adding</span>
+              <span>{i18n("Adding")}</span>
             </>
           ) : (
             <>
@@ -339,7 +344,7 @@ export default function ProductCard({
                 <ShoppingCart className="h-3.5 w-3.5" />
               )}
               <span>
-                {requiresOptionSelection ? "Options" : "Add"}
+                {requiresOptionSelection ? i18n("Options") : i18n("Add")}
               </span>
             </>
           )}
@@ -361,12 +366,12 @@ export default function ProductCard({
                 />
               ))}
             </div>
-            <span className="ml-0.5 text-[10px] text-brand-text-muted">({reviewCount})</span>
+            <span className="ms-0.5 text-[10px] text-brand-text-muted">({reviewCount})</span>
           </div>
         )}
 
         <Link href={productHref}>
-          <h3 className="line-clamp-2 min-h-8 text-xs font-semibold leading-tight text-foreground transition-colors hover:text-brand-black sm:line-clamp-1 sm:min-h-0 sm:text-sm">
+          <h3 lang={nameLocale} dir="auto" className="line-clamp-2 min-h-8 text-xs font-semibold leading-tight text-foreground transition-colors hover:text-brand-black sm:line-clamp-1 sm:min-h-0 sm:text-sm">
             {name}
           </h3>
         </Link>
@@ -391,16 +396,16 @@ export default function ProductCard({
             disabled={isCartBusy}
             aria-busy={isCartBusy}
             aria-label={
-              requiresOptionSelection ? "Select product options" : "Add to cart"
+              requiresOptionSelection ? i18n("Select product options") : i18n("Add to cart")
             }
             className="flex py-2 min-w-0 max-w-24 flex-1 items-center justify-center rounded-lg bg-brand-red px-1.5 text-[11px] font-semibold text-brand-white shadow-sm transition-colors hover:bg-brand-red-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 active:bg-brand-red-hover disabled:cursor-not-allowed disabled:opacity-60 "
           >
             <span className="truncate">
               {isCartBusy
-                ? "Adding..."
+                ? i18n("Adding...")
                 : requiresOptionSelection
-                  ? "Options"
-                  : "Add"}
+                  ? i18n("Options")
+                  : i18n("Add")}
             </span>
           </button>
 
@@ -409,7 +414,7 @@ export default function ProductCard({
             onClick={handleWishlistClick}
             disabled={isBusy}
             aria-busy={isBusy}
-            aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+            aria-label={isWishlisted ? i18n("Remove from wishlist") : i18n("Add to wishlist")}
             aria-pressed={isWishlisted}
             className={`flex py-2 w-11 shrink-0 items-center justify-center rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
               isWishlisted

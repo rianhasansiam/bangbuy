@@ -1,11 +1,14 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import dynamic from "next/dynamic";
 
 function SectionFallback({ label }: { label: string }) {
+  const i18n = useInterfaceTranslations("InterfaceProductsSlugComponentsDeferredProductSections");
   return (
     <div
-      aria-label={label}
+      aria-label={i18n(label)}
       aria-busy="true"
       role="status"
       className="min-h-28 animate-pulse rounded-2xl border border-brand-border bg-white"

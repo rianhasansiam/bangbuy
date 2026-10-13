@@ -1,6 +1,8 @@
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 import { ArrowRight, FolderTree } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/lib/i18n/navigation";
 
 import type { CategoryDto } from "@/lib/services/category.service";
 
@@ -25,6 +27,7 @@ export default function CategoryScroller({
 }: {
   categories: CategoryDto[];
 }) {
+  const i18n = useInterfaceTranslations("InterfaceComponentsCategoryScroller");
   if (categories.length === 0) return null;
 
   const bags = findCategoryByName(categories, "Bags");
@@ -44,8 +47,7 @@ export default function CategoryScroller({
             id="home-category-scroller-title"
             className="text-lg font-black text-gray-950 sm:text-xl"
           >
-            All categories
-          </h2>
+            {i18n("All categories")}</h2>
           {/* <p className="mt-1 text-xs text-brand-text-muted sm:text-sm">
             Swipe or scroll to explore the complete catalog.
           </p> */}
@@ -55,13 +57,12 @@ export default function CategoryScroller({
           href="/categories"
           className="group hidden shrink-0 items-center gap-1 text-sm font-semibold text-brand-red transition-colors hover:text-brand-red-hover sm:flex"
         >
-          View all
-          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          {i18n("View all")}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 rtl:rotate-180" />
         </Link>
       </div>
 
       <nav
-        aria-label="All product categories"
+        aria-label={i18n("All product categories")}
         className="snap-x snap-proximity overflow-x-auto overscroll-x-contain pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         <div className="mx-auto flex w-max min-w-full justify-center gap-4 px-2 pt-2  sm:gap-5">
@@ -93,18 +94,18 @@ export default function CategoryScroller({
                 {category.name}
               </span>
               <span
-                title={`${category.totalProductCount} ${category.totalProductCount === 1 ? "product" : "products"}`}
+                title={`${category.totalProductCount} ${category.totalProductCount === 1 ? i18n("product") : i18n("products")}`}
                 className="mt-0.5 w-full truncate text-[10px] text-brand-text-muted sm:text-xs"
               >
                 {category.totalProductCount}{" "}
-                {category.totalProductCount === 1 ? "product" : "products"}
+                {category.totalProductCount === 1 ? i18n("product") : i18n("products")}
               </span>
             </Link>
           ))}
 
           <Link
             href="/categories"
-            title="Browse all categories"
+            title={i18n("Browse all categories")}
             className="group flex w-24 shrink-0 snap-start flex-col items-center text-center sm:w-28"
           >
             <span className="relative flex size-20 items-center justify-center overflow-hidden rounded-full border-2 border-brand-border bg-brand-light-bg shadow-sm transition duration-300 group-hover:-translate-y-1 group-hover:border-brand-red/50 group-hover:shadow-md sm:size-24">
@@ -114,11 +115,9 @@ export default function CategoryScroller({
               />
             </span>
             <span className="mt-2 min-h-9 text-xs font-bold leading-4 text-gray-800 transition-colors group-hover:text-brand-red sm:text-sm sm:leading-[1.125rem]">
-              Others
-            </span>
+              {i18n("Others")}</span>
             <span className="mt-0.5 text-[10px] text-brand-text-muted sm:text-xs">
-              View all
-            </span>
+              {i18n("View all")}</span>
           </Link>
         </div>
       </nav>

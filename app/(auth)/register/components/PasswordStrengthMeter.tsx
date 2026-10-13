@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Check } from "lucide-react";
 
@@ -19,6 +21,7 @@ export default function PasswordStrengthMeter({
   label,
   colorClass,
 }: PasswordStrengthMeterProps) {
+  const i18n = useInterfaceTranslations("InterfaceRegisterComponentsPasswordStrengthMeter");
   return (
     <div>
       <div className="flex gap-1.5">
@@ -35,8 +38,7 @@ export default function PasswordStrengthMeter({
 
       <div className="mt-2 flex items-center justify-between text-[11px]">
         <span className="font-bold uppercase tracking-wide text-brand-text-muted">
-          Strength
-        </span>
+          {i18n("Strength")}</span>
 
         <span
           className={cn(
@@ -48,7 +50,7 @@ export default function PasswordStrengthMeter({
                 : "text-red-500",
           )}
         >
-          {password ? label : "—"}
+          {password ? i18n(label) : "—"}
         </span>
       </div>
 
@@ -58,11 +60,12 @@ export default function PasswordStrengthMeter({
 }
 
 function PasswordHints({ password }: { password: string }) {
+  const i18n = useInterfaceTranslations("InterfaceRegisterComponentsPasswordStrengthMeter");
   const checks = [
-    { label: "8+ characters", passed: password.length >= 8 },
-    { label: "Uppercase", passed: /[A-Z]/.test(password) },
-    { label: "Number", passed: /\d/.test(password) },
-    { label: "Symbol", passed: /[^A-Za-z0-9]/.test(password) },
+    { label: i18n("8+ characters"), passed: password.length >= 8 },
+    { label: i18n("Uppercase"), passed: /[A-Z]/.test(password) },
+    { label: i18n("Number"), passed: /\d/.test(password) },
+    { label: i18n("Symbol"), passed: /[^A-Za-z0-9]/.test(password) },
   ];
 
   return (
@@ -86,7 +89,7 @@ function PasswordHints({ password }: { password: string }) {
             <Check className="h-3 w-3" />
           </span>
 
-          {check.label}
+          {i18n(check.label)}
         </li>
       ))}
     </ul>

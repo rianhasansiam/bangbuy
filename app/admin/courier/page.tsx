@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -34,6 +38,8 @@ import { cn } from "@/lib/utils";
 import CourierReportPanel from "./components/CourierReportPanel";
 
 export default function AdminCourierPage() {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminCourierPage");
   const dispatch = useDispatch<AppDispatch>();
   const orders = useSelector((state: RootState) => state.adminOrders.items);
   const ordersLoading = useSelector(
@@ -154,11 +160,9 @@ export default function AdminCourierPage() {
             <ShieldCheck className="h-5 w-5" />
           </span>
           <div>
-            <h1 className="text-lg font-bold">Courier Fraud Check</h1>
+            <h1 className="text-lg font-bold">{i18n("Courier Fraud Check")}</h1>
             <p className="text-xs text-white/70">
-              Review a customer&apos;s delivery track record before dispatching
-              an order.
-            </p>
+              {i18n("Review a customer's delivery track record before dispatching an order.")}</p>
           </div>
         </div>
       </div>
@@ -166,8 +170,7 @@ export default function AdminCourierPage() {
       {/* Manual search */}
       <div className="rounded-2xl border border-brand-border bg-white p-4 shadow-sm sm:p-5">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Manual lookup
-        </p>
+          {i18n("Manual lookup")}</p>
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -182,8 +185,8 @@ export default function AdminCourierPage() {
               inputMode="tel"
               value={manualPhone}
               onChange={(event) => setManualPhone(event.target.value)}
-              placeholder="Enter customer phone, e.g. 017XXXXXXXX"
-              className="h-10 w-full rounded-xl border border-brand-border pl-9 pr-3 text-sm outline-none transition focus:border-brand-red"
+              placeholder={i18n("Enter customer phone, e.g. 017XXXXXXXX")}
+              className="h-10 w-full rounded-xl border border-brand-border ps-9 pe-3 text-sm outline-none transition focus:border-brand-red"
             />
           </label>
           <button
@@ -193,12 +196,11 @@ export default function AdminCourierPage() {
             className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-brand-red px-5 text-sm font-semibold text-white transition hover:bg-brand-red-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {checking ? (
-              <ButtonLoader label="Checking..." />
+              <ButtonLoader label={i18n("Checking...")} />
             ) : (
               <>
                 <Search className="h-4 w-4" />
-                Check
-              </>
+                {i18n("Check")}</>
             )}
           </button>
         </form>
@@ -225,11 +227,9 @@ export default function AdminCourierPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Order history
-            </p>
+              {i18n("Order history")}</p>
             <p className="text-sm text-gray-600">
-              Click a customer to check their courier record.
-            </p>
+              {i18n("Click a customer to check their courier record.")}</p>
           </div>
           <button
             type="button"
@@ -245,7 +245,7 @@ export default function AdminCourierPage() {
             ) : (
               <RotateCcw className="h-4 w-4" />
             )}
-            {ordersLoading ? "Refreshing..." : "Refresh"}
+            {ordersLoading ? i18n("Refreshing...") : i18n("Refresh")}
           </button>
         </div>
 
@@ -255,8 +255,8 @@ export default function AdminCourierPage() {
             type="text"
             value={orderQuery}
             onChange={(event) => setOrderQuery(event.target.value)}
-            placeholder="Search customers by name, phone, or order #..."
-            className="h-10 w-full rounded-xl border border-brand-border pl-9 pr-3 text-sm outline-none transition focus:border-brand-red"
+            placeholder={i18n("Search customers by name, phone, or order #...")}
+            className="h-10 w-full rounded-xl border border-brand-border ps-9 pe-3 text-sm outline-none transition focus:border-brand-red"
           />
         </label>
 
@@ -272,18 +272,17 @@ export default function AdminCourierPage() {
           ) : customers.length === 0 ? (
             <div className="p-8 text-center text-sm text-gray-600">
               <Package2 className="mx-auto mb-2 h-8 w-8 text-brand-text-muted" />
-              No customers match the current search.
-            </div>
+              {i18n("No customers match the current search.")}</div>
           ) : (
             <div className="max-h-112 overflow-x-auto overflow-y-auto">
               <table className="min-w-full text-sm">
-                <thead className="sticky top-0 bg-brand-light-bg text-left text-xs uppercase tracking-wider text-brand-black">
+                <thead className="sticky top-0 bg-brand-light-bg text-start text-xs uppercase tracking-wider text-brand-black">
                   <tr>
-                    <th className="px-4 py-3">Customer</th>
-                    <th className="px-4 py-3">Phone</th>
-                    <th className="px-4 py-3">Orders</th>
-                    <th className="px-4 py-3">Last order</th>
-                    <th className="px-4 py-3 text-right">Action</th>
+                    <th className="px-4 py-3">{i18n("Customer")}</th>
+                    <th className="px-4 py-3">{i18n("Phone")}</th>
+                    <th className="px-4 py-3">{i18n("Orders")}</th>
+                    <th className="px-4 py-3">{i18n("Last order")}</th>
+                    <th className="px-4 py-3 text-end">{i18n("Action")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -312,10 +311,10 @@ export default function AdminCourierPage() {
                             {customer.lastOrderNumber}
                           </p>
                           <p className="text-xs text-gray-400">
-                            {formatDateTime(customer.lastOrderAt)}
+                            {formatDateTime(customer.lastOrderAt, locale)}
                           </p>
                         </td>
-                        <td className="px-4 py-3 text-right">
+                        <td className="px-4 py-3 text-end">
                           <button
                             type="button"
                             onClick={() => {
@@ -327,12 +326,11 @@ export default function AdminCourierPage() {
                             className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border px-3 py-1.5 text-xs font-semibold text-brand-black transition hover:bg-brand-light-bg disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {checking && activePhone === customer.phone.trim() ? (
-                              <ButtonLoader label="Checking" />
+                              <ButtonLoader label={i18n("Checking")} />
                             ) : (
                               <>
                                 <ShieldCheck className="h-3.5 w-3.5" />
-                                Check
-                              </>
+                                {i18n("Check")}</>
                             )}
                           </button>
                         </td>
@@ -346,8 +344,7 @@ export default function AdminCourierPage() {
         </div>
 
         <p className="mt-2 text-xs text-gray-500">
-          {customers.length} customer{customers.length === 1 ? "" : "s"} from{" "}
-          {orders.length} order{orders.length === 1 ? "" : "s"}
+          {i18n("{customerCount, plural, one {# customer} other {# customers}} from {orderCount, plural, one {# order} other {# orders}}", { customerCount: customers.length, orderCount: orders.length })}
         </p>
       </div>
     </section>

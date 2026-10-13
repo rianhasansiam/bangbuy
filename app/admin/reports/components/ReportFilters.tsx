@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { CalendarRange, Hash, Infinity as InfinityIcon, Play } from "lucide-react";
 
@@ -30,10 +32,11 @@ const PRESETS: Array<{ days: number; label: string }> = [
  * button shows a spinner so admins know exactly what's happening.
  */
 export default function ReportFilters(props: Props) {
+  const i18n = useInterfaceTranslations("AdminAdminReportsComponentsReportFilters");
   return (
     <div className="rounded-2xl border border-brand-border bg-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-wrap items-end gap-3">
-        <Field label="From" icon={<CalendarRange className="h-3.5 w-3.5" />}>
+        <Field label={i18n("From")} icon={<CalendarRange className="h-3.5 w-3.5" />}>
           <input
             type="date"
             value={props.from}
@@ -43,7 +46,7 @@ export default function ReportFilters(props: Props) {
           />
         </Field>
 
-        <Field label="To" icon={<CalendarRange className="h-3.5 w-3.5" />}>
+        <Field label={i18n("To")} icon={<CalendarRange className="h-3.5 w-3.5" />}>
           <input
             type="date"
             value={props.to}
@@ -54,8 +57,8 @@ export default function ReportFilters(props: Props) {
         </Field>
 
         <Field
-          label="Records"
-          hint="Caps detail rows in the report."
+          label={i18n("Records")}
+          hint={i18n("Caps detail rows in the report.")}
           icon={<Hash className="h-3.5 w-3.5" />}
         >
           <input
@@ -85,8 +88,7 @@ export default function ReportFilters(props: Props) {
             aria-pressed={props.allTime}
           >
             <InfinityIcon className="h-4 w-4" />
-            All time
-          </button>
+            {i18n("All time")}</button>
 
           <div
             className={
@@ -101,7 +103,7 @@ export default function ReportFilters(props: Props) {
                 onClick={() => props.onPresetWindow(preset.days)}
                 className="rounded-lg px-3 py-1.5 text-brand-text-muted transition-all duration-200 hover:bg-white hover:text-brand-red"
               >
-                Last {preset.label}
+                {i18n("Last")}{" "}{preset.label}
               </button>
             ))}
           </div>
@@ -114,12 +116,11 @@ export default function ReportFilters(props: Props) {
             className="inline-flex h-10 items-center gap-2 rounded-xl bg-brand-red px-4 text-sm font-semibold text-white transition hover:bg-brand-red-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
             {props.isLoading ? (
-              <ButtonLoader label="Generating..." />
+              <ButtonLoader label={i18n("Generating...")} />
             ) : (
               <>
                 <Play className="h-4 w-4" />
-                Generate report
-              </>
+                {i18n("Generate report")}</>
             )}
           </button>
         </div>

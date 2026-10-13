@@ -10,6 +10,8 @@ import {
   serializeProduct,
 } from "@/lib/services/product.service";
 import type { ProductQueryInput } from "@/lib/validations/product.validation";
+import { getRequestLocale } from "@/lib/i18n/server";
+import { localizeCategorySnapshots, localizeProductSnapshots } from "@/lib/translations/public";
 
 const getCachedPublicCatalogPage = unstable_cache(
   async (query: ProductQueryInput) => {
@@ -58,17 +60,20 @@ export function isCacheablePublicCatalogQuery(query: ProductQueryInput): boolean
 }
 
 export async function getPublicCatalogPage(query: ProductQueryInput) {
+  const locale=await getRequestLocale();
   if (isCacheablePublicCatalogQuery(query)) {
-    return getCachedPublicCatalogPage(query);
+    const result=await getCachedPublicCatalogPage(query);
+    return {...result,items:await localizeProductSnapshots(result.items,locale)};
   }
 
   const { items, meta } = await listProducts(query, { publicOnly: true });
   return {
-    items: items.map((product): Product => mapApiProduct(serializeProduct(product))),
+    items: await localizeProductSnapshots(items.map((product): Product => mapApiProduct(serializeProduct(product))),locale),
     meta,
   };
 }
 
-export function getPublicCatalogFacets() {
-  return getCachedCatalogFacets();
+export async function getPublicCatalogFacets(requestedLocale?:string) {
+  const [facets,locale]=await Promise.all([getCachedCatalogFacets(),requestedLocale?Promise.resolve(requestedLocale):getRequestLocale()]);
+  return {...facets,categories:await localizeCategorySnapshots(facets.categories,locale)};
 }

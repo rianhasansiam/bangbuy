@@ -1,8 +1,10 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, Grid3X3 } from "lucide-react";
-import Link from "next/link";
+import Link from "@/lib/i18n/navigation";
 
 import {
   categoryHref,
@@ -17,6 +19,7 @@ export function DesktopCategoryMenu({
   categories: PublicCategoryNode[];
   active: boolean;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceLayoutCategoryNavigation");
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -49,8 +52,7 @@ export function DesktopCategoryMenu({
         )}
       >
         <Grid3X3 className="h-4 w-4" />
-        Categories
-        <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+        {i18n("Categories")}<ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
         <span className={cn(
           "absolute bottom-0 left-1/2 h-0.5 w-[60%] -translate-x-1/2 rounded-full bg-brand-red transition",
           active || open ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0",
@@ -64,15 +66,14 @@ export function DesktopCategoryMenu({
         >
           <div className="mb-4 flex items-center justify-between border-b border-brand-border pb-3">
             <div>
-              <p className="font-bold text-brand-black">Shop by category</p>
-              <p className="text-xs text-brand-text-muted">Browse departments and their most popular sections.</p>
+              <p className="font-bold text-brand-black">{i18n("Shop by category")}</p>
+              <p className="text-xs text-brand-text-muted">{i18n("Browse departments and their most popular sections.")}</p>
             </div>
             <Link href="/categories" onClick={() => setOpen(false)} className="text-sm font-semibold text-brand-red hover:text-brand-red-hover">
-              View all categories
-            </Link>
+              {i18n("View all categories")}</Link>
           </div>
           {categories.length === 0 ? (
-            <p className="py-6 text-center text-sm text-brand-text-muted">No categories available.</p>
+            <p className="py-6 text-center text-sm text-brand-text-muted">{i18n("No categories available.")}</p>
           ) : (
             <div className="grid max-h-[65vh] grid-cols-2 gap-x-8 gap-y-6 overflow-y-auto lg:grid-cols-3 xl:grid-cols-4">
               {categories.map((root) => (
@@ -96,7 +97,7 @@ export function DesktopCategoryMenu({
                             onClick={() => setOpen(false)}
                             className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-brand-red"
                           >
-                            <ChevronRight className="h-3 w-3 shrink-0" />
+                            <ChevronRight className="h-3 w-3 shrink-0 rtl:rotate-180" />
                             <span className="truncate">{child.name}</span>
                           </Link>
                         </li>
@@ -120,12 +121,13 @@ export function MobileCategoryMenu({
   categories: PublicCategoryNode[];
   onNavigate: () => void;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceLayoutCategoryNavigation");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   return (
     <div className="mt-2 border-t border-brand-border pt-2">
       <div className="mb-1 flex items-center justify-between px-4 py-2">
-        <p className="text-xs font-bold uppercase tracking-wider text-brand-text-muted">Categories</p>
-        <Link href="/categories" onClick={onNavigate} className="text-xs font-semibold text-brand-red">View all</Link>
+        <p className="text-xs font-bold uppercase tracking-wider text-brand-text-muted">{i18n("Categories")}</p>
+        <Link href="/categories" onClick={onNavigate} className="text-xs font-semibold text-brand-red">{i18n("View all")}</Link>
       </div>
       {categories.map((root) => {
         const isExpanded = expanded.has(root.id);
@@ -143,7 +145,7 @@ export function MobileCategoryMenu({
               {root.children.length > 0 && (
                 <button
                   type="button"
-                  aria-label={`${isExpanded ? "Collapse" : "Expand"} ${root.name}`}
+                  aria-label={`${isExpanded ? i18n("Collapse") : i18n("Expand")} ${root.name}`}
                   aria-expanded={isExpanded}
                   onClick={() =>
                     setExpanded((current) => {
@@ -153,14 +155,14 @@ export function MobileCategoryMenu({
                       return next;
                     })
                   }
-                  className="mr-2 flex h-10 w-10 items-center justify-center rounded-lg text-brand-text-muted hover:bg-white hover:text-brand-red"
+                  className="me-2 flex h-10 w-10 items-center justify-center rounded-lg text-brand-text-muted hover:bg-white hover:text-brand-red"
                 >
                   <ChevronDown className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-180")} />
                 </button>
               )}
             </div>
             {root.children.length > 0 && isExpanded && (
-              <div className="ml-7 min-w-0 border-l border-brand-border pl-3">
+              <div className="ms-7 min-w-0 border-s border-brand-border ps-3">
                 {root.children.map((child) => (
                   <Link
                     key={child.id}

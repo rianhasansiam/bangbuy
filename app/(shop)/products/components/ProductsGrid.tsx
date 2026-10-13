@@ -1,11 +1,13 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import ProductCard from "@/components/product/ProductCard";
 import CurrencyAmount from "@/components/currency/CurrencyAmount";
 import { Heart, ShoppingCart, Star, PackageX } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/lib/i18n/navigation";
+import { useRouter } from "@/lib/i18n/navigation";
 import { useSession } from "@/lib/auth/use-app-session";
 import { useState } from "react";
 import { useDispatch } from "react-redux";
@@ -45,6 +47,7 @@ export default function ProductsGrid({
   wide,
   animateFrom = 0,
 }: Props) {
+  const i18n = useInterfaceTranslations("InterfaceProductsComponentsProductsGrid");
   if (products.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-brand-border bg-white px-6 py-16 text-center shadow-sm">
@@ -52,17 +55,14 @@ export default function ProductsGrid({
           <PackageX className="h-10 w-10 text-brand-text-muted" />
         </div>
         <h3 className="mb-1 text-lg font-bold text-gray-900">
-          No products found
-        </h3>
+          {i18n("No products found")}</h3>
         <p className="mb-5 max-w-md text-sm text-gray-500">
-          Try adjusting your filters to find what you&apos;re looking for.
-        </p>
+          {i18n("Try adjusting your filters to find what you're looking for.")}</p>
         <button
           onClick={onClearFilters}
           className="rounded-full bg-brand-red px-5 py-2 text-sm font-semibold text-brand-white transition hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-lg"
         >
-          Clear all filters
-        </button>
+          {i18n("Clear all filters")}</button>
       </div>
     );
   }
@@ -122,6 +122,7 @@ export default function ProductsGrid({
             productCode={p.productCode}
             slug={p.slug}
             name={p.name}
+            nameLocale={p.fieldLocales?.name}
             price={p.discountPrice ?? p.price}
             originalPrice={p.discountPrice ? p.price : undefined}
             image={p.image}
@@ -138,6 +139,7 @@ export default function ProductsGrid({
 }
 
 function ListItem({ product }: { product: Product }) {
+  const i18n = useInterfaceTranslations("InterfaceProductsComponentsProductsGrid");
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -216,19 +218,19 @@ function ListItem({ product }: { product: Product }) {
           className="object-cover transition-transform duration-500 group-hover:scale-105"
         />
         {product.badge ? (
-          <span className="absolute left-2 top-2 rounded-full bg-brand-red px-2 py-0.5 text-[10px] font-semibold text-brand-white">
+          <span className="absolute start-2 top-2 rounded-full bg-brand-red px-2 py-0.5 text-[10px] font-semibold text-brand-white">
             {product.badge}
           </span>
         ) : (
           discount > 0 && (
-            <span className="absolute left-2 top-2 rounded-full bg-brand-red px-2 py-0.5 text-[10px] font-semibold text-brand-white">
+            <span className="absolute start-2 top-2 rounded-full bg-brand-red px-2 py-0.5 text-[10px] font-semibold text-brand-white">
               -{discount}%
             </span>
           )
         )}
       </Link>
 
-      <div className="flex min-w-0 flex-1 flex-col py-2 pr-3 sm:py-3 sm:pr-4">
+      <div className="flex min-w-0 flex-1 flex-col py-2 pe-3 sm:py-3 sm:pe-4">
         <div className="mb-1 flex items-start justify-between gap-2">
           <Link href={`/products/${product.slug}`} className="min-w-0">
             <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-gray-900 transition hover:text-brand-red sm:text-base">
@@ -236,7 +238,7 @@ function ListItem({ product }: { product: Product }) {
             </h3>
           </Link>
           <button
-            aria-label="Add to wishlist"
+            aria-label={i18n("Add to wishlist")}
             className="shrink-0 rounded-full p-1.5 transition hover:bg-brand-light-bg"
           >
             <Heart className="h-4 w-4 text-gray-500 transition-colors hover:text-brand-red" />
@@ -254,7 +256,7 @@ function ListItem({ product }: { product: Product }) {
               }`}
             />
           ))}
-          <span className="ml-0.5 text-[11px] text-gray-500">
+          <span className="ms-0.5 text-[11px] text-gray-500">
             ({product.reviewCount})
           </span>
         </div>
@@ -278,8 +280,7 @@ function ListItem({ product }: { product: Product }) {
                   className="text-xs text-gray-400 line-through"
                 />
                 <span className="text-[10px] font-bold text-brand-red sm:text-xs">
-                  {discount}% off
-                </span>
+                  {discount}{i18n("% off")}</span>
               </>
             )}
           </div>
@@ -294,18 +295,16 @@ function ListItem({ product }: { product: Product }) {
               className="hidden items-center gap-1.5 rounded-full bg-brand-red px-3 py-1.5 text-xs font-semibold text-brand-white shadow-sm transition hover:bg-brand-red-hover hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 sm:flex"
             >
               {isCartBusy ? (
-                <ButtonLoader label="Adding..." />
+                <ButtonLoader label={i18n("Adding...")} />
               ) : (
                 <>
                   <ShoppingCart className="h-3.5 w-3.5" />
-                  Add to Cart
-                </>
+                  {i18n("Add to Cart")}</>
               )}
             </button>
           ) : (
             <span className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600">
-              Out of Stock
-            </span>
+              {i18n("Out of Stock")}</span>
           )}
         </div>
       </div>

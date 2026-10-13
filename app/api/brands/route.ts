@@ -11,6 +11,7 @@ import {
   brandQuerySchema,
   createBrandSchema,
 } from "@/lib/validations/brand.validation";
+import { apiLocale, localizeBrandSnapshots } from "@/lib/translations/public";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
       ? parsed.data
       : { ...parsed.data, status: "ACTIVE" as const };
     const { items, meta } = await listBrands(query);
-    return ok(items, meta);
+    return ok(request.nextUrl.searchParams.has("locale")?await localizeBrandSnapshots(items,await apiLocale(request)):items, meta);
   } catch (error) {
     return handleServiceError("brands.GET", error);
   }

@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 /* eslint-disable @next/next/no-img-element */
 
@@ -17,8 +21,8 @@ import {
 } from "@/lib/motion/list-removal";
 import { cn } from "@/lib/utils";
 
-function formatBDT(value: number): string {
-  return `BDT ${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+function formatBDT(value: number, locale = "en"): string {
+  return `BDT ${value.toLocaleString(locale, { maximumFractionDigits: 2 })}`;
 }
 
 function Actions({
@@ -34,18 +38,17 @@ function Actions({
   onToggleHide: (product: AdminProduct) => void;
   onDelete: (product: AdminProduct) => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminProductsComponentsProductsTable");
   return (
     <div className="flex flex-wrap items-center justify-end gap-1.5">
       <button type="button" onClick={() => onEdit(product)} disabled={busy} className="inline-flex h-8 items-center gap-1 rounded-lg border border-brand-border px-2.5 text-xs font-semibold text-gray-700 hover:bg-brand-light-bg disabled:opacity-50">
-        <Pencil className="h-3.5 w-3.5" /> Edit
-      </button>
+        <Pencil className="h-3.5 w-3.5" /> {i18n("Edit")}</button>
       <button type="button" onClick={() => onToggleHide(product)} disabled={busy} className="inline-flex h-8 items-center gap-1 rounded-lg border border-brand-border px-2.5 text-xs font-semibold text-gray-700 hover:bg-brand-light-bg disabled:opacity-50">
         {product.status === "ACTIVE" ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-        {product.status === "ACTIVE" ? "Hide" : "Show"}
+        {product.status === "ACTIVE" ? i18n("Hide") : i18n("Show")}
       </button>
       <button type="button" onClick={() => onDelete(product)} disabled={busy} className="inline-flex h-8 items-center gap-1 rounded-lg border border-red-200 px-2.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">
-        <Trash2 className="h-3.5 w-3.5" /> Delete
-      </button>
+        <Trash2 className="h-3.5 w-3.5" /> {i18n("Delete")}</button>
     </div>
   );
 }
@@ -67,26 +70,28 @@ export default function ProductsTable({
   onToggleHide: (product: AdminProduct) => void;
   onDelete: (product: AdminProduct) => void;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminProductsComponentsProductsTable");
   if (isLoading && totalCount === 0) {
     return <TableSkeleton rows={6} columns={7} ariaLabel="Loading products" />;
   }
   if (products.length === 0) {
-    return <div className="rounded-2xl border border-brand-border bg-white p-10 text-center text-sm text-gray-600 shadow-sm">No products found for the current filters.</div>;
+    return <div className="rounded-2xl border border-brand-border bg-white p-10 text-center text-sm text-gray-600 shadow-sm">{i18n("No products found for the current filters.")}</div>;
   }
 
   return (
     <div className="overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm">
       <div className="hidden overflow-x-auto md:block">
         <table className="min-w-full text-sm">
-          <thead className="bg-brand-light-bg text-left text-xs uppercase tracking-wider text-gray-500">
+          <thead className="bg-brand-light-bg text-start text-xs uppercase tracking-wider text-gray-500">
             <tr>
-              <th className="px-4 py-3">Product</th>
-              <th className="px-4 py-3">Classification</th>
-              <th className="px-4 py-3">Inventory</th>
-              <th className="px-4 py-3">Pricing</th>
-              <th className="px-4 py-3">Reviews</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">{i18n("Product")}</th>
+              <th className="px-4 py-3">{i18n("Classification")}</th>
+              <th className="px-4 py-3">{i18n("Inventory")}</th>
+              <th className="px-4 py-3">{i18n("Pricing")}</th>
+              <th className="px-4 py-3">{i18n("Reviews")}</th>
+              <th className="px-4 py-3">{i18n("Status")}</th>
+              <th className="px-4 py-3 text-end">{i18n("Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -121,17 +126,17 @@ export default function ProductsTable({
                     </p>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-bold text-gray-950">{product.stock} units</p>
-                    <p className="mt-1 text-xs text-gray-500">{product.variants.length} {product.variants.length === 1 ? "variant" : "variants"}</p>
+                    <p className="font-bold text-gray-950">{product.stock} {i18n("units")}</p>
+                    <p className="mt-1 text-xs text-gray-500">{product.variants.length} {product.variants.length === 1 ? i18n("variant") : i18n("variants")}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-bold text-gray-950">{formatBDT(product.discountPrice ?? product.salePrice)}</p>
-                    {product.discountPrice !== null && <p className="text-xs text-gray-400 line-through">{formatBDT(product.salePrice)}</p>}
-                    <p className="mt-1 text-[11px] text-gray-500">Cost {formatBDT(product.buyingPrice)}</p>
+                    <p className="font-bold text-gray-950">{formatBDT(product.discountPrice ?? product.salePrice, locale)}</p>
+                    {product.discountPrice !== null && <p className="text-xs text-gray-400 line-through">{formatBDT(product.salePrice, locale)}</p>}
+                    <p className="mt-1 text-[11px] text-gray-500">{i18n("Cost")}{" "}{formatBDT(product.buyingPrice, locale)}</p>
                   </td>
                   <td className="px-4 py-3">
                     <span className="inline-flex items-center gap-1 font-semibold text-gray-800"><Star className="h-3.5 w-3.5 fill-brand-gold text-brand-gold" /> {product.rating.toFixed(1)}</span>
-                    <p className="mt-1 text-xs text-gray-500">{product.reviewCount} reviews</p>
+                    <p className="mt-1 text-xs text-gray-500">{product.reviewCount} {i18n("reviews")}</p>
                   </td>
                   <td className="px-4 py-3">
                     <span className={cn("rounded-full px-2 py-1 text-xs font-semibold", product.status === "ACTIVE" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700")}>{product.status}</span>
@@ -163,9 +168,9 @@ export default function ProductsTable({
               </div>
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl bg-brand-light-bg p-3 text-xs">
-              <div><p className="text-gray-500">Price</p><p className="mt-0.5 font-bold">{formatBDT(product.discountPrice ?? product.salePrice)}</p></div>
-              <div><p className="text-gray-500">Stock</p><p className="mt-0.5 font-bold">{product.stock}</p></div>
-              <div><p className="text-gray-500">Variants</p><p className="mt-0.5 font-bold">{product.variants.length}</p></div>
+              <div><p className="text-gray-500">{i18n("Price")}</p><p className="mt-0.5 font-bold">{formatBDT(product.discountPrice ?? product.salePrice, locale)}</p></div>
+              <div><p className="text-gray-500">{i18n("Stock")}</p><p className="mt-0.5 font-bold">{product.stock}</p></div>
+              <div><p className="text-gray-500">{i18n("Variants")}</p><p className="mt-0.5 font-bold">{product.variants.length}</p></div>
             </div>
             <div className="mt-3"><Actions product={product} busy={busyActionProductId === product.id} onEdit={onEdit} onToggleHide={onToggleHide} onDelete={onDelete} /></div>
           </article>

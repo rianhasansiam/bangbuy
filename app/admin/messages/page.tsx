@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -33,6 +35,7 @@ import MessageDrawer from "./components/MessageDrawer";
 type StatusFilter = "ALL" | ContactMessageStatus;
 
 export default function AdminMessagesPage() {
+  const i18n = useInterfaceTranslations("AdminAdminMessagesPage");
   const dispatch = useDispatch<AppDispatch>();
   const messages = useSelector(
     (state: RootState) => state.adminMessages.items,
@@ -148,7 +151,7 @@ export default function AdminMessagesPage() {
   const handleDelete = async (row: AdminMessageRow) => {
     const confirmed = await confirmMajorAction({
       title: `Delete message from ${row.name || row.email}?`,
-      description: "This action cannot be undone.",
+      description: i18n("This action cannot be undone."),
       confirmLabel: "Delete",
       variant: "danger",
     });
@@ -209,7 +212,7 @@ export default function AdminMessagesPage() {
 
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {error}
+          {i18n(error)}
         </div>
       )}
 

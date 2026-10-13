@@ -137,8 +137,8 @@ export function riskLabelFromRate(successRate: number, total: number): string {
   return "High risk";
 }
 
-export function formatPercent(value: number): string {
-  return `${value.toLocaleString(undefined, {
+export function formatPercent(value: number, locale = "en"): string {
+  return `${value.toLocaleString(locale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   })}%`;

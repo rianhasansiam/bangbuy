@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
@@ -54,6 +56,7 @@ const ProductGallery = ({
   initialVariantId?: string | null;
   productName: string;
 }) => {
+  const i18n = useInterfaceTranslations("InterfaceProductsSlugComponentsProductGallery");
   const galleryItems = useMemo<GalleryItem[]>(() => {
     const items: GalleryItem[] = [];
 
@@ -174,7 +177,7 @@ const ProductGallery = ({
             currentItem.alt ||
             (isVariantImage && currentItem.label
               ? `${productName} ${currentItem.label}`
-              : `${productName} - Image ${selectedImage + 1}`)
+              : i18n("{value0} - Image {value1}", { value0: productName, value1: selectedImage + 1 }))
           }
           fill
           sizes="(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw"
@@ -182,9 +185,8 @@ const ProductGallery = ({
           className="object-contain p-4"
         />
         {isVariantImage && (
-          <span className="absolute bottom-3 left-3 rounded-full bg-brand-red px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm">
-            Selected variant
-          </span>
+          <span className="absolute bottom-3 start-3 rounded-full bg-brand-red px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white shadow-sm">
+            {i18n("Selected variant")}</span>
         )}
       </div>
 
@@ -206,16 +208,16 @@ const ProductGallery = ({
               )}
               aria-label={
                 itemIsVariant && item.label
-                  ? `Show ${item.label} variant image`
-                  : `Show product image ${index + 1}`
+                  ? i18n("Show {value0} variant image", { value0: item.label })
+                  : i18n("Show product image {value0}", { value0: index + 1 })
               }
             >
               <Image
                 src={item.url}
                 alt={
                   item.alt || (itemIsVariant && item.label
-                    ? `${productName} ${item.label} thumbnail`
-                    : `${productName} thumbnail ${index + 1}`)
+                    ? i18n("{value0} {value1} thumbnail", { value0: productName, value1: item.label })
+                    : i18n("{value0} thumbnail {value1}", { value0: productName, value1: index + 1 }))
                 }
                 fill
                 sizes="56px"
@@ -225,7 +227,7 @@ const ProductGallery = ({
                 <span
                   aria-hidden
                   className={cn(
-                    "absolute right-1 top-1 h-2.5 w-2.5 rounded-full ring-2 ring-white",
+                    "absolute end-1 top-1 h-2.5 w-2.5 rounded-full ring-2 ring-white",
                     selectedImage === index ? "bg-brand-red" : "bg-gray-500",
                   )}
                 />

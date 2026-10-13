@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Minus, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -20,6 +22,7 @@ export default function QuantityStepper({
   onChange,
   size = "md",
 }: QuantityStepperProps) {
+  const i18n = useInterfaceTranslations("InterfaceCartComponentsQuantityStepper");
   const inputRef = useRef<HTMLInputElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [draftValue, setDraftValue] = useState(String(value));
@@ -66,7 +69,7 @@ export default function QuantityStepper({
         type="button"
         onClick={() => changeBy(-1)}
         disabled={draftQuantity <= min}
-        aria-label="Decrease quantity"
+        aria-label={i18n("Decrease quantity")}
         className={buttonClasses}
       >
         <Minus className={size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5"} />
@@ -77,7 +80,7 @@ export default function QuantityStepper({
         inputMode="numeric"
         pattern="[0-9]*"
         autoComplete="off"
-        aria-label="Quantity"
+        aria-label={i18n("Quantity")}
         role="spinbutton"
         aria-valuemin={min}
         aria-valuemax={max}
@@ -121,7 +124,7 @@ export default function QuantityStepper({
         type="button"
         onClick={() => changeBy(1)}
         disabled={draftQuantity >= max}
-        aria-label="Increase quantity"
+        aria-label={i18n("Increase quantity")}
         className={buttonClasses}
       >
         <Plus className={size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5"} />

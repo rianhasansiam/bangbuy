@@ -1,4 +1,5 @@
 import { readApiError } from "@/features/http/api-envelope";
+import { addActiveApiLocale } from "@/lib/i18n/api-locale";
 
 export type PublicCategoryNode = {
   id: string;
@@ -69,7 +70,7 @@ export async function fetchPublicCategoryTree(
     status: "ACTIVE",
     withCounts: "true",
   });
-  const response = await fetch(`/api/categories?${params.toString()}`, { signal });
+  const response = await fetch(`/api/categories?${addActiveApiLocale(params).toString()}`, { signal });
   let payload: unknown;
   try {
     payload = (await response.json()) as unknown;

@@ -6,17 +6,20 @@ import ContactForm from "./components/ContactForm";
 import ContactMap from "./components/ContactMap";
 import FAQSection from "./components/FAQSection";
 import SocialConnect from "./components/SocialConnect";
-import { buildMetadata } from "@/lib/seo/metadata";
+import { buildLocalizedMetadata } from "@/lib/seo/localized-metadata";
 import { siteConfig } from "@/lib/seo/site";
+import PreparedLanguageLinks from "@/components/i18n/PreparedLanguageLinks";
 
 export const revalidate = 3600;
 
-export const metadata: Metadata = buildMetadata({
+export async function generateMetadata(): Promise<Metadata> {
+  return buildLocalizedMetadata({
   title: "Contact Us",
   description: `Get in touch with ${siteConfig.name}. Questions about orders, products, or support? Reach our team and we'll help you out.`,
   path: "/contact",
   keywords: [`contact ${siteConfig.name}`, "customer support", "help", siteConfig.name],
-});
+}, "InterfaceContactPage");
+}
 
 export default function ContactPage() {
   return (
@@ -28,6 +31,7 @@ export default function ContactPage() {
         <ContactMap />
         <FAQSection />
         <SocialConnect />
+        <PreparedLanguageLinks pathname="/contact" />
       </div>
     </div>
   );

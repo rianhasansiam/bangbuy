@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { MessageSquareQuote, Pencil, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -37,6 +41,8 @@ export default function TestimonialsTable({
   onEdit: (row: AdminTestimonialRow) => void;
   onDelete: (id: string) => void;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminTestimonialsComponentsTestimonialsTable");
   if (isLoading && totalCount === 0) {
     return <TableSkeleton rows={6} columns={7} ariaLabel="Loading testimonials" />;
   }
@@ -45,8 +51,7 @@ export default function TestimonialsTable({
     return (
       <div className="rounded-2xl border border-brand-border bg-white p-10 text-center text-sm text-gray-600 shadow-sm">
         <MessageSquareQuote className="mx-auto mb-2 h-8 w-8 text-brand-text-muted" />
-        No testimonials yet. Add one to populate the About page.
-      </div>
+        {i18n("No testimonials yet. Add one to populate the About page.")}</div>
     );
   }
 
@@ -54,15 +59,15 @@ export default function TestimonialsTable({
     <div className="overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
-          <thead className="bg-brand-light-bg text-left text-xs uppercase tracking-wider text-brand-black">
+          <thead className="bg-brand-light-bg text-start text-xs uppercase tracking-wider text-brand-black">
             <tr>
               <th className="px-4 py-3">#</th>
-              <th className="px-4 py-3">Reviewer</th>
-              <th className="px-4 py-3">Rating</th>
-              <th className="px-4 py-3">Testimonial</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Added</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">{i18n("Reviewer")}</th>
+              <th className="px-4 py-3">{i18n("Rating")}</th>
+              <th className="px-4 py-3">{i18n("Testimonial")}</th>
+              <th className="px-4 py-3">{i18n("Status")}</th>
+              <th className="px-4 py-3">{i18n("Added")}</th>
+              <th className="px-4 py-3 text-end">{i18n("Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -121,7 +126,7 @@ export default function TestimonialsTable({
                     </span>
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500">
-                    {formatDate(row.createdAt)}
+                    {formatDate(row.createdAt, locale)}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
@@ -131,8 +136,7 @@ export default function TestimonialsTable({
                         className="inline-flex items-center gap-1 rounded-lg border border-brand-border px-2.5 py-1 text-xs font-semibold text-brand-black transition hover:bg-brand-light-bg"
                       >
                         <Pencil className="h-3 w-3" />
-                        Edit
-                      </button>
+                        {i18n("Edit")}</button>
                       <button
                         type="button"
                         onClick={() => onDelete(row.id)}
@@ -145,8 +149,7 @@ export default function TestimonialsTable({
                         ) : (
                           <Trash2 className="h-3 w-3" />
                         )}
-                        Delete
-                      </button>
+                        {i18n("Delete")}</button>
                     </div>
                   </td>
                 </motion.tr>

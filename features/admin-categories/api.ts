@@ -332,11 +332,11 @@ export function categoryLabel(category: AdminCategoryRow): string {
   return names.length > 1 ? names.join(" › ") : category.name;
 }
 
-export function formatDate(value: string | null | undefined): string {
+export function formatDate(value: string | null | undefined, locale = "en"): string {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString(locale, {
     year: "numeric",
     month: "short",
     day: "2-digit",

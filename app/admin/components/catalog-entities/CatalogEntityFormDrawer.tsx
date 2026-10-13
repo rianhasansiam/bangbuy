@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Building2, Globe2, Tags } from "lucide-react";
 
@@ -45,6 +47,7 @@ export default function CatalogEntityFormDrawer({
   onChange: React.Dispatch<React.SetStateAction<CatalogEntityFormState>>;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminComponentsCatalogEntitiesCatalogEntityFormDrawer");
   const label = kind === "brand" ? "Brand" : "Manufacturer";
   const slugPreview =
     mode === "edit" && editing
@@ -75,7 +78,7 @@ export default function CatalogEntityFormDrawer({
 
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
-            <Field label="Name" required icon={<Tags className="h-4 w-4" />}>
+            <Field label={i18n("Name")} required icon={<Tags className="h-4 w-4" />}>
               <input
                 value={form.name}
                 onChange={(event) =>
@@ -94,9 +97,9 @@ export default function CatalogEntityFormDrawer({
 
             {kind === "brand" && mode === "edit" && (
               <Field
-                label="Canonical slug"
+                label={i18n("Canonical slug")}
                 required
-                hint="Changing this creates a permanent redirect from the current brand URL."
+                hint={i18n("Changing this creates a permanent redirect from the current brand URL.")}
               >
                 <input
                   value={form.slug}
@@ -116,7 +119,7 @@ export default function CatalogEntityFormDrawer({
             )}
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Status" required>
+              <Field label={i18n("Status")} required>
                 <select
                   value={form.status}
                   onChange={(event) =>
@@ -137,7 +140,7 @@ export default function CatalogEntityFormDrawer({
 
               {kind === "manufacturer" && (
                 <Field
-                  label="Country"
+                  label={i18n("Country")}
                   icon={<Building2 className="h-4 w-4" />}
                 >
                   <input
@@ -150,16 +153,16 @@ export default function CatalogEntityFormDrawer({
                     }
                     maxLength={120}
                     className={INPUT_CLASS}
-                    placeholder="e.g. Bangladesh"
+                    placeholder={i18n("e.g. Bangladesh")}
                   />
                 </Field>
               )}
             </div>
 
             <Field
-              label="Website"
+              label={i18n("Website")}
               icon={<Globe2 className="h-4 w-4" />}
-              hint="Use a full http:// or https:// address."
+              hint={i18n("Use a full http:// or https:// address.")}
             >
               <input
                 type="url"
@@ -177,7 +180,7 @@ export default function CatalogEntityFormDrawer({
             </Field>
 
             <div className="space-y-1.5">
-              <p className="text-sm font-semibold text-gray-700">Logo</p>
+              <p className="text-sm font-semibold text-gray-700">{i18n("Logo")}</p>
               <ImageUploader
                 category="other"
                 value={form.logo}
@@ -188,7 +191,7 @@ export default function CatalogEntityFormDrawer({
               />
             </div>
 
-            <Field label="Description">
+            <Field label={i18n("Description")}>
               <textarea
                 value={form.description}
                 onChange={(event) =>
@@ -206,12 +209,11 @@ export default function CatalogEntityFormDrawer({
             {kind === "brand" && (
               <div className="space-y-4 rounded-xl border border-brand-border bg-brand-light-bg p-4">
                 <div>
-                  <p className="text-sm font-bold text-brand-black">Search and social</p>
+                  <p className="text-sm font-bold text-brand-black">{i18n("Search and social")}</p>
                   <p className="mt-1 text-xs text-brand-text-muted">
-                    Optional values override the public brand-page fallbacks.
-                  </p>
+                    {i18n("Optional values override the public brand-page fallbacks.")}</p>
                 </div>
-                <Field label="SEO title" hint="Recommended: 50–60 characters.">
+                <Field label={i18n("SEO title")} hint={i18n("Recommended: 50–60 characters.")}>
                   <input
                     value={form.seoTitle}
                     onChange={(event) =>
@@ -225,7 +227,7 @@ export default function CatalogEntityFormDrawer({
                     placeholder={`${label} products`}
                   />
                 </Field>
-                <Field label="Meta description" hint="Recommended: up to 160 characters.">
+                <Field label={i18n("Meta description")} hint={i18n("Recommended: up to 160 characters.")}>
                   <textarea
                     value={form.metaDescription}
                     onChange={(event) =>
@@ -236,11 +238,11 @@ export default function CatalogEntityFormDrawer({
                     }
                     maxLength={320}
                     className="min-h-24 w-full rounded-xl border border-brand-border bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-red"
-                    placeholder="Unique search-result description"
+                    placeholder={i18n("Unique search-result description")}
                   />
                 </Field>
                 <div className="space-y-1.5">
-                  <p className="text-sm font-semibold text-gray-700">Social share image</p>
+                  <p className="text-sm font-semibold text-gray-700">{i18n("Social share image")}</p>
                   <ImageUploader
                     category="other"
                     value={form.ogImage}
@@ -254,14 +256,14 @@ export default function CatalogEntityFormDrawer({
             )}
 
             <div className="rounded-xl border border-brand-border bg-brand-light-bg p-3 text-xs text-brand-text-muted">
-              <p className="font-semibold text-brand-black">Stable slug</p>
+              <p className="font-semibold text-brand-black">{i18n("Stable slug")}</p>
               <p className="mt-1 break-all font-mono">{slugPreview}</p>
               <p className="mt-1.5">
                 {mode === "create"
-                  ? "The API generates this slug when the record is created."
+                  ? i18n("The API generates this slug when the record is created.")
                   : kind === "brand"
-                    ? "Saving a changed canonical slug preserves this URL as a permanent redirect."
-                    : "Display-name changes keep this original slug so existing links remain valid."}
+                    ? i18n("Saving a changed canonical slug preserves this URL as a permanent redirect.")
+                    : i18n("Display-name changes keep this original slug so existing links remain valid.")}
               </p>
             </div>
           </div>
@@ -274,8 +276,7 @@ export default function CatalogEntityFormDrawer({
                 disabled={isSubmitting}
                 className="h-10 rounded-xl border border-brand-border px-4 text-sm font-semibold text-brand-black transition hover:bg-brand-light-bg disabled:opacity-60"
               >
-                Cancel
-              </button>
+                {i18n("Cancel")}</button>
               <button
                 type="submit"
                 disabled={isSubmitting}
@@ -284,12 +285,12 @@ export default function CatalogEntityFormDrawer({
               >
                 {isSubmitting ? (
                   <ButtonLoader
-                    label={mode === "create" ? "Creating..." : "Saving..."}
+                    label={mode === "create" ? i18n("Creating...") : i18n("Saving...")}
                   />
                 ) : mode === "create" ? (
                   `Create ${label}`
                 ) : (
-                  "Save changes"
+                  i18n("Save changes")
                 )}
               </button>
             </div>

@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Mail, MailOpen, Archive, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -36,6 +40,8 @@ export default function MessagesTable({
   onSetStatus: (row: AdminMessageRow, next: ContactMessageStatus) => void;
   onDelete: (row: AdminMessageRow) => void;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminMessagesComponentsMessagesTable");
   if (isLoading && totalCount === 0) {
     return <TableSkeleton rows={6} columns={5} ariaLabel="Loading messages" />;
   }
@@ -44,8 +50,7 @@ export default function MessagesTable({
     return (
       <div className="rounded-2xl border border-brand-border bg-brand-white p-10 text-center text-sm text-gray-600 shadow-sm">
         <Mail className="mx-auto mb-2 h-8 w-8 text-brand-text-muted" />
-        No messages match the current filters.
-      </div>
+        {i18n("No messages match the current filters.")}</div>
     );
   }
 
@@ -53,13 +58,13 @@ export default function MessagesTable({
     <div className="overflow-hidden rounded-2xl border border-brand-border bg-brand-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
-          <thead className="bg-brand-light-bg text-left text-xs uppercase tracking-wider text-foreground">
+          <thead className="bg-brand-light-bg text-start text-xs uppercase tracking-wider text-foreground">
             <tr>
-              <th className="px-4 py-3">From</th>
-              <th className="px-4 py-3">Subject</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Received</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">{i18n("From")}</th>
+              <th className="px-4 py-3">{i18n("Subject")}</th>
+              <th className="px-4 py-3">{i18n("Status")}</th>
+              <th className="px-4 py-3">{i18n("Received")}</th>
+              <th className="px-4 py-3 text-end">{i18n("Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -86,7 +91,7 @@ export default function MessagesTable({
                     <button
                       type="button"
                       onClick={() => onOpen(row)}
-                      className="flex items-center gap-3 text-left"
+                      className="flex items-center gap-3 text-start"
                     >
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-black text-xs font-bold text-white">
                         {getInitials(row.name, row.email)}
@@ -111,7 +116,7 @@ export default function MessagesTable({
                     <button
                       type="button"
                       onClick={() => onOpen(row)}
-                      className="block w-full text-left"
+                      className="block w-full text-start"
                     >
                       <p
                         className={cn(
@@ -137,7 +142,7 @@ export default function MessagesTable({
                     </span>
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500">
-                    {formatDateTime(row.createdAt)}
+                    {formatDateTime(row.createdAt, locale)}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1.5">
@@ -147,7 +152,7 @@ export default function MessagesTable({
                           busy={isBusy}
                           onClick={() => onSetStatus(row, "READ")}
                           icon={<MailOpen className="h-3.5 w-3.5" />}
-                          label="Read"
+                          label={i18n("Read")}
                         />
                       )}
                       {row.status !== "ARCHIVED" && (
@@ -156,7 +161,7 @@ export default function MessagesTable({
                           busy={isBusy}
                           onClick={() => onSetStatus(row, "ARCHIVED")}
                           icon={<Archive className="h-3.5 w-3.5" />}
-                          label="Archive"
+                          label={i18n("Archive")}
                         />
                       )}
                       <MessageActionButton
@@ -164,7 +169,7 @@ export default function MessagesTable({
                         busy={isBusy}
                         onClick={() => onDelete(row)}
                         icon={<Trash2 className="h-3.5 w-3.5" />}
-                        label="Delete"
+                        label={i18n("Delete")}
                       />
                     </div>
                   </td>

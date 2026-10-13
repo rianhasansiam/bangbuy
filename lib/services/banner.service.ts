@@ -1,4 +1,7 @@
 import "server-only";
+import { getRequestLocale } from "@/lib/i18n/server";
+import { localizeBannerSnapshots } from "@/lib/translations/public";
+import { schedulePublicTranslationStaleness } from "@/lib/translations/invalidation";
 
 import type { BannerType, Prisma } from "@/app/generated/prisma/client";
 import { unstable_cache } from "next/cache";
@@ -428,6 +431,7 @@ export async function updateCarouselBanner(
     data,
     select: bannerSelect,
   });
+  schedulePublicTranslationStaleness("banner",[id]);
   return toCarouselRow(row);
 }
 
@@ -452,8 +456,8 @@ const getCachedActiveCarouselBanners = unstable_cache(
   { revalidate: 600, tags: ["carousel-banners"] },
 );
 
-export function getActiveCarouselBanners() {
-  return getCachedActiveCarouselBanners();
+export async function getActiveCarouselBanners() {
+  return localizeBannerSnapshots(await getCachedActiveCarouselBanners(),await getRequestLocale());
 }
 
 /* -------------------------------------------------------------------------- */
@@ -545,6 +549,7 @@ export async function updateCategoryBanner(
     data,
     select: bannerWithCategorySelect,
   });
+  schedulePublicTranslationStaleness("banner",[id]);
   return toCategoryRow(row);
 }
 
@@ -604,6 +609,7 @@ export async function updateTopBanner(id: string, input: UpdateTopBannerInput) {
     data,
     select: bannerSelect,
   });
+  schedulePublicTranslationStaleness("banner",[id]);
   return toTopRow(row);
 }
 
@@ -657,6 +663,7 @@ export async function updateDealBanner(id: string, input: UpdateDealBannerInput)
     data,
     select: bannerSelect,
   });
+  schedulePublicTranslationStaleness("banner",[id]);
   return toDealRow(row);
 }
 
@@ -714,6 +721,7 @@ export async function updatePromoBanner(
     data,
     select: bannerSelect,
   });
+  schedulePublicTranslationStaleness("banner",[id]);
   return toPromoRow(row);
 }
 
@@ -738,8 +746,8 @@ const getCachedActiveDealBanners = unstable_cache(
   { revalidate: 900, tags: ["deal-banners"] },
 );
 
-export function getActiveDealBanners() {
-  return getCachedActiveDealBanners();
+export async function getActiveDealBanners() {
+  return localizeBannerSnapshots(await getCachedActiveDealBanners(),await getRequestLocale());
 }
 
 const getCachedActivePromoBanners = unstable_cache(
@@ -755,8 +763,8 @@ const getCachedActivePromoBanners = unstable_cache(
   { revalidate: 900, tags: ["promo-banners"] },
 );
 
-export function getActivePromoBanners() {
-  return getCachedActivePromoBanners();
+export async function getActivePromoBanners() {
+  return localizeBannerSnapshots(await getCachedActivePromoBanners(),await getRequestLocale());
 }
 
 /* -------------------------------------------------------------------------- */
@@ -776,6 +784,6 @@ const getCachedActiveTopBanners = unstable_cache(
   { revalidate: 1800, tags: ["top-banners"] },
 );
 
-export function getActiveTopBanners() {
-  return getCachedActiveTopBanners();
+export async function getActiveTopBanners() {
+  return localizeBannerSnapshots(await getCachedActiveTopBanners(),await getRequestLocale());
 }

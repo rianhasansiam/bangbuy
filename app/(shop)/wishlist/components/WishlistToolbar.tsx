@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import {
   Search,
@@ -60,25 +62,26 @@ export default function WishlistToolbar({
   allSelected,
   onToggleSelectAll,
 }: WishlistToolbarProps) {
+  const i18n = useInterfaceTranslations("InterfaceWishlistComponentsWishlistToolbar");
   return (
     <div className="sticky top-[68px] z-30 -mx-2 mt-6 rounded-2xl border border-brand-border bg-brand-white/85 px-3 py-3 shadow-sm backdrop-blur-lg sm:mx-0 sm:px-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         {/* Search */}
         <div className="relative flex-1 lg:max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
             type="text"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
-            placeholder="Search your wishlist..."
-            className="h-10 rounded-xl border-brand-border bg-brand-white pl-10 pr-9 text-sm focus-visible:border-brand-red focus-visible:ring-brand-red/20"
+            placeholder={i18n("Search your wishlist...")}
+            className="h-10 rounded-xl border-brand-border bg-brand-white ps-10 pe-9 text-sm focus-visible:border-brand-red focus-visible:ring-brand-red/20"
           />
           {query && (
             <button
               type="button"
-              aria-label="Clear search"
+              aria-label={i18n("Clear search")}
               onClick={() => onQueryChange("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-500 transition-colors hover:bg-gray-100"
+              className="absolute end-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-500 transition-colors hover:bg-gray-100"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -98,21 +101,21 @@ export default function WishlistToolbar({
               <Square className="h-4 w-4" />
             )}
             <span className="hidden sm:inline">
-              {allSelected ? "Deselect all" : "Select all"}
+              {allSelected ? i18n("Deselect all") : i18n("Select all")}
             </span>
           </button>
 
           {/* Sort */}
           <div className="relative">
-            <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-text-muted" />
+            <ArrowUpDown className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-text-muted" />
             <select
               value={sort}
               onChange={(e) => onSortChange(e.target.value as WishlistSort)}
-              className="h-10 cursor-pointer appearance-none rounded-xl border border-brand-border bg-brand-white pl-9 pr-8 text-sm font-medium text-foreground transition-colors hover:border-brand-red hover:bg-brand-light-bg focus:border-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red/20"
+              className="h-10 cursor-pointer appearance-none rounded-xl border border-brand-border bg-brand-white ps-9 pe-8 text-sm font-medium text-foreground transition-colors hover:border-brand-red hover:bg-brand-light-bg focus:border-brand-red focus:outline-none focus:ring-2 focus:ring-brand-red/20"
             >
               {SORT_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {opt.label}
+                  {i18n(opt.label)}
                 </option>
               ))}
             </select>
@@ -121,20 +124,20 @@ export default function WishlistToolbar({
           {/* View toggle */}
           <div
             role="group"
-            aria-label="View"
+            aria-label={i18n("View")}
             className="flex h-10 items-center rounded-xl border border-brand-border bg-brand-white p-0.5"
           >
             <ViewButton
               active={view === "grid"}
               onClick={() => onViewChange("grid")}
-              label="Grid view"
+              label={i18n("Grid view")}
             >
               <LayoutGrid className="h-4 w-4" />
             </ViewButton>
             <ViewButton
               active={view === "list"}
               onClick={() => onViewChange("list")}
-              label="List view"
+              label={i18n("List view")}
             >
               <List className="h-4 w-4" />
             </ViewButton>
@@ -146,7 +149,7 @@ export default function WishlistToolbar({
       {categories.length > 0 && (
         <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none [&::-webkit-scrollbar]:hidden">
           <CategoryChip
-            label={`All (${totalCount})`}
+            label={i18n("All ({value0})", { value0: totalCount })}
             active={activeCategory === "all"}
             onClick={() => onCategoryChange("all")}
           />
@@ -158,9 +161,8 @@ export default function WishlistToolbar({
               onClick={() => onCategoryChange(cat)}
             />
           ))}
-          <span className="ml-auto whitespace-nowrap text-xs text-gray-500">
-            {visibleCount} of {totalCount} shown
-          </span>
+          <span className="ms-auto whitespace-nowrap text-xs text-gray-500">
+            {i18n("{shown, number} of {total, number} shown", { shown: visibleCount, total: totalCount })}</span>
         </div>
       )}
     </div>
@@ -178,11 +180,12 @@ function ViewButton({
   label: string;
   children: React.ReactNode;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceWishlistComponentsWishlistToolbar");
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label={label}
+      aria-label={i18n(label)}
       aria-pressed={active}
       className={cn(
         "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all duration-200",
@@ -205,6 +208,7 @@ function CategoryChip({
   active: boolean;
   onClick: () => void;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceWishlistComponentsWishlistToolbar");
   return (
     <button
       type="button"
@@ -216,7 +220,7 @@ function CategoryChip({
           : "border-brand-border bg-brand-white text-foreground hover:border-brand-red hover:text-brand-red",
       )}
     >
-      {label}
+      {i18n(label)}
     </button>
   );
 }

@@ -1,4 +1,6 @@
-import Link from "next/link";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+import Link from "@/lib/i18n/navigation";
 import { Sparkles, MessageSquare } from "lucide-react";
 
 import { siteConfig } from "@/lib/seo/site";
@@ -51,6 +53,7 @@ const socials = [
 ];
 
 export default function SocialConnect() {
+  const i18n = useInterfaceTranslations("InterfaceContactComponentsSocialConnect");
   return (
     <section className="relative overflow-hidden rounded-3xl bg-brand-light-bg p-6 sm:p-8 lg:p-10 ring-1 ring-brand-border">
       <div className="grid items-center gap-6 lg:grid-cols-2 lg:gap-10">
@@ -58,25 +61,20 @@ export default function SocialConnect() {
           <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 ring-1 ring-brand-border shadow-sm">
             <Sparkles className="h-3.5 w-3.5 text-brand-red" />
             <span className="text-[11px] font-bold uppercase tracking-wide text-brand-red">
-              Stay Connected
-            </span>
+              {i18n("Stay Connected")}</span>
           </div>
 
           <h2 className="mt-3 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
-            Follow {siteConfig.name} on socials
-          </h2>
+            {i18n("Follow {brand} on socials", { brand: siteConfig.name })}</h2>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Daily deals, new arrivals, behind-the-scenes, and quick replies to your DMs. Pick your
-            favorite platform and say hi.
-          </p>
+            {i18n("Daily deals, new arrivals, behind-the-scenes, and quick replies to your DMs. Pick your favorite platform and say hi.")}</p>
 
           <Link
             href="#contact-form"
             className="mt-5 inline-flex items-center gap-2 rounded-full bg-brand-red px-5 py-2.5 text-sm font-bold text-brand-white shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-lg"
           >
             <MessageSquare className="h-4 w-4" />
-            Or drop us a message
-          </Link>
+            {i18n("Or drop us a message")}</Link>
         </div>
 
         <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:gap-4">

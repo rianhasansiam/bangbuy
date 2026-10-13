@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import {
   ArrowDownRight,
@@ -45,7 +49,7 @@ type CardConfig = {
   hint: string;
   accent: Accent;
   icon: LucideIcon | string;
-  format: (value: number) => string;
+  format: (value: number, locale?: string) => string;
   /**
    * Some metrics (e.g. cancellations) are healthier when going down.
    * `up`/`down`/`flat` is computed by the service so the card just
@@ -54,12 +58,12 @@ type CardConfig = {
   positiveTrend?: DashboardTrend;
 };
 
-function formatBdt(value: number): string {
-  return `BDT ${Math.round(value).toLocaleString()}`;
+function formatBdt(value: number, locale = "en"): string {
+  return `BDT ${Math.round(value).toLocaleString(locale)}`;
 }
 
-function formatCount(value: number): string {
-  return value.toLocaleString();
+function formatCount(value: number, locale = "en"): string {
+  return value.toLocaleString(locale);
 }
 
 const CARDS: readonly CardConfig[] = [
@@ -140,6 +144,8 @@ type StatCardProps = {
 };
 
 function StatCard({ card, stat, loading }: StatCardProps) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminComponentsStatCards");
   const styles = ACCENT_STYLES[card.accent];
   const Icon = card.icon;
 
@@ -175,13 +181,13 @@ function StatCard({ card, stat, loading }: StatCardProps) {
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-            {card.label}
+            {i18n(card.label)}
           </p>
           {loading ? (
             <div className="mt-2 h-8 w-32 animate-pulse rounded-md bg-brand-light-bg" />
           ) : (
             <p className="mt-2 text-2xl font-extrabold text-gray-900">
-              {stat ? card.format(stat.current) : "—"}
+              {stat ? card.format(stat.current, locale) : "—"}
             </p>
           )}
         </div>
@@ -205,7 +211,7 @@ function StatCard({ card, stat, loading }: StatCardProps) {
             )}
           >
             <TrendIcon className="h-3 w-3" />
-            {formatDelta(stat.delta)}
+            {formatDelta(stat.delta, locale)}
           </span>
         ) : (
           <span className="inline-flex items-center gap-0.5 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-bold text-gray-500">
@@ -213,17 +219,16 @@ function StatCard({ card, stat, loading }: StatCardProps) {
           </span>
         )}
         <span className="text-[11px] font-medium text-gray-500">
-          {card.hint}
+          {i18n(card.hint)}
         </span>
       </div>
     </article>
   );
 }
 
-function formatDelta(delta: number): string {
+function formatDelta(delta: number, locale = "en"): string {
   if (!Number.isFinite(delta)) return "—";
-  const sign = delta > 0 ? "+" : "";
   // Trim a trailing .0 so 12.0% renders as 12%.
   const rounded = Math.round(delta * 10) / 10;
-  return `${sign}${rounded}%`;
+  return new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 1, signDisplay: "exceptZero" }).format(rounded / 100);
 }

@@ -1,5 +1,13 @@
 import { clampDescription, plainMetadataText } from "@/lib/seo/metadata";
 import { siteConfig } from "@/lib/seo/site";
+import { createTranslator } from "next-intl";
+import englishMessages from "@/messages/seo-en.json";
+import bengaliMessages from "@/messages/seo-bn.json";
+
+function messages(locale: string) {
+  return createTranslator({ locale, namespace: "Seo", messages: locale === "bn" ? bengaliMessages : englishMessages });
+}
+export type CatalogMetadataTranslator = ReturnType<typeof messages>;
 
 const SEO_TITLE_MAX_LENGTH = 70;
 
@@ -68,14 +76,15 @@ function categoryDisplayContext(input: CategoryIdentity): {
   };
 }
 
-export function categoryFallbackTitle(input: CategoryIdentity): string {
+export function categoryFallbackTitle(input: CategoryIdentity, locale = "en", translator?: CatalogMetadataTranslator): string {
+  const translate = translator ?? messages(locale);
   const { context, qualifier } = categoryDisplayContext(input);
-  const naturalTitle = `Shop ${context} Online${qualifier}`;
+  const naturalTitle = translate("categoryTitle", { context, qualifier });
   if (naturalTitle.length <= SEO_TITLE_MAX_LENGTH) return naturalTitle;
 
   return clampTextWithSuffix(
-    `Shop ${context}`,
-    ` Online · ${pathFingerprint(input.path)}`,
+    translate("categoryTitleShort", { context }),
+    translate("categoryTitleSuffix", { fingerprint: pathFingerprint(input.path) }),
   );
 }
 
@@ -84,7 +93,10 @@ export function categoryFallbackDescription(
     description?: string | null;
     totalProductCount: number;
   },
+  locale = "en",
+  translator?: CatalogMetadataTranslator,
 ): string {
+  const translate = translator ?? messages(locale);
   const { context, qualifier } = categoryDisplayContext(input);
   const naturalIdentity = `${context}${qualifier}`;
   const identity =
@@ -94,8 +106,8 @@ export function categoryFallbackDescription(
   const authoredDescription = plainMetadataText(input.description);
   return clampDescription(
     authoredDescription
-      ? `Shop ${identity} at ${siteConfig.name}. ${authoredDescription}`
-      : `Shop ${identity} at ${siteConfig.name}. Browse ${input.totalProductCount} products from this category and its active subcategories.`,
+      ? translate("categoryAuthoredDescription", { identity, brand: siteConfig.name, description: authoredDescription })
+      : translate("categoryDescription", { identity, brand: siteConfig.name, count: input.totalProductCount }),
   );
 }
 
@@ -113,12 +125,13 @@ export function productFallbackDescription(input: {
   description?: string | null;
   categoryName: string;
   price: number;
-}): string {
+}, locale = "en", translator?: CatalogMetadataTranslator): string {
+  const translate = translator ?? messages(locale);
   const identifier = `${plainMetadataText(input.name)} (${plainMetadataText(input.productCode)})`;
   const authoredDescription = plainMetadataText(input.description);
   return clampDescription(
     authoredDescription
       ? `${identifier}: ${authoredDescription}`
-      : `Buy ${identifier} in ${input.categoryName} at ${siteConfig.name}. Price ${siteConfig.currency} ${input.price.toLocaleString()}. Secure checkout and fast delivery.`,
+      : translate("productDescription", { identifier, category: input.categoryName, brand: siteConfig.name, currency: siteConfig.currency, price: input.price.toLocaleString(locale) }),
   );
 }

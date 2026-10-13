@@ -1,7 +1,9 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useEffect, useRef } from "react";
-import Link from "next/link";
+import Link from "@/lib/i18n/navigation";
 import { ArrowRight, Heart, ShoppingBag, Trash2, Star } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSession } from "@/lib/auth/use-app-session";
@@ -37,6 +39,7 @@ const PROFILE_PREVIEW_LIMIT = 6;
  * management UX lives on /wishlist; this is the at-a-glance view.
  */
 export default function WishlistTab() {
+  const i18n = useInterfaceTranslations("InterfaceProfileComponentsWishlistTab");
   const dispatch = useDispatch<AppDispatch>();
   const { data: session, status } = useSession();
 
@@ -76,12 +79,12 @@ export default function WishlistTab() {
         const next = itemsRef.current.filter((item) => item.id !== id);
         dispatch(setWishlistItems(next));
         writeLocalWishlist(next);
-        toast.success("Removed from wishlist");
+        toast.success(i18n("Removed from wishlist"));
       },
       (error) => {
         const message =
           error instanceof Error ? error.message : "Failed to remove from wishlist.";
-        toast.error(message);
+        toast.error(i18n(message));
       },
     );
   };
@@ -99,27 +102,23 @@ export default function WishlistTab() {
             </span>
             <div className="min-w-0">
               <h2 className="text-base font-bold text-gray-900 sm:text-lg">
-                Wishlist
-              </h2>
+                {i18n("Wishlist")}</h2>
               <p className="text-xs text-gray-500">
-                {items.length} saved {items.length === 1 ? "item" : "items"}.
-                Manage filters and bulk actions on the full wishlist page.
-              </p>
+                {i18n("{count, plural, one {# saved item.} other {# saved items.}} Manage filters and bulk actions on the full wishlist page.", { count: items.length })}</p>
             </div>
           </div>
           <Link
             href="/wishlist"
             className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-brand-border bg-brand-white px-3 py-2 text-xs font-bold text-brand-red transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-red hover:bg-brand-light-bg sm:w-auto"
           >
-            Open wishlist
-            <ArrowRight className="h-3.5 w-3.5" />
+            {i18n("Open wishlist")}<ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
           </Link>
         </div>
       </header>
 
       {error && (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
-          {error}
+          {i18n(error)}
         </div>
       )}
 
@@ -131,18 +130,15 @@ export default function WishlistTab() {
             <Heart className="h-6 w-6" />
           </div>
           <h3 className="mt-4 text-lg font-extrabold text-gray-900">
-            Your wishlist is empty
-          </h3>
+            {i18n("Your wishlist is empty")}</h3>
           <p className="mt-1 text-sm text-gray-600">
-            Save products you love and they&apos;ll show up here.
-          </p>
+            {i18n("Save products you love and they'll show up here.")}</p>
           <Link
             href="/products"
             className="mt-5 inline-flex items-center gap-2 rounded-2xl bg-brand-red px-5 py-2.5 text-sm font-bold text-brand-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl"
           >
             <ShoppingBag className="h-4 w-4" />
-            Discover products
-          </Link>
+            {i18n("Discover products")}</Link>
         </div>
       ) : (
         <>
@@ -191,7 +187,7 @@ export default function WishlistTab() {
                     <button
                       type="button"
                       onClick={() => handleRemove(item.id)}
-                      aria-label="Remove from wishlist"
+                      aria-label={i18n("Remove from wishlist")}
                       className="grid h-8 w-8 place-items-center rounded-lg border border-rose-200 bg-rose-50 text-rose-600 transition-colors hover:bg-rose-100"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -208,8 +204,8 @@ export default function WishlistTab() {
               href="/wishlist"
               className="inline-flex items-center justify-center gap-1.5 rounded-2xl border border-dashed border-brand-border bg-brand-white px-4 py-3 text-sm font-bold text-brand-red transition-colors hover:bg-brand-light-bg"
             >
-              View {hiddenCount} more {hiddenCount === 1 ? "item" : "items"}
-              <ArrowRight className="h-4 w-4" />
+              {i18n("View {count, plural, one {# more item} other {# more items}}", { count: hiddenCount })}
+              <ArrowRight className="h-4 w-4 rtl:rotate-180" />
             </Link>
           )}
         </>

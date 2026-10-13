@@ -1,7 +1,11 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import { useLocale } from "next-intl";
+import { localizeHref } from "@/lib/i18n/paths";
 
 import GoogleIcon from "./GoogleIcon";
 import { LoadingSpinner } from "@/components/ui/loading";
@@ -16,13 +20,13 @@ type GoogleSignInButtonProps = {
 };
 
 export function SocialDivider() {
+  const i18n = useInterfaceTranslations("InterfaceComponentsGoogleSignInButton");
   return (
     <div className="my-1 flex items-center gap-3">
       <div className="h-px flex-1 bg-linear-to-r from-transparent via-brand-border to-brand-border" />
 
       <span className="text-[11px] font-bold uppercase tracking-wide text-brand-text-muted">
-        or continue with
-      </span>
+        {i18n("or continue with")}</span>
 
       <div className="h-px flex-1 bg-linear-to-l from-transparent via-brand-border to-brand-border" />
     </div>
@@ -32,14 +36,16 @@ export function SocialDivider() {
 export function GoogleSignInButton({
   callbackUrl = "/",
 }: GoogleSignInButtonProps = {}) {
+  const i18n = useInterfaceTranslations("InterfaceComponentsGoogleSignInButton");
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const locale = useLocale();
 
   const handleClick = () => {
     if (isRedirecting) return;
     setIsRedirecting(true);
     // Full-page redirect to Google's consent screen. NextAuth will return
     // to `callbackUrl` after the round-trip succeeds.
-    void signIn("google", { callbackUrl });
+    void signIn("google", { callbackUrl: localizeHref(callbackUrl, locale) });
   };
 
   return (
@@ -59,7 +65,7 @@ export function GoogleSignInButton({
           )}
         </span>
 
-        <span>{isRedirecting ? "Redirecting..." : "Continue with Google"}</span>
+        <span>{isRedirecting ? i18n("Redirecting...") : i18n("Continue with Google")}</span>
       </button>
     </div>
   );

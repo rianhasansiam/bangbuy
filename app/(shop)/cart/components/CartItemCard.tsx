@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import {
   Bookmark,
@@ -10,7 +12,7 @@ import {
   Check,
 } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/lib/i18n/navigation";
 
 import { CurrencyAmount } from "@/components/currency/CurrencyAmount";
 import ColorBadge from "@/components/ui/ColorBadge";
@@ -57,6 +59,7 @@ export default function CartItemCard({
   selectionDisabled = false,
   onSelectionChange,
 }: CartItemCardProps) {
+  const i18n = useInterfaceTranslations("InterfaceCartComponentsCartItemCard");
   const hasDiscount =
     typeof item.originalPrice === "number" && item.originalPrice > item.price;
   const lineTotal = item.price * item.quantity;
@@ -81,8 +84,8 @@ export default function CartItemCard({
           aria-checked={selected}
           aria-label={
             selectionDisabled
-              ? `${item.name} is unavailable for checkout`
-              : `${selected ? "Deselect" : "Select"} ${item.name} for checkout`
+              ? i18n("{product} is unavailable for checkout", { product: item.name })
+              : selected ? i18n("Deselect {product} for checkout", { product: item.name }) : i18n("Select {product} for checkout", { product: item.name })
           }
           disabled={selectionDisabled}
           onClick={() => onSelectionChange(item.id)}
@@ -108,7 +111,7 @@ export default function CartItemCard({
             className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
           {hasDiscount && (
-            <span className="absolute left-1.5 top-1.5 rounded-full bg-brand-red px-1.5 py-0.5 text-[10px] font-bold text-brand-white shadow">
+            <span className="absolute start-1.5 top-1.5 rounded-full bg-brand-red px-1.5 py-0.5 text-[10px] font-bold text-brand-white shadow">
               -
               {Math.round(
                 ((item.originalPrice! - item.price) / item.originalPrice!) *
@@ -143,7 +146,7 @@ export default function CartItemCard({
               )}
             </div>
 
-            <div className="text-left min-[380px]:shrink-0 min-[380px]:text-right">
+            <div className="text-start min-[380px]:shrink-0 min-[380px]:text-end">
               <p className="text-base font-extrabold text-brand-red sm:text-lg">
                 <CurrencyAmount amountBDT={lineTotal} />
               </p>
@@ -155,8 +158,7 @@ export default function CartItemCard({
                 </p>
               )}
               <p className="mt-0.5 text-[11px] text-gray-500">
-                <CurrencyAmount amountBDT={item.price} /> each
-              </p>
+                <CurrencyAmount amountBDT={item.price} /> {i18n("each")}</p>
             </div>
           </div>
 
@@ -166,8 +168,7 @@ export default function CartItemCard({
               {item.deliveryDays && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
                   <Truck className="h-3 w-3" />
-                  {item.deliveryDays}-day delivery
-                </span>
+                  {item.deliveryDays}{i18n("-day delivery")}</span>
               )}
               {item.perks?.map((perk) => (
                 <span
@@ -184,7 +185,7 @@ export default function CartItemCard({
           {hasDiscount && (
             <p className="mt-2 inline-flex w-fit items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
               <Tag className="h-3 w-3" />
-              You&apos;re saving <CurrencyAmount amountBDT={lineSavings} />
+              {i18n("You're saving")}<CurrencyAmount amountBDT={lineSavings} />
             </p>
           )}
 
@@ -200,7 +201,7 @@ export default function CartItemCard({
               {nearMax && (
                 <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700">
                   <AlertTriangle className="h-3 w-3" />
-                  Max {item.maxQuantity}
+                  {i18n("Max")}{item.maxQuantity}
                 </span>
               )}
             </div>
@@ -214,17 +215,17 @@ export default function CartItemCard({
                 className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:bg-brand-light-bg hover:text-brand-red"
               >
                 <Bookmark className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Save for later</span>
-                <span className="sm:hidden">Save</span>
+                <span className="hidden sm:inline">{i18n("Save for later")}</span>
+                <span className="sm:hidden">{i18n("Save")}</span>
               </button>
               <button
                 type="button"
                 onClick={() => onRemove(item.id)}
-                aria-label="Remove from cart"
+                aria-label={i18n("Remove from cart")}
                 className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50"
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Remove</span>
+                <span className="hidden sm:inline">{i18n("Remove")}</span>
               </button>
             </div>
           </div>

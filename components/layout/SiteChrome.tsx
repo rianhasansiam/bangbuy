@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/lib/i18n/navigation";
 
 /**
  * Gates the public site chrome (top strip banner, navbar, footer) around

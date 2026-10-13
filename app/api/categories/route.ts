@@ -15,6 +15,7 @@ import {
   categoryQuerySchema,
   createCategorySchema,
 } from "@/lib/validations/category.validation";
+import { apiLocale, localizeCategorySnapshots } from "@/lib/translations/public";
 
 export async function GET(request: NextRequest) {
   const parsed = categoryQuerySchema.safeParse(
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
     if (isAdmin) {
       // Admin reads deliberately bypass the public data cache.
       const { items, meta } = await listCategories(parsed.data);
-      return ok(items, meta);
+      return ok(request.nextUrl.searchParams.has("locale")?await localizeCategorySnapshots(items,await apiLocale(request)):items, meta);
     }
 
     const query = { ...parsed.data, status: "ACTIVE" as const };
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
       effectiveActiveOnly: true,
       activeProductsOnly: true,
     });
-    return ok(items, meta);
+    return ok(await localizeCategorySnapshots(items,await apiLocale(request)), meta);
   } catch (error) {
     return handleCategoryApiError("categories.GET", error);
   }

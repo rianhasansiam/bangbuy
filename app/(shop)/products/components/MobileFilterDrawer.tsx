@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import {
   Sheet,
@@ -27,6 +29,7 @@ export default function MobileFilterDrawer({
   onReset,
   facets,
 }: Props) {
+  const i18n = useInterfaceTranslations("InterfaceProductsComponentsMobileFilterDrawer");
   return (
     <Sheet open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
       <SheetContent
@@ -35,8 +38,7 @@ export default function MobileFilterDrawer({
       >
         <SheetHeader className="bg-brand-black px-4 py-3 text-brand-white">
           <SheetTitle className="text-base font-bold text-brand-white">
-            Product filters
-          </SheetTitle>
+            {i18n("Product filters")}</SheetTitle>
         </SheetHeader>
 
         <div className="h-[calc(100%-3.25rem)] overflow-y-auto p-3">

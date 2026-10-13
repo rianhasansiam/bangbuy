@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -38,6 +40,7 @@ import ImportReviewsPanel from "./components/ImportReviewsPanel";
 type StatusFilter = "ALL" | TestimonialStatus;
 
 export default function AdminTestimonialsPage() {
+  const i18n = useInterfaceTranslations("AdminAdminTestimonialsPage");
   const dispatch = useDispatch<AppDispatch>();
   const testimonials = useSelector(
     (state: RootState) => state.adminTestimonials.items,
@@ -161,13 +164,13 @@ export default function AdminTestimonialsPage() {
       if (editingId === "new") {
         const created = await createTestimonial(body);
         dispatch(upsertAdminTestimonial(created));
-        const message = "Testimonial added.";
+        const message = i18n("Testimonial added.");
         setSuccessNote(message);
         notifyActionSuccess(message);
       } else if (editingId) {
         const updated = await updateTestimonial(editingId, body);
         dispatch(upsertAdminTestimonial(updated));
-        const message = "Testimonial updated.";
+        const message = i18n("Testimonial updated.");
         setSuccessNote(message);
         notifyActionSuccess(message);
       }
@@ -186,8 +189,8 @@ export default function AdminTestimonialsPage() {
 
   const handleDelete = async (id: string) => {
     const confirmed = await confirmMajorAction({
-      title: "Delete this testimonial?",
-      description: "This action cannot be undone.",
+      title: i18n("Delete this testimonial?"),
+      description: i18n("This action cannot be undone."),
       confirmLabel: "Delete",
       variant: "danger",
     });
@@ -230,10 +233,7 @@ export default function AdminTestimonialsPage() {
       />
 
       <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-3 text-xs text-amber-800">
-        The About page shows your <strong>active</strong> testimonials. With 3
-        or fewer it renders a static grid; with more than 3 it switches to a
-        smooth left-to-right auto-scrolling marquee.
-      </div>
+        {i18n("The About page shows your")}{" "}<strong>{i18n("active")}</strong> {i18n("testimonials. With 3 or fewer it renders a static grid; with more than 3 it switches to a smooth left-to-right auto-scrolling marquee.")}</div>
 
       <TestimonialsToolbar
         query={query}
@@ -284,7 +284,7 @@ export default function AdminTestimonialsPage() {
 
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {error}
+          {i18n(error)}
         </div>
       )}
       {mutationError && (

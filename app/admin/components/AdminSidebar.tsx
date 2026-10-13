@@ -1,19 +1,27 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+
+import Link from "@/lib/i18n/navigation";
+import { usePathname } from "@/lib/i18n/navigation";
 import { signOut } from "next-auth/react";
 import { Home, LogOut, ShieldCheck, X } from "lucide-react";
 import { ADMIN_NAV_GROUPS } from "./data";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/lib/seo/site";
+import LanguageSelector, { type SelectableLanguage } from "@/components/i18n/LanguageSelector";
+import { useLocale } from "next-intl";
+import { localizeHref } from "@/lib/i18n/paths";
 
 type Props = {
   open: boolean;
   onClose: () => void;
+  languages: SelectableLanguage[];
 };
 
-export default function AdminSidebar({ open, onClose }: Props) {
+export default function AdminSidebar({ open, onClose, languages }: Props) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminComponentsAdminSidebar");
   const pathname = usePathname();
 
   return (
@@ -29,9 +37,10 @@ export default function AdminSidebar({ open, onClose }: Props) {
       />
 
       <aside
+        id="admin-sidebar"
         className={cn(
-          "fixed inset-y-0 left-0 z-60 flex w-72 flex-col border-r border-brand-border bg-white shadow-xl transition-transform duration-300 ease-out lg:sticky lg:top-0 lg:z-0 lg:h-screen lg:translate-x-0 lg:shadow-sm",
-          open ? "translate-x-0" : "-translate-x-full",
+          "fixed inset-y-0 start-0 z-60 flex w-72 flex-col border-e border-brand-border bg-white shadow-xl transition-transform duration-300 ease-out lg:sticky lg:top-0 lg:z-0 lg:h-screen lg:translate-x-0 lg:shadow-sm",
+          open ? "translate-x-0" : "-translate-x-full rtl:translate-x-full",
         )}
       >
         {/* Brand block */}
@@ -41,14 +50,14 @@ export default function AdminSidebar({ open, onClose }: Props) {
               <ShieldCheck className="h-5 w-5 text-white" />
             </div>
             <div className="leading-tight">
-              <p className="text-sm font-bold text-white">Admin Panel</p>
-              <p className="text-[11px] font-medium text-white/70">{siteConfig.name} Console</p>
+              <p className="text-sm font-bold text-white">{i18n("Admin Panel")}</p>
+              <p className="text-[11px] font-medium text-white/70">{i18n(siteConfig.name)} {i18n("Console")}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close sidebar"
+            aria-label={i18n("Close sidebar")}
             className="rounded-lg p-1.5 text-white/90 transition-colors duration-200 hover:bg-white/15 lg:hidden"
           >
             <X className="h-5 w-5" />
@@ -66,7 +75,7 @@ export default function AdminSidebar({ open, onClose }: Props) {
                   id={headingId}
                   className="mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-gray-400"
                 >
-                  {group.label}
+                  {i18n(group.label)}
                 </p>
                 <ul className="space-y-1">
                   {group.items.map((item) => {
@@ -96,7 +105,7 @@ export default function AdminSidebar({ open, onClose }: Props) {
                                 active ? "text-white" : "text-brand-red",
                               )}
                             />
-                            {item.label}
+                            {i18n(item.label)}
                           </span>
                         </Link>
                       </li>
@@ -111,22 +120,21 @@ export default function AdminSidebar({ open, onClose }: Props) {
 
         {/* Footer */}
         <div className="space-y-1 border-t border-brand-border p-3">
+          <LanguageSelector languages={languages} mobile />
           <Link
             href="/"
             onClick={onClose}
             className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-brand-black transition-all duration-200 hover:translate-x-0.5 hover:bg-brand-light-bg hover:text-brand-red"
           >
             <Home className="h-4 w-4 text-brand-red" />
-            Exit to Site
-          </Link>
+            {i18n("Exit to Site")}</Link>
           <button
             type="button"
-            onClick={() => void signOut({ callbackUrl: "/" })}
+            onClick={() => void signOut({ callbackUrl: localizeHref("/", locale) })}
             className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-red-600 transition-all duration-200 hover:translate-x-0.5 hover:bg-red-50"
           >
             <LogOut className="h-4 w-4" />
-            Sign Out
-          </button>
+            {i18n("Sign Out")}</button>
         </div>
       </aside>
     </>

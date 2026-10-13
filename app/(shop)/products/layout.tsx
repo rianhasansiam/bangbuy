@@ -1,7 +1,8 @@
+import LocaleSection from "@/components/i18n/LocaleSection";
 export default function ProductsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return <LocaleSection pathname="/products">{children}</LocaleSection>;
 }

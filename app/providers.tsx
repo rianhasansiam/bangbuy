@@ -13,6 +13,7 @@ import {
 import Toaster from "@/components/ui/Toaster";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import StoreHydrator from "@/components/layout/StoreHydrator";
+import LocaleDraftMonitor from "@/components/i18n/LocaleDraftMonitor";
 
 /**
  * Single client-side provider tree mounted by the root layout.
@@ -41,6 +42,7 @@ export default function Providers({
   return (
     <CurrencyProvider initialContext={initialCurrencyContext}>
       <SessionProvider>
+        <LocaleDraftMonitor />
         <ReduxProvider store={store}>
           <StoreHydrator />
           {children}

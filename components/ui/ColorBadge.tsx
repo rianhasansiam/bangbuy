@@ -1,3 +1,5 @@
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 import { cn } from "@/lib/utils";
 
 /**
@@ -26,6 +28,7 @@ export default function ColorBadge({
   size?: string | null;
   className?: string;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceUiColorBadge");
   const hasColor = Boolean(color && color.trim());
   const hasSize = Boolean(size && size.trim());
   if (!hasColor && !hasSize) return null;
@@ -45,7 +48,7 @@ export default function ColorBadge({
             className="inline-block h-3.5 w-3.5 shrink-0 rounded-full ring-1 ring-inset ring-black/15"
             style={{ backgroundColor: color as string }}
             title={color as string}
-            aria-label={`Color ${color}`}
+            aria-label={i18n("Color {value0}", { value0: color ?? "" })}
           />
         ) : (
           <span className="min-w-0 max-w-full">{color}</span>

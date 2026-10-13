@@ -1,6 +1,8 @@
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 import React from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from "@/lib/i18n/navigation"
 
 import { resolveColorValue } from '@/components/ui/tailwind-palette'
 
@@ -19,6 +21,7 @@ type PromoBannersProps = {
 }
 
 const PromoBanners: React.FC<PromoBannersProps> = ({ banners }) => {
+  const i18n = useInterfaceTranslations("InterfaceProductsSlugComponentsPromoBanners");
   if (!banners || banners.length === 0) {
     return null
   }
@@ -31,7 +34,7 @@ const PromoBanners: React.FC<PromoBannersProps> = ({ banners }) => {
           href={banner.link ?? "#"}
           style={{
             backgroundColor: resolveColorValue(banner.bgClass) ?? "var(--brand-black)",
-            position: 'relative',
+            position: "relative",
           }}
           className="group relative block h-48 min-w-0 overflow-hidden rounded-2xl"
         >
@@ -43,7 +46,7 @@ const PromoBanners: React.FC<PromoBannersProps> = ({ banners }) => {
             sizes="(max-width: 1024px) 100vw, 25vw"
           />
           <div className="absolute inset-0 flex min-w-0 flex-col items-center justify-center p-4 text-center text-brand-white">
-            <p className="text-xs font-medium opacity-80">SUPER SALE</p>
+            <p className="text-xs font-medium opacity-80">{i18n("SUPER SALE")}</p>
             <h3 className="max-w-full line-clamp-2 text-2xl font-black leading-tight [overflow-wrap:anywhere]">
               {banner.title}
             </h3>

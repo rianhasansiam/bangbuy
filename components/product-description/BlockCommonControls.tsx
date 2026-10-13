@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { cn } from "@/lib/utils";
 import type {
@@ -20,13 +22,13 @@ export default function BlockCommonControls({
   onChange,
   disabled,
 }: BlockCommonControlsProps) {
+  const i18n = useInterfaceTranslations("InterfaceProductDescriptionBlockCommonControls");
   return (
     <div className="mt-4 grid gap-3 border-t border-brand-border pt-4 sm:grid-cols-3">
       {/* Visibility */}
       <div>
         <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Visibility
-        </p>
+          {i18n("Visibility")}</p>
         <label className="flex cursor-pointer items-center gap-2">
           <input
             type="checkbox"
@@ -36,7 +38,7 @@ export default function BlockCommonControls({
             className="h-4 w-4 accent-brand-red"
           />
           <span className="text-sm text-gray-700">
-            {block.isVisible ? "Visible on public page" : "Hidden from public page"}
+            {block.isVisible ? i18n("Visible on public page") : i18n("Hidden from public page")}
           </span>
         </label>
       </div>
@@ -44,8 +46,7 @@ export default function BlockCommonControls({
       {/* Spacing */}
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Block spacing
-        </label>
+          {i18n("Block spacing")}</label>
         <select
           value={block.spacing ?? "medium"}
           onChange={(e) =>
@@ -56,17 +57,16 @@ export default function BlockCommonControls({
           disabled={disabled}
           className={cn(inputClass)}
         >
-          <option value="small">Small</option>
-          <option value="medium">Medium (default)</option>
-          <option value="large">Large</option>
+          <option value="small">{i18n("Small")}</option>
+          <option value="medium">{i18n("Medium (default)")}</option>
+          <option value="large">{i18n("Large")}</option>
         </select>
       </div>
 
       {/* Container style */}
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Container style
-        </label>
+          {i18n("Container style")}</label>
         <select
           value={block.containerStyle ?? "contained"}
           onChange={(e) =>
@@ -77,8 +77,8 @@ export default function BlockCommonControls({
           disabled={disabled}
           className={cn(inputClass)}
         >
-          <option value="contained">Contained</option>
-          <option value="fullWidth">Full width</option>
+          <option value="contained">{i18n("Contained")}</option>
+          <option value="fullWidth">{i18n("Full width")}</option>
         </select>
       </div>
     </div>

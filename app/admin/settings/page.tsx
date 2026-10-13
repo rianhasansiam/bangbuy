@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, RotateCcw, Ticket } from "lucide-react";
@@ -45,6 +47,7 @@ import PromoCodesTable from "./components/PromoCodesTable";
 import PromoFormDrawer from "./components/PromoFormDrawer";
 
 export default function AdminSettingsPage() {
+  const i18n = useInterfaceTranslations("AdminAdminSettingsPage");
   const dispatch = useDispatch<AppDispatch>();
   const settings = useSelector((s: RootState) => s.adminSettings.settings);
   const promos = useSelector((s: RootState) => s.adminSettings.promos);
@@ -119,7 +122,7 @@ export default function AdminSettingsPage() {
         "Tax rate",
       );
       if (taxPercent > 100) {
-        throw new Error("Tax rate cannot exceed 100%.");
+        throw new Error(i18n("Tax rate cannot exceed 100%."));
       }
       const standardShippingFee = parseNumberField(
         settingsForm.standardShippingFee || "0",
@@ -143,7 +146,7 @@ export default function AdminSettingsPage() {
       });
       dispatch(setStoreSettings(updated));
       setSettingsForm(buildSettingsForm(updated));
-      const message = "Store settings saved.";
+      const message = i18n("Store settings saved.");
       setSettingsNote(message);
       notifyActionSuccess(message);
     } catch (mutation) {
@@ -185,11 +188,11 @@ export default function AdminSettingsPage() {
 
     try {
       const code = promoForm.code.trim();
-      if (!code) throw new Error("Promo code is required.");
+      if (!code) throw new Error(i18n("Promo code is required."));
 
       const value = parseNumberField(promoForm.value || "0", "Discount value");
       if (promoForm.discountType === "PERCENT" && value > 100) {
-        throw new Error("Percent discount must be between 0 and 100.");
+        throw new Error(i18n("Percent discount must be between 0 and 100."));
       }
 
       const minOrder = parseOptionalNumber(promoForm.minOrder, "Minimum order");
@@ -202,7 +205,7 @@ export default function AdminSettingsPage() {
       const startsAt = fromDateTimeLocal(promoForm.startsAt);
       const endsAt = fromDateTimeLocal(promoForm.endsAt);
       if (startsAt && endsAt && new Date(startsAt) > new Date(endsAt)) {
-        throw new Error("End date must be after the start date.");
+        throw new Error(i18n("End date must be after the start date."));
       }
 
       const body = {
@@ -244,7 +247,7 @@ export default function AdminSettingsPage() {
   const handleDeletePromo = async (promo: PromoCodeRow) => {
     const confirmed = await confirmMajorAction({
       title: `Delete promo code "${promo.code}"?`,
-      description: "This action cannot be undone.",
+      description: i18n("This action cannot be undone."),
       confirmLabel: "Delete",
       variant: "danger",
     });
@@ -300,14 +303,10 @@ export default function AdminSettingsPage() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold text-red-800">
-              Couldn&apos;t load settings
-            </p>
-            <p className="mt-0.5 wrap-break-word text-sm text-red-700">{error}</p>
+              {i18n("Couldn't load settings")}</p>
+            <p className="mt-0.5 wrap-break-word text-sm text-red-700">{i18n(error)}</p>
             <p className="mt-1 text-xs text-red-600/80">
-              The API responded with an error. If this persists right after a
-              schema change, restart the dev server so the Prisma client picks
-              up the new models.
-            </p>
+              {i18n("The API responded with an error. If this persists right after a schema change, restart the dev server so the Prisma client picks up the new models.")}</p>
           </div>
           <button
             type="button"
@@ -317,8 +316,7 @@ export default function AdminSettingsPage() {
             className="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl border border-red-300 bg-white px-3 text-xs font-semibold text-red-700 transition hover:bg-red-100"
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            Try again
-          </button>
+            {i18n("Try again")}</button>
         </div>
       )}
 
@@ -349,11 +347,9 @@ export default function AdminSettingsPage() {
             <div>
               <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
                 <Ticket className="h-4 w-4 text-brand-red" />
-                Promo codes
-              </h2>
+                {i18n("Promo codes")}</h2>
               <p className="text-xs text-gray-500">
-                Customers redeem these at the cart. Codes are case-insensitive.
-              </p>
+                {i18n("Customers redeem these at the cart. Codes are case-insensitive.")}</p>
             </div>
 
             <button
@@ -362,8 +358,7 @@ export default function AdminSettingsPage() {
               className="inline-flex h-10 items-center gap-2 rounded-xl bg-brand-red px-4 text-sm font-semibold text-white transition hover:bg-brand-red-hover"
             >
               <Plus className="h-4 w-4" />
-              New promo code
-            </button>
+              {i18n("New promo code")}</button>
           </div>
         </div>
 

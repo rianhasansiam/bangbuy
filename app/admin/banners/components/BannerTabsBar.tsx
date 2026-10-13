@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Plus, RotateCcw } from "lucide-react";
 
@@ -18,6 +20,7 @@ export default function BannerTabsBar({
   onRefresh: () => void;
   onCreate: () => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminBannersComponentsBannerTabsBar");
   return (
     <div className="rounded-2xl border border-brand-border bg-brand-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -36,7 +39,7 @@ export default function BannerTabsBar({
                     : "border-brand-border text-foreground hover:bg-brand-light-bg",
                 )}
               >
-                {tab.label}
+                {i18n(tab.label)}
               </button>
             );
           })}
@@ -49,8 +52,7 @@ export default function BannerTabsBar({
             className="inline-flex h-10 items-center gap-2 rounded-xl border border-brand-border px-3 text-sm font-semibold text-foreground transition hover:bg-brand-light-bg"
           >
             <RotateCcw className="h-4 w-4" />
-            Refresh
-          </button>
+            {i18n("Refresh")}</button>
 
           <button
             type="button"
@@ -58,7 +60,7 @@ export default function BannerTabsBar({
             className="inline-flex h-10 items-center gap-2 rounded-xl bg-brand-red px-4 text-sm font-semibold text-white transition hover:bg-brand-red-hover"
           >
             <Plus className="h-4 w-4" />
-            New {TABS.find((t) => t.kind === activeTab)?.label.toLowerCase()}
+            {i18n("New")}{" "}{TABS.find((t) => t.kind === activeTab)?.label.toLowerCase()}
           </button>
         </div>
       </div>

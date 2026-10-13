@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useCallback, useEffect, useState } from "react";
 import { Plus, Receipt, RotateCcw } from "lucide-react";
@@ -61,6 +65,8 @@ import CapitalCostActivity from "./components/CapitalCostActivity";
 const CURRENCY = "BDT";
 
 export default function AdminCapitalCostsPage() {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminCapitalCostsPage");
   const dispatch = useDispatch<AppDispatch>();
   const capital = useSelector((s: RootState) => s.adminCapitalCosts.capital);
   const productCost = useSelector(
@@ -203,7 +209,7 @@ export default function AdminCapitalCostsPage() {
       dispatch(setCapital(added));
       setCapitalForm(EMPTY_CAPITAL_FORM);
       await syncSummary();
-      const message = "Capital added.";
+      const message = i18n("Capital added.");
       setCapitalNote(message);
       notifyActionSuccess(message);
     } catch (mutation) {
@@ -255,7 +261,7 @@ export default function AdminCapitalCostsPage() {
     setProductPickerError(null);
     try {
       if (selectedProductIds.length === 0) {
-        throw new Error("Select at least one product.");
+        throw new Error(i18n("Select at least one product."));
       }
 
       setIsSavingProductCosts(true);
@@ -282,7 +288,7 @@ export default function AdminCapitalCostsPage() {
     const confirmed = await confirmMajorAction({
       title: `Remove "${item.productName}"?`,
       description:
-        "This product will no longer be included in the product-cost total.",
+        i18n("This product will no longer be included in the product-cost total."),
       confirmLabel: "Remove",
       variant: "danger",
     });
@@ -370,12 +376,12 @@ export default function AdminCapitalCostsPage() {
 
     try {
       const reason = costForm.reason.trim();
-      if (!reason) throw new Error("Reason is required.");
+      if (!reason) throw new Error(i18n("Reason is required."));
 
       const amount = parsePositiveAmount(costForm.amount || "0", "Amount");
 
       const costDate = fromDateTimeLocal(costForm.costDate);
-      if (!costDate) throw new Error("Cost date is required.");
+      if (!costDate) throw new Error(i18n("Cost date is required."));
 
       const body = {
         amount,
@@ -413,7 +419,7 @@ export default function AdminCapitalCostsPage() {
   const handleDeleteCost = async (cost: OtherCostRow) => {
     const confirmed = await confirmMajorAction({
       title: `Delete "${cost.reason}"?`,
-      description: "This cost record will be permanently removed.",
+      description: i18n("This cost record will be permanently removed."),
       confirmLabel: "Delete",
       variant: "danger",
     });
@@ -455,12 +461,9 @@ export default function AdminCapitalCostsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg font-extrabold text-gray-900 sm:text-xl">
-            Capital &amp; Cost Tracker
-          </h1>
+            {i18n("Capital & Cost Tracker")}</h1>
           <p className="text-xs text-gray-500">
-            Track business capital, selected inventory costs, and manual costs
-            in one place.
-          </p>
+            {i18n("Track business capital, selected inventory costs, and manual costs in one place.")}</p>
         </div>
         <button
           type="button"
@@ -474,7 +477,7 @@ export default function AdminCapitalCostsPage() {
           ) : (
             <RotateCcw className="h-3.5 w-3.5" />
           )}
-          {isLoading ? "Refreshing..." : "Refresh"}
+          {isLoading ? i18n("Refreshing...") : i18n("Refresh")}
         </button>
       </div>
 
@@ -488,13 +491,10 @@ export default function AdminCapitalCostsPage() {
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold text-red-800">
-              Couldn&apos;t load capital &amp; cost data
-            </p>
-            <p className="mt-0.5 wrap-break-word text-sm text-red-700">{error}</p>
+              {i18n("Couldn't load capital & cost data")}</p>
+            <p className="mt-0.5 wrap-break-word text-sm text-red-700">{i18n(error)}</p>
             <p className="mt-1 text-xs text-red-600/80">
-              If this persists right after a schema change, restart the dev
-              server so the Prisma client picks up the new models.
-            </p>
+              {i18n("If this persists right after a schema change, restart the dev server so the Prisma client picks up the new models.")}</p>
           </div>
           <button
             type="button"
@@ -502,8 +502,7 @@ export default function AdminCapitalCostsPage() {
             className="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl border border-red-300 bg-white px-3 text-xs font-semibold text-red-700 transition hover:bg-red-100"
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            Try again
-          </button>
+            {i18n("Try again")}</button>
         </div>
       )}
 
@@ -544,13 +543,12 @@ export default function AdminCapitalCostsPage() {
             <div>
               <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
                 <Receipt className="h-4 w-4 text-brand-red" />
-                Other costs
-              </h2>
+                {i18n("Other costs")}</h2>
               <p className="text-xs text-gray-500">
-                Manual costs you record by hand.{" "}
-                {filterActive ? "Filtered" : "Showing"} total:{" "}
+                {i18n("Manual costs you record by hand.")}{" "}
+                {filterActive ? i18n("Filtered") : i18n("Showing")} {i18n("total:")}{" "}
                 <span className="font-semibold text-gray-700">
-                  {formatCurrency(filteredTotal, CURRENCY)}
+                  {formatCurrency(filteredTotal, CURRENCY, locale)}
                 </span>
               </p>
             </div>
@@ -561,8 +559,7 @@ export default function AdminCapitalCostsPage() {
               className="inline-flex h-10 items-center gap-2 rounded-xl bg-brand-red px-4 text-sm font-semibold text-white transition hover:bg-brand-red-hover"
             >
               <Plus className="h-4 w-4" />
-              Add other cost
-            </button>
+              {i18n("Add other cost")}</button>
           </div>
         </div>
 

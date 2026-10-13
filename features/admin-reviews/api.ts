@@ -182,11 +182,11 @@ export async function deleteAdminReview(reviewId: string): Promise<void> {
   }
 }
 
-export function formatDateTime(value: string): string {
+export function formatDateTime(value: string, locale = "en"): string {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString(undefined, {
+  return date.toLocaleString(locale, {
     year: "numeric",
     month: "short",
     day: "2-digit",

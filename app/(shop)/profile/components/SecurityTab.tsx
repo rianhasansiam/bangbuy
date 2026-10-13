@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 import { toast } from "@/lib/feedback";
 
 import { useMemo, useState } from "react";
@@ -51,6 +53,7 @@ const EMPTY_FORM: FormState = {
  * copy and hides the current-password field for first-time setters.
  */
 export default function SecurityTab({ user }: SecurityTabProps) {
+  const i18n = useInterfaceTranslations("InterfaceProfileComponentsSecurityTab");
   const isGoogleOnly = user.provider === "GOOGLE";
   // We don't actually know server-side whether the user has a password
   // already (we'd need an extra round-trip to find out), but a Google
@@ -116,15 +119,15 @@ export default function SecurityTab({ user }: SecurityTabProps) {
       setHasPassword(true);
       setForm(EMPTY_FORM);
       toast.success(
-        result.hadPassword
+        i18n(result.hadPassword
           ? "Password changed successfully"
-          : "Password set — you can now sign in with email",
+          : "Password set — you can now sign in with email"),
       );
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to change password.";
       setSubmitState({ status: "error", message });
-      toast.error(message);
+      toast.error(i18n(message));
     }
   };
 
@@ -137,12 +140,12 @@ export default function SecurityTab({ user }: SecurityTabProps) {
           </span>
           <div className="min-w-0">
             <h2 className="text-base font-bold text-gray-900 sm:text-lg">
-              {hasPassword ? "Change password" : "Set a password"}
+              {hasPassword ? i18n("Change password") : i18n("Set a password")}
             </h2>
             <p className="text-xs text-gray-500">
               {hasPassword
-                ? "Use a unique password you don't reuse anywhere else."
-                : "Add a password so you can sign in with your email and password too."}
+                ? i18n("Use a unique password you don't reuse anywhere else.")
+                : i18n("Add a password so you can sign in with your email and password too.")}
             </p>
           </div>
         </header>
@@ -150,16 +153,14 @@ export default function SecurityTab({ user }: SecurityTabProps) {
         {isGoogleOnly && !hasPassword && (
           <div className="mb-5 flex items-start gap-2 rounded-2xl border border-brand-border bg-brand-light-bg p-3 text-sm text-brand-black">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-            You normally sign in with Google. Setting a password gives you a
-            fallback if you ever lose access to your Google account.
-          </div>
+            {i18n("You normally sign in with Google. Setting a password gives you a fallback if you ever lose access to your Google account.")}</div>
         )}
 
         <form onSubmit={handleSubmit} className="grid gap-4">
           {hasPassword && (
             <FloatField
               icon={<Lock className="h-4 w-4" />}
-              label="Current password"
+              label={i18n("Current password")}
               type={show.current ? "text" : "password"}
               value={form.currentPassword}
               onChange={handleChange("currentPassword")}
@@ -178,7 +179,7 @@ export default function SecurityTab({ user }: SecurityTabProps) {
           )}
           <FloatField
             icon={<Lock className="h-4 w-4" />}
-            label="New password"
+            label={i18n("New password")}
             type={show.next ? "text" : "password"}
             value={form.newPassword}
             onChange={handleChange("newPassword")}
@@ -196,7 +197,7 @@ export default function SecurityTab({ user }: SecurityTabProps) {
           />
           <FloatField
             icon={<Lock className="h-4 w-4" />}
-            label="Confirm new password"
+            label={i18n("Confirm new password")}
             type={show.confirm ? "text" : "password"}
             value={form.confirmPassword}
             onChange={handleChange("confirmPassword")}
@@ -218,7 +219,7 @@ export default function SecurityTab({ user }: SecurityTabProps) {
           {submitState.status === "error" && (
             <div className="flex items-start gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              {submitState.message}
+              {i18n(submitState.message)}
             </div>
           )}
 
@@ -226,8 +227,8 @@ export default function SecurityTab({ user }: SecurityTabProps) {
             <div className="flex items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
               {submitState.firstTime
-                ? "Password set. You can now sign in with your email and password."
-                : "Password changed successfully."}
+                ? i18n("Password set. You can now sign in with your email and password.")
+                : i18n("Password changed successfully.")}
             </div>
           )}
 
@@ -239,11 +240,11 @@ export default function SecurityTab({ user }: SecurityTabProps) {
               className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-brand-red px-5 text-sm font-bold text-brand-white shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl disabled:cursor-not-allowed disabled:bg-gray-300 disabled:hover:translate-y-0 sm:w-auto"
             >
               {submitState.status === "saving" ? (
-                <ButtonLoader label="Saving..." />
+                <ButtonLoader label={i18n("Saving...")} />
               ) : (
                 <>
                   <KeyRound className="h-4 w-4" />
-                  {hasPassword ? "Update password" : "Set password"}
+                  {hasPassword ? i18n("Update password") : i18n("Set password")}
                 </>
               )}
             </button>
@@ -258,29 +259,27 @@ export default function SecurityTab({ user }: SecurityTabProps) {
           </span>
           <div className="min-w-0">
             <h2 className="text-base font-bold text-gray-900 sm:text-lg">
-              Sign-in methods
-            </h2>
+              {i18n("Sign-in methods")}</h2>
             <p className="text-xs text-gray-500">
-              How you can access this account.
-            </p>
+              {i18n("How you can access this account.")}</p>
           </div>
         </header>
         <ul className="grid gap-2 sm:grid-cols-2">
           <SignInMethod
-            label="Google"
+            label={i18n("Google")}
             description={
               user.provider === "GOOGLE"
-                ? "Original sign-up method."
-                : "Not connected."
+                ? i18n("Original sign-up method.")
+                : i18n("Not connected.")
             }
             connected={user.provider === "GOOGLE"}
           />
           <SignInMethod
-            label="Email + password"
+            label={i18n("Email + password")}
             description={
               hasPassword
-                ? "Active. Use the form above to rotate."
-                : "Not set. Add one above."
+                ? i18n("Active. Use the form above to rotate.")
+                : i18n("Not set. Add one above.")
             }
             connected={hasPassword}
           />
@@ -291,21 +290,22 @@ export default function SecurityTab({ user }: SecurityTabProps) {
 }
 
 function PasswordChecklist({ password }: { password: string }) {
+  const i18n = useInterfaceTranslations("InterfaceProfileComponentsSecurityTab");
   const checks = [
     {
       label: `At least ${FIELD_LIMITS.PASSWORD_MIN} characters`,
       ok: password.length >= FIELD_LIMITS.PASSWORD_MIN,
     },
     {
-      label: "Contains a lowercase letter",
+      label: i18n("Contains a lowercase letter"),
       ok: /[a-z]/.test(password),
     },
     {
-      label: "Contains an uppercase letter",
+      label: i18n("Contains an uppercase letter"),
       ok: /[A-Z]/.test(password),
     },
     {
-      label: "Contains a number",
+      label: i18n("Contains a number"),
       ok: /\d/.test(password),
     },
   ];
@@ -330,7 +330,7 @@ function PasswordChecklist({ password }: { password: string }) {
           >
             {check.ok ? "✓" : "·"}
           </span>
-          {check.label}
+          {i18n(check.label)}
         </li>
       ))}
     </ul>
@@ -346,6 +346,7 @@ function SignInMethod({
   description: string;
   connected: boolean;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceProfileComponentsSecurityTab");
   return (
     <li
       className={
@@ -368,8 +369,8 @@ function SignInMethod({
         )}
       </span>
       <div className="min-w-0">
-        <p className="text-sm font-bold text-gray-900">{label}</p>
-        <p className="text-[11px] text-gray-500">{description}</p>
+        <p className="text-sm font-bold text-gray-900">{i18n(label)}</p>
+        <p className="text-[11px] text-gray-500">{i18n(description)}</p>
       </div>
     </li>
   );

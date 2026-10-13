@@ -1,7 +1,10 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { LoaderCircle, X } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "@/lib/i18n/navigation";
 import {
   useCallback,
   useEffect,
@@ -26,6 +29,7 @@ import {
   toProductQueryInput,
 } from "@/lib/catalog/products-page-query";
 import { cn } from "@/lib/utils";
+import PublicContentNotice from "@/components/i18n/PublicContentNotice";
 
 import FilterSidebar, {
   type CatalogFilterState,
@@ -71,6 +75,7 @@ export default function ProductsExplorer({
   initialMeta,
   initialFacets,
 }: ProductsExplorerProps) {
+  const i18n = useInterfaceTranslations("InterfaceProductsComponentsProductsExplorer");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -237,11 +242,10 @@ export default function ProductsExplorer({
       <div className="mx-auto max-w-7xl px-3 py-4 sm:px-4 sm:py-6 lg:px-6">
         <div className="mb-4 min-w-0">
           <h1 className="text-2xl font-bold tracking-tight text-gray-950 [overflow-wrap:anywhere] sm:text-3xl">
-            {query.search ? `Results for “${query.search}”` : "All products"}
+            {query.search ? i18n("Results for “{query}”", { query: query.search }) : i18n("All products")}
           </h1>
           <p className="mt-1 text-sm text-gray-500">
-            Browse the catalog with live availability and verified customer ratings.
-          </p>
+            {i18n("Browse the catalog with live availability and verified customer ratings.")}</p>
           <ActiveFilterChips
             query={query.search}
             filters={filters}
@@ -254,7 +258,7 @@ export default function ProductsExplorer({
           <div
             className={cn(
               "hidden shrink-0 overflow-hidden transition-[width,opacity,margin] duration-300 ease-in-out lg:block",
-              sidebarOpen ? "w-64 opacity-100" : "-ml-5 w-0 opacity-0",
+              sidebarOpen ? "w-64 opacity-100" : "-ms-5 w-0 opacity-0",
             )}
             aria-hidden={!sidebarOpen}
           >
@@ -269,6 +273,7 @@ export default function ProductsExplorer({
           </div>
 
           <main className="min-w-0 flex-1">
+            <PublicContentNotice available={!products.some(product=>product.translationAvailable===false)}/>
             <ProductToolbar
               resultsCount={products.length}
               totalCount={meta.total}
@@ -292,7 +297,7 @@ export default function ProductsExplorer({
             />
 
             {isPending ? (
-              <div aria-busy="true" aria-label="Loading products" className="mt-4">
+              <div aria-busy="true" aria-label={i18n("Loading products")} className="mt-4">
                 <ProductGridSkeleton wide={!sidebarOpen} />
               </div>
             ) : (
@@ -317,8 +322,7 @@ export default function ProductsExplorer({
                         className="h-5 w-5 animate-spin text-brand-red"
                         aria-hidden="true"
                       />
-                      Loading more products…
-                    </div>
+                      {i18n("Loading more products…")}</div>
                   ) : loadMoreError ? (
                     <div className="text-center">
                       <p
@@ -332,13 +336,11 @@ export default function ProductsExplorer({
                         onClick={() => void loadMoreProducts()}
                         className="mt-2 rounded-lg border border-brand-red px-3 py-1.5 text-sm font-semibold text-brand-red transition-colors hover:bg-brand-red hover:text-white"
                       >
-                        Try again
-                      </button>
+                        {i18n("Try again")}</button>
                     </div>
                   ) : !hasMore && products.length > 0 ? (
                     <p className="text-sm text-gray-500">
-                      You’ve reached the end of the products.
-                    </p>
+                      {i18n("You’ve reached the end of the products.")}</p>
                   ) : null}
                 </div>
               </>
@@ -370,6 +372,7 @@ function ActiveFilterChips({
   facets: CatalogFacets;
   onRemove: (key: string) => void;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceProductsComponentsProductsExplorer");
   const categoryName = (() => {
     const stack = [...facets.categories];
     while (stack.length > 0) {
@@ -402,10 +405,10 @@ function ActiveFilterChips({
           key: "minPrice",
           label: (
             <>
-              From <CurrencyAmount amountBDT={filters.minPrice} />
+              {i18n("From")}<CurrencyAmount amountBDT={filters.minPrice} />
             </>
           ),
-          ariaLabel: "Remove minimum price filter",
+          ariaLabel: i18n("Remove minimum price filter"),
         }
       : null,
     filters.maxPrice != null
@@ -413,34 +416,34 @@ function ActiveFilterChips({
           key: "maxPrice",
           label: (
             <>
-              Up to <CurrencyAmount amountBDT={filters.maxPrice} />
+              {i18n("Up to")}<CurrencyAmount amountBDT={filters.maxPrice} />
             </>
           ),
-          ariaLabel: "Remove maximum price filter",
+          ariaLabel: i18n("Remove maximum price filter"),
         }
       : null,
     filters.stock ? { key: "stock", label: filters.stock === "in-stock" ? "In stock" : "Out of stock" } : null,
     filters.minRating
       ? { key: "minRating", label: `${filters.minRating}+ stars` }
       : null,
-  ].filter((chip): chip is { key: string; label: string } => Boolean(chip));
+  ].filter((chip): chip is NonNullable<typeof chip> => Boolean(chip));
 
   if (chips.length === 0) return null;
   return (
-    <div className="mt-3 flex flex-wrap gap-2" aria-label="Active product filters">
+    <div className="mt-3 flex flex-wrap gap-2" aria-label={i18n("Active product filters")}>
       {chips.map((chip) => (
         <button
           key={chip.key}
           type="button"
           onClick={() => onRemove(chip.key)}
-          className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border border-brand-red/20 bg-white px-2.5 py-1 text-left text-xs font-medium text-gray-700 transition-colors hover:border-brand-red hover:text-brand-red"
+          className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border border-brand-red/20 bg-white px-2.5 py-1 text-start text-xs font-medium text-gray-700 transition-colors hover:border-brand-red hover:text-brand-red"
           aria-label={
             "ariaLabel" in chip && typeof chip.ariaLabel === "string"
               ? chip.ariaLabel
-              : `Remove ${chip.label} filter`
+              : i18n("Remove filter")
           }
         >
-          <span className="min-w-0 truncate">{chip.label}</span>
+          <span className="min-w-0 truncate">{typeof chip.label === "string" ? i18n(chip.label) : chip.label}</span>
           <X className="h-3 w-3 shrink-0" aria-hidden="true" />
         </button>
       ))}

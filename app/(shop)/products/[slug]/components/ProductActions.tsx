@@ -1,8 +1,11 @@
 "use client";
+import { useLocaleDraft, useLocaleSwitchGuard } from "@/components/i18n/useLocaleDraft";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { Check, Heart, Minus, Plus, ShoppingCart, Zap } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/lib/i18n/navigation";
 import { useDispatch, useSelector } from "react-redux";
 
 import { ButtonLoader } from "@/components/ui/loading";
@@ -154,6 +157,7 @@ const ProductActions = ({
   salePrice,
   discountPrice,
 }: ProductActionsProps) => {
+  const i18n = useInterfaceTranslations("InterfaceProductsSlugComponentsProductActions");
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -170,6 +174,16 @@ const ProductActions = ({
   const [isCartBusy, setIsCartBusy] = useState(false);
   const [isWishlistBusy, setIsWishlistBusy] = useState(false);
   const [isBuyNowPending, startBuyNowTransition] = useTransition();
+  useLocaleSwitchGuard(isCartBusy || isWishlistBusy || isBuyNowPending);
+  const selectionDraft = { selectedVariantId: selectedVariantId ?? "", quantity };
+  useLocaleDraft("product-options:" + productId, selectionDraft, (update) => {
+    const next = typeof update === "function" ? update(selectionDraft) : update;
+    const variant = activeVariants.find((entry) => entry.id === next.selectedVariantId);
+    if (variant) {
+      setSelectedVariantId(variant.id);
+      if (Number.isFinite(next.quantity)) setQuantity(Math.max(1, Math.min(Math.max(1, variant.stock), Math.round(next.quantity))));
+    }
+  }, ["selectedVariantId", "quantity"]);
   const isWishlisted = useSelector((state: RootState) =>
     state.wishlist.items.some((item) => item.id === productId),
   );
@@ -228,14 +242,14 @@ const ProductActions = ({
         const snapshot = await fetchServerCartSnapshot();
         writeLocalCart(snapshot.items);
         dispatch(setCartData(snapshot));
-        toast.success(`${productName} added to cart`);
+        toast.success(i18n(`${productName} added to cart`));
       } catch (error) {
         const message =
           error instanceof Error
             ? error.message
             : "Failed to add item to cart.";
         dispatch(setCartErrorAction(message));
-        toast.error(message);
+        toast.error(i18n(message));
       } finally {
         setIsCartBusy(false);
       }
@@ -273,7 +287,7 @@ const ProductActions = ({
         summary: computeCartSummary(nextLocal),
       }),
     );
-    toast.success(`${productName} added to cart`);
+    toast.success(i18n(`${productName} added to cart`));
     trackLocalCartAddition(localBefore, nextLocal, createEventId());
   };
 
@@ -316,7 +330,7 @@ const ProductActions = ({
       const nextLocal = localBefore.filter((item) => item.id !== productId);
       writeLocalWishlist(nextLocal);
       dispatch(removeWishlistItem(productId));
-      toast.success("Removed from wishlist");
+      toast.success(i18n("Removed from wishlist"));
 
       if (!canUseServer) return;
 
@@ -331,7 +345,7 @@ const ProductActions = ({
             ? error.message
             : "Failed to remove item from wishlist.";
         dispatch(setWishlistError(message));
-        toast.error(message);
+        toast.error(i18n(message));
       } finally {
         setIsWishlistBusy(false);
       }
@@ -341,7 +355,7 @@ const ProductActions = ({
     const nextLocal = upsertLocalWishlistItem(localBefore, optimisticItem);
     writeLocalWishlist(nextLocal);
     dispatch(upsertWishlistItem(optimisticItem));
-    toast.success("Added to wishlist");
+    toast.success(i18n("Added to wishlist"));
 
     if (!canUseServer) return;
 
@@ -362,7 +376,7 @@ const ProductActions = ({
           ? error.message
           : "Failed to add item to wishlist.";
       dispatch(setWishlistError(message));
-      toast.error(message);
+      toast.error(i18n(message));
     } finally {
       setIsWishlistBusy(false);
     }
@@ -394,12 +408,9 @@ const ProductActions = ({
           aria-describedby="variant-selection-help"
         >
           <legend className="text-sm font-semibold text-gray-900">
-            Choose an option
-          </legend>
+            {i18n("Choose an option")}</legend>
           <p id="variant-selection-help" className="sr-only">
-            The first option is selected by default. Choose another available
-            combination if you prefer.
-          </p>
+            {i18n("The first option is selected by default. Choose another available combination if you prefer.")}</p>
           <div className="flex min-w-0 flex-wrap gap-2">
             {activeVariants.map((variant) => {
               const isSelected = variant.id === selectedVariant?.id;
@@ -431,7 +442,7 @@ const ProductActions = ({
                     ...options.map((option) => `${option.key}: ${option.value}`),
                     ...(isOutOfStock ? ["Out of stock"] : []),
                   ].join(", ")}
-                  className={`inline-flex min-h-11 min-w-0 max-w-full items-center gap-2 rounded-lg border px-3 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 ${
+                  className={`inline-flex min-h-11 min-w-0 max-w-full items-center gap-2 rounded-lg border px-3 py-2 text-start transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 ${
                     isSelected
                       ? "border-brand-red bg-brand-red/5 ring-1 ring-brand-red"
                       : isOutOfStock
@@ -460,8 +471,7 @@ const ProductActions = ({
                     ))}
                     {isOutOfStock && (
                       <span className="text-[11px] font-medium leading-4 text-rose-600">
-                        Out of stock
-                      </span>
+                        {i18n("Out of stock")}</span>
                     )}
                   </span>
                   <Check
@@ -496,7 +506,7 @@ const ProductActions = ({
                   isPurchasable ? "text-emerald-700" : "text-rose-600"
                 }`}
               >
-                {isPurchasable ? `${stockCount} available` : "Out of stock"}
+                {isPurchasable ? i18n("{value0} available", { value0: stockCount }) : i18n("Out of stock")}
               </span>
             </div>
           )}
@@ -508,8 +518,7 @@ const ProductActions = ({
         variantDisplayOptions(selectedVariant).length > 0 && (
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Included option
-            </p>
+              {i18n("Included option")}</p>
             <dl className="mt-2 flex min-w-0 flex-wrap gap-x-5 gap-y-2 text-sm">
               {variantDisplayOptions(selectedVariant).map((option) => (
                 <div
@@ -534,21 +543,19 @@ const ProductActions = ({
       >
         {activeVariants.length === 0 ? (
           <span className="text-rose-600">
-            This product is currently unavailable.
-          </span>
+            {i18n("This product is currently unavailable.")}</span>
         ) : hasMultipleVariants && !selectedVariant ? (
-          "Choose an option combination to see its availability."
+          i18n("Choose an option combination to see its availability.")
         ) : isPurchasable ? (
           <>
-            <span className="text-emerald-700">In stock</span>
+            <span className="text-emerald-700">{i18n("In stock")}</span>
             {stockCount <= 5 && (
-              <span className="ml-1 text-amber-600">
-                · only {stockCount} left
-              </span>
+              <span className="ms-1 text-amber-600">
+                {i18n("· only {count, number} left", { count: stockCount })}</span>
             )}
           </>
         ) : (
-          <span className="text-rose-600">Out of stock</span>
+          <span className="text-rose-600">{i18n("Out of stock")}</span>
         )}
       </p>
 
@@ -558,7 +565,7 @@ const ProductActions = ({
             type="button"
             onClick={() => handleQuantityChange(-1)}
             disabled={!isPurchasable || quantity <= 1}
-            aria-label="Decrease quantity"
+            aria-label={i18n("Decrease quantity")}
             className="flex h-11 w-11 items-center justify-center transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Minus className="h-4 w-4 text-gray-600" />
@@ -570,7 +577,7 @@ const ProductActions = ({
             type="button"
             onClick={() => handleQuantityChange(1)}
             disabled={!isPurchasable || quantity >= stockCount}
-            aria-label="Increase quantity"
+            aria-label={i18n("Increase quantity")}
             className="flex h-11 w-11 items-center justify-center transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus className="h-4 w-4 text-gray-600" />
@@ -591,14 +598,14 @@ const ProductActions = ({
           }`}
         >
           {isCartBusy ? (
-            <ButtonLoader label="Adding..." />
+            <ButtonLoader label={i18n("Adding...")} />
           ) : (
             <>
               <ShoppingCart className="h-4 w-4 shrink-0" />
               <span className="truncate">
                 {hasMultipleVariants && !selectedVariant
-                  ? "Select an option"
-                  : "Add to cart"}
+                  ? i18n("Select an option")
+                  : i18n("Add to cart")}
               </span>
             </>
           )}
@@ -617,12 +624,11 @@ const ProductActions = ({
         }`}
       >
         {isBuyNowPending ? (
-          <ButtonLoader label="Preparing checkout..." />
+          <ButtonLoader label={i18n("Preparing checkout...")} />
         ) : (
           <>
             <Zap className="h-4 w-4" />
-            Buy now
-          </>
+            {i18n("Buy now")}</>
         )}
       </button>
 
@@ -635,7 +641,7 @@ const ProductActions = ({
               }}
               disabled={isWishlistBusy}
               aria-label={
-                isWishlisted ? "Remove from wishlist" : "Add to wishlist"
+                isWishlisted ? i18n("Remove from wishlist") : i18n("Add to wishlist")
               }
               aria-pressed={isWishlisted}
               aria-busy={isWishlistBusy}
@@ -664,14 +670,14 @@ const ProductActions = ({
               className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-brand-red bg-white px-2 text-xs font-bold text-brand-red transition hover:bg-brand-red/5 disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400 sm:h-12 sm:px-4 sm:text-sm"
             >
               {isCartBusy ? (
-                <ButtonLoader label="Adding..." />
+                <ButtonLoader label={i18n("Adding...")} />
               ) : (
                 <>
                   <ShoppingCart className="h-4 w-4 shrink-0" />
                   <span className="truncate">
                     {hasMultipleVariants && !selectedVariant
-                      ? "Select option"
-                      : "Add to cart"}
+                      ? i18n("Select option")
+                      : i18n("Add to cart")}
                   </span>
                 </>
               )}
@@ -685,11 +691,11 @@ const ProductActions = ({
               className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-brand-red px-2 text-xs font-bold text-brand-white shadow-sm transition hover:bg-brand-red-hover disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 sm:h-12 sm:px-4 sm:text-sm"
             >
               {isBuyNowPending ? (
-                <ButtonLoader label="Opening..." />
+                <ButtonLoader label={i18n("Opening...")} />
               ) : (
                 <>
                   <Zap className="h-4 w-4 shrink-0" />
-                  <span className="truncate">Buy now</span>
+                  <span className="truncate">{i18n("Buy now")}</span>
                 </>
               )}
             </button>

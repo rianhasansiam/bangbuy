@@ -350,19 +350,19 @@ export function parseOptionalInt(raw: string, field: string): number | null {
   return value;
 }
 
-export function formatDate(value: string | null | undefined): string {
+export function formatDate(value: string | null | undefined, locale = "en"): string {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString(locale, {
     year: "numeric",
     month: "short",
     day: "2-digit",
   });
 }
 
-export function formatCurrency(value: number, currency = "BDT"): string {
-  return `${currency} ${value.toLocaleString(undefined, {
+export function formatCurrency(value: number, currency = "BDT", locale = "en"): string {
+  return `${currency} ${value.toLocaleString(locale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   })}`;

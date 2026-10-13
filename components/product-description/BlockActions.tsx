@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import {
   ChevronUp,
@@ -47,6 +49,7 @@ export default function BlockActions({
   onToggleVisibility,
   onDelete,
 }: BlockActionsProps) {
+  const i18n = useInterfaceTranslations("InterfaceProductDescriptionBlockActions");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -74,7 +77,7 @@ export default function BlockActions({
         type="button"
         {...(dragHandleListeners as React.ButtonHTMLAttributes<HTMLButtonElement>)}
         {...(dragHandleAttributes as React.ButtonHTMLAttributes<HTMLButtonElement>)}
-        aria-label="Drag to reorder block"
+        aria-label={i18n("Drag to reorder block")}
         className="cursor-grab touch-none rounded p-1 text-gray-400 hover:text-gray-700 active:cursor-grabbing"
       >
         <GripVertical className="h-4 w-4" />
@@ -89,7 +92,7 @@ export default function BlockActions({
             : "bg-gray-100 text-gray-500",
         )}
       >
-        {isVisible ? "Visible" : "Hidden"}
+        {isVisible ? i18n("Visible") : i18n("Hidden")}
       </span>
 
       {/* Kebab menu */}
@@ -97,7 +100,7 @@ export default function BlockActions({
         <button
           type="button"
           onClick={() => setMenuOpen((prev) => !prev)}
-          aria-label="Block actions"
+          aria-label={i18n("Block actions")}
           aria-expanded={menuOpen}
           className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
         >
@@ -105,7 +108,7 @@ export default function BlockActions({
         </button>
 
         {menuOpen && (
-          <div className="absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-xl border border-brand-border bg-white shadow-lg">
+          <div className="absolute end-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-xl border border-brand-border bg-white shadow-lg">
             <button
               type="button"
               onClick={() => action(onMoveUp)}
@@ -113,8 +116,7 @@ export default function BlockActions({
               className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ChevronUp className="h-4 w-4" />
-              Move up
-            </button>
+              {i18n("Move up")}</button>
             <button
               type="button"
               onClick={() => action(onMoveDown)}
@@ -122,8 +124,7 @@ export default function BlockActions({
               className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ChevronDown className="h-4 w-4" />
-              Move down
-            </button>
+              {i18n("Move down")}</button>
             <div className="my-1 h-px bg-gray-100" />
             <button
               type="button"
@@ -131,8 +132,7 @@ export default function BlockActions({
               className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
             >
               <Copy className="h-4 w-4" />
-              Duplicate
-            </button>
+              {i18n("Duplicate")}</button>
             <button
               type="button"
               onClick={() => action(onToggleVisibility)}
@@ -143,7 +143,7 @@ export default function BlockActions({
               ) : (
                 <Eye className="h-4 w-4" />
               )}
-              {isVisible ? "Hide block" : "Show block"}
+              {isVisible ? i18n("Hide block") : i18n("Show block")}
             </button>
             <div className="my-1 h-px bg-gray-100" />
             <button
@@ -152,8 +152,7 @@ export default function BlockActions({
               className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
             >
               <Trash2 className="h-4 w-4" />
-              Delete block
-            </button>
+              {i18n("Delete block")}</button>
           </div>
         )}
       </div>

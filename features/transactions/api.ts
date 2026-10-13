@@ -222,33 +222,34 @@ export function fetchAdminTransactions(
 export function formatTransactionAmount(
   amount: number,
   currency: string,
+  locale = "en",
 ): string {
   const normalizedCurrency = currency.trim().toUpperCase() || BASE_CURRENCY;
   const supportedCurrency = parseCurrencyCode(normalizedCurrency);
-  if (supportedCurrency) return formatMoney(amount, supportedCurrency);
+  if (supportedCurrency) return formatMoney(amount, supportedCurrency, { locale });
 
   // Transactions record the payment provider's actual currency, which is
   // independent from the storefront display-currency allowlist.
   try {
-    return new Intl.NumberFormat(undefined, {
+    return new Intl.NumberFormat(locale, {
       style: "currency",
       currency: normalizedCurrency,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount);
   } catch {
-    return `${normalizedCurrency} ${new Intl.NumberFormat(undefined, {
+    return `${normalizedCurrency} ${new Intl.NumberFormat(locale, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount)}`;
   }
 }
 
-export function formatTransactionDate(value: string | null): string {
+export function formatTransactionDate(value: string | null, locale = "en"): string {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString(undefined, {
+  return date.toLocaleString(locale, {
     year: "numeric",
     month: "short",
     day: "2-digit",

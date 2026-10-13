@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+
 import { cache, Suspense } from "react";
 
 import { ProductGridSkeleton } from "@/components/ui/loading";
@@ -10,7 +11,8 @@ import {
   productsPageIndexingPolicy,
   toProductQueryInput,
 } from "@/lib/catalog/products-page-query";
-import { buildMetadata } from "@/lib/seo/metadata";
+import { buildLocalizedMetadata } from "@/lib/seo/localized-metadata";
+import { getTranslations } from "next-intl/server";
 import { siteConfig } from "@/lib/seo/site";
 import {
   getPublicCatalogFacets,
@@ -41,6 +43,7 @@ function productsPageDataKey(query: ReturnType<typeof parseProductsPageQuery>) {
 }
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  const translate = await getTranslations("Seo");
   const raw = await searchParams;
   const query = parseProductsPageQuery(raw);
   const { meta } = await getProductsPageDataByKey(productsPageDataKey(query));
@@ -49,19 +52,19 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   }
   const policy = productsPageIndexingPolicy(raw);
   const title = query.search
-    ? `Search results for “${query.search}”`
+    ? translate("searchTitle", { search: query.search })
     : policy.hasUncontrolledParams
-      ? "Filtered products"
+      ? translate("filteredProducts")
       : query.page > 1
-        ? `All products - Page ${query.page}`
-        : "All products";
+        ? translate("productsPageTitle", { page: query.page })
+        : translate("allProducts");
   const description = query.search
-    ? `Browse ${siteConfig.name} search results for ${query.search}.`
+    ? translate("searchDescription", { brand: siteConfig.name, search: query.search })
     : query.page > 1 && policy.index
-      ? `Continue browsing the ${siteConfig.name} product catalog on page ${query.page}.`
-      : `Browse the complete ${siteConfig.name} catalog by category, brand, price, rating, and availability.`;
+      ? translate("productsPageDescription", { brand: siteConfig.name, page: query.page })
+      : translate("productsDescription");
 
-  return buildMetadata({
+  return buildLocalizedMetadata({
     title,
     description,
     path: policy.canonicalPath,
@@ -69,7 +72,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
     keywords: policy.index
       ? ["all products", "online catalog", "shop online", ...siteConfig.keywords]
       : undefined,
-  });
+  }, "InterfaceProductsPage");
 }
 
 export default async function ProductsPage({ searchParams }: Props) {

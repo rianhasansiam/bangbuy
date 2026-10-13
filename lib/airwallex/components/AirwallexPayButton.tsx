@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useRef, useState } from "react";
 import { CreditCard } from "lucide-react";
@@ -82,6 +84,7 @@ export function AirwallexPayButton({
   disabled,
   ...buttonProps
 }: AirwallexPayButtonProps) {
+  const i18n = useInterfaceTranslations("InterfaceAirwallexComponentsAirwallexPayButton");
   const inFlightRef = useRef(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -114,14 +117,14 @@ export function AirwallexPayButton({
         onClick={handleClick}
       >
         <CreditCard aria-hidden="true" />
-        {label}
+        {i18n(label)}
       </Button>
       <p
         className="mt-2 text-xs font-medium text-rose-700"
         role={error ? "alert" : undefined}
         aria-live="polite"
       >
-        {error ?? (loading ? "Redirecting to Airwallex's secure checkout." : "")}
+        {error ?? (loading ? i18n("Redirecting to Airwallex's secure checkout.") : "")}
       </p>
     </div>
   );

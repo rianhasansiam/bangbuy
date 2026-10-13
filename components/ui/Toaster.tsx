@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 /**
  * Toaster — lightweight toast notification system.
@@ -13,7 +15,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, XCircle, Info, AlertTriangle, X } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/lib/i18n/navigation";
 
 import { cn } from "@/lib/utils";
 import { toastEmitter, type ToastItem } from "@/lib/feedback";
@@ -46,6 +48,7 @@ function ToastCard({
   item: ToastItem;
   onDismiss: (id: string) => void;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceUiToaster");
   const Icon = ICONS[item.type];
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -72,7 +75,7 @@ function ToastCard({
       <button
         type="button"
         onClick={() => onDismiss(item.id)}
-        aria-label="Dismiss notification"
+        aria-label={i18n("Dismiss notification")}
         className="shrink-0 rounded-lg p-0.5 opacity-60 transition-opacity hover:opacity-100"
       >
         <X className="h-4 w-4" />
@@ -82,6 +85,7 @@ function ToastCard({
 }
 
 export default function Toaster() {
+  const i18n = useInterfaceTranslations("InterfaceUiToaster");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const pathname = usePathname();
   const hasMobileBottomActions =
@@ -108,9 +112,9 @@ export default function Toaster() {
   return (
     <div
       role="region"
-      aria-label="Notifications"
+      aria-label={i18n("Notifications")}
       className={cn(
-        "pointer-events-none fixed inset-x-3 z-9999 flex min-w-0 flex-col items-stretch gap-2 sm:left-auto sm:right-6 sm:w-full sm:max-w-sm lg:bottom-6",
+        "pointer-events-none fixed inset-x-3 z-9999 flex min-w-0 flex-col items-stretch gap-2 sm:start-auto sm:end-6 sm:w-full sm:max-w-sm lg:bottom-6",
         hasMobileBottomActions
           ? "bottom-[calc(5.75rem+env(safe-area-inset-bottom))]"
           : "bottom-[max(0.75rem,env(safe-area-inset-bottom))]",

@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { CalendarRange, Tag, Ticket } from "lucide-react";
 
@@ -50,24 +54,26 @@ export default function SettingsSummaryCards({
   activeCount: number;
   usedCount: number;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminSettingsComponentsSettingsSummaryCards");
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       <SummaryCard
         icon={<Ticket className="h-4 w-4" />}
-        label="Promo codes"
-        value={promoCount.toLocaleString()}
+        label={i18n("Promo codes")}
+        value={promoCount.toLocaleString(locale)}
         accent="violet"
       />
       <SummaryCard
         icon={<Tag className="h-4 w-4" />}
-        label="Active codes"
-        value={activeCount.toLocaleString()}
+        label={i18n("Active codes")}
+        value={activeCount.toLocaleString(locale)}
         accent="emerald"
       />
       <SummaryCard
         icon={<CalendarRange className="h-4 w-4" />}
-        label="Total redemptions"
-        value={usedCount.toLocaleString()}
+        label={i18n("Total redemptions")}
+        value={usedCount.toLocaleString(locale)}
         accent="amber"
       />
     </div>

@@ -1,3 +1,5 @@
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 import { generateHTML } from "@tiptap/core";
 import type { JSONContent } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
@@ -58,10 +60,11 @@ function RichTextContent({ html }: { html: string }) {
 }
 
 export default function RichTextBlockView({ block }: { block: RichTextBlock }) {
+  const i18n = useInterfaceTranslations("InterfaceProductProductDescriptionBlocksRichTextBlockView");
   const html = tiptapToHtml(block.content);
   if (!html.trim()) return null;
   return (
-    <section className="min-w-0" aria-label="Rich text content">
+    <section className="min-w-0" aria-label={i18n("Rich text content")}>
       <RichTextContent html={html} />
     </section>
   );

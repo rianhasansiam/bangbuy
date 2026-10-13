@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 
+import { DEFAULT_LOCALE, isPublishedLocale } from "@/lib/i18n/registry";
+import { localizeHref } from "@/lib/i18n/paths";
+
 import { absoluteUrl, siteConfig } from "./site";
 
 /**
@@ -50,7 +53,25 @@ export type PageMetadataInput = {
   ogType?: "website" | "article";
   /** Set false for pages that must not be indexed. */
   index?: boolean;
+  /** Active URL locale; English is used for legacy callers. */
+  locale?: string;
+  /** Only variants with translated primary content and metadata belong here. */
+  preparedLocales?: readonly string[];
+  /** Pass request-resolved publication state when administrator overrides exist. */
+  publishedLocales?: readonly string[];
 };
+
+/** Reciprocal alternates are emitted only for genuinely prepared variants. */
+export function localizedAlternates(path: string, preparedLocales: readonly string[], publishedLocales?: readonly string[]) {
+  const locales = Array.from(new Set(preparedLocales))
+    .filter((locale) => publishedLocales ? publishedLocales.includes(locale) : isPublishedLocale(locale));
+  return Object.fromEntries([
+    ...locales.map((locale) => [locale, absoluteUrl(localizeHref(path, locale))]),
+    ...(locales.includes(DEFAULT_LOCALE)
+      ? [["x-default", absoluteUrl(localizeHref(path, DEFAULT_LOCALE))]]
+      : []),
+  ]);
+}
 
 /**
  * Build a complete `Metadata` object for a public page.
@@ -67,24 +88,33 @@ export function buildMetadata({
   keywords,
   ogType = "website",
   index = true,
+  locale = DEFAULT_LOCALE,
+  preparedLocales = [DEFAULT_LOCALE],
+  publishedLocales,
 }: PageMetadataInput): Metadata {
   const safeTitle = plainMetadataText(title) || siteConfig.name;
   const desc = clampDescription(description);
-  const canonical = absoluteUrl(path);
+  const canonical = absoluteUrl(localizeHref(path, locale));
+  const ready = preparedLocales.includes(locale);
+  const published = publishedLocales ? publishedLocales.includes(locale) : isPublishedLocale(locale);
+  const mayIndex = index && ready && published;
   const images = resolveOgImages(image, safeTitle);
 
   return {
     title: safeTitle,
     description: desc,
     keywords: keywords && keywords.length > 0 ? keywords : [...siteConfig.keywords],
-    alternates: { canonical },
+    alternates: {
+      canonical,
+      languages: localizedAlternates(path, preparedLocales, publishedLocales),
+    },
     openGraph: {
       type: ogType,
       url: canonical,
       siteName: siteConfig.name,
       title: safeTitle,
       description: desc,
-      locale: siteConfig.locale,
+      locale: locale.replace(/-/g, "_"),
       images,
     },
     twitter: {
@@ -93,7 +123,7 @@ export function buildMetadata({
       description: desc,
       images: images.map((img) => img.url),
     },
-    robots: index
+    robots: mayIndex
       ? {
           index: true,
           follow: true,

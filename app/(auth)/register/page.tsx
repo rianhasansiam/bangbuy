@@ -1,7 +1,10 @@
 "use client";
+import { useLocaleDraft, useLocaleSwitchGuard } from "@/components/i18n/useLocaleDraft";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/lib/i18n/navigation";
 import { signIn } from "next-auth/react";
 
 import AuthAnimations from "@/app/(auth)/_components/AuthAnimations";
@@ -56,11 +59,13 @@ const GENERIC_REGISTER_ERROR =
   "We couldn't create your account. Please try again.";
 
 export default function RegisterPage() {
+  const i18n = useInterfaceTranslations("InterfaceRegisterPage");
   const router = useRouter();
 
   const [currentStep, setCurrentStep] = useState<RegisterStep>(0);
   const [status, setStatus] = useState<RegisterStatus>("idle");
   const [form, setForm] = useState<RegisterForm>(INITIAL_FORM);
+  useLocaleDraft("register-profile", form, setForm, ["name", "email", "phone", "city", "agreeToTerms"]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [visiblePasswordField, setVisiblePasswordField] =
     useState<PasswordField | null>(null);
@@ -77,6 +82,7 @@ export default function RegisterPage() {
 
   const isLastStep = currentStep === REGISTER_STEPS.length - 1;
   const isSubmitting = status === "submitting";
+  useLocaleSwitchGuard(isSubmitting);
 
   const updateField = <Field extends keyof RegisterForm>(
     field: Field,
@@ -160,15 +166,15 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="relative isolate min-h-screen overflow-hidden bg-brand-light-bg">
+    <main data-locale-recoverable className="relative isolate min-h-screen overflow-hidden bg-brand-light-bg">
       <AuthBackground />
 
       <section className="relative z-10 mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 px-4 py-8 sm:px-6 lg:grid-cols-12 lg:gap-8 lg:py-12">
         <BrandPanel
-          badgeText="BangBuy · Welcome"
-          headlineLead="Join the local"
-          headlineEmphasis="shopping revolution."
-          subheading="Create your account in under a minute and start unlocking deals from premium stores in your neighborhood."
+          badgeText={i18n("BangBuy · Welcome")}
+          headlineLead={i18n("Join the local")}
+          headlineEmphasis={i18n("shopping revolution.")}
+          subheading={i18n("Create your account in under a minute and start unlocking deals from premium stores in your neighborhood.")}
           perks={BRAND_PERKS}
           stats={BRAND_STATS}
           activePerkIndex={activePerkIndex}
@@ -177,7 +183,7 @@ export default function RegisterPage() {
 
         <section className="lg:col-span-7">
           <div className="relative overflow-hidden rounded-3xl bg-white p-6 shadow-xl ring-1 ring-brand-border sm:p-9">
-            <div className="pointer-events-none absolute -top-px left-0 h-1 w-full bg-brand-red" />
+            <div className="pointer-events-none absolute -top-px start-0 h-1 w-full bg-brand-red" />
 
             <RegisterHeader currentStep={currentStep} />
 
@@ -191,7 +197,7 @@ export default function RegisterPage() {
                       role="alert"
                       className="mb-4 rounded-xl border border-red-200 bg-red-50/70 p-3 text-xs text-red-700"
                     >
-                      {errorMessage}
+                      {i18n(errorMessage)}
                     </div>
                   )}
 

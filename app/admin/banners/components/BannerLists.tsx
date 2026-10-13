@@ -1,9 +1,13 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 /* eslint-disable @next/next/no-img-element */
 
 import { AnimatePresence, motion } from "framer-motion";
-import Link from "next/link";
+import Link from "@/lib/i18n/navigation";
 
 import {
   categoryBannerHref,
@@ -38,7 +42,8 @@ export function CarouselList({
   onEdit: (banner: CarouselBannerRow) => void;
   onDelete: (banner: CarouselBannerRow) => void;
 }) {
-  if (rows.length === 0) return <EmptyState label="No carousel slides yet." />;
+  const i18n = useInterfaceTranslations("AdminAdminBannersComponentsBannerLists");
+  if (rows.length === 0) return <EmptyState label={i18n("No carousel slides yet.")} />;
 
   return (
     <div className="grid gap-3 lg:grid-cols-2">
@@ -111,7 +116,7 @@ export function CarouselList({
                     } → ${banner.bgTo ?? ""}`}
               </span>
               {banner.link && (
-                <span className="ml-1 truncate font-mono">→ {banner.link}</span>
+                <span className="ms-1 truncate font-mono">→ {banner.link}</span>
               )}
             </div>
             <RowFooter
@@ -139,7 +144,8 @@ export function CategoryList({
   onEdit: (banner: CategoryBannerRow) => void;
   onDelete: (banner: CategoryBannerRow) => void;
 }) {
-  if (rows.length === 0) return <EmptyState label="No category banners yet." />;
+  const i18n = useInterfaceTranslations("AdminAdminBannersComponentsBannerLists");
+  if (rows.length === 0) return <EmptyState label={i18n("No category banners yet.")} />;
 
   return (
     <div className="grid gap-3 lg:grid-cols-2">
@@ -189,7 +195,7 @@ export function CategoryList({
             </p>
             <div className="text-[11px] text-gray-500">
               <p>
-                Linked to:{" "}
+                {i18n("Linked to:")}{" "}
                 <span className="font-semibold text-brand-black">
                   {banner.category.name || banner.categoryId}
                 </span>
@@ -203,7 +209,7 @@ export function CategoryList({
                 }
                 className="mt-1 inline-flex max-w-full items-center gap-1 truncate font-mono font-semibold text-brand-red hover:underline"
               >
-                Storefront →{" "}
+                {i18n("Storefront →")}{" "}
                 {banner.link ?? categoryBannerHref(banner.category.path)}
               </Link>
             </div>
@@ -232,7 +238,9 @@ export function TopList({
   onEdit: (banner: TopBannerRow) => void;
   onDelete: (banner: TopBannerRow) => void;
 }) {
-  if (rows.length === 0) return <EmptyState label="No top strip slides yet." />;
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminBannersComponentsBannerLists");
+  if (rows.length === 0) return <EmptyState label={i18n("No top strip slides yet.")} />;
 
   return (
     <div className="grid gap-3 lg:grid-cols-2">
@@ -277,12 +285,12 @@ export function TopList({
           </div>
           <div className="space-y-2 p-4">
             <p className="text-[11px] text-gray-400">
-              Position{" "}
+              {i18n("Position")}{" "}
               <span className="font-semibold text-brand-black">
                 #{banner.position}
               </span>
               <span className="mx-2">·</span>
-              Created {formatDate(banner.createdAt)}
+              {i18n("Created")}{" "}{formatDate(banner.createdAt, locale)}
             </p>
             <RowFooter
               busyId={busyId}
@@ -309,7 +317,8 @@ export function DealList({
   onEdit: (banner: DealBannerRow) => void;
   onDelete: (banner: DealBannerRow) => void;
 }) {
-  if (rows.length === 0) return <EmptyState label="No deal banners yet." />;
+  const i18n = useInterfaceTranslations("AdminAdminBannersComponentsBannerLists");
+  if (rows.length === 0) return <EmptyState label={i18n("No deal banners yet.")} />;
 
   return (
     <div className="grid gap-3 lg:grid-cols-3">
@@ -353,7 +362,7 @@ export function DealList({
             <p className="text-[11px] text-gray-400">
               <span className="font-mono">{banner.bgClass}</span>
               <span className="mx-2">·</span>
-              Position {banner.position}
+              {i18n("Position")}{" "}{banner.position}
             </p>
             {banner.link && (
               <p className="truncate text-[11px] text-gray-400">
@@ -385,7 +394,8 @@ export function PromoList({
   onEdit: (banner: PromoBannerRow) => void;
   onDelete: (banner: PromoBannerRow) => void;
 }) {
-  if (rows.length === 0) return <EmptyState label="No promo banners yet." />;
+  const i18n = useInterfaceTranslations("AdminAdminBannersComponentsBannerLists");
+  if (rows.length === 0) return <EmptyState label={i18n("No promo banners yet.")} />;
 
   return (
     <div className="grid gap-3 lg:grid-cols-2">
@@ -419,7 +429,7 @@ export function PromoList({
               {banner.status}
             </span>
             <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center text-white">
-              <p className="text-xs font-medium opacity-80">SUPER SALE</p>
+              <p className="text-xs font-medium opacity-80">{i18n("SUPER SALE")}</p>
               <h3 className="text-2xl font-black drop-shadow">{banner.title}</h3>
               <p className="text-xl font-bold text-yellow-300">
                 {banner.subtitle}
@@ -433,7 +443,7 @@ export function PromoList({
             <p className="text-[11px] text-gray-400">
               <span className="font-mono">{banner.bgClass}</span>
               <span className="mx-2">·</span>
-              Position {banner.position}
+              {i18n("Position")}{" "}{banner.position}
               {banner.link && (
                 <>
                   <span className="mx-2">·</span>

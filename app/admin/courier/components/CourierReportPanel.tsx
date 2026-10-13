@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import Image from "next/image";
 import { PackageCheck, PackageX, Truck } from "lucide-react";
@@ -32,6 +36,8 @@ export default function CourierReportPanel({
 }: {
   report: CourierReport;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminCourierComponentsCourierReportPanel");
   const { totals } = report;
   const tone = riskToneFromRate(totals.successRate, totals.total);
 
@@ -42,8 +48,7 @@ export default function CourierReportPanel({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-              Courier history for
-            </p>
+              {i18n("Courier history for")}</p>
             <p className="text-lg font-bold text-gray-900">{report.phone}</p>
           </div>
           <span
@@ -57,20 +62,20 @@ export default function CourierReportPanel({
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-4">
-          <Stat label="Total parcels" value={totals.total.toLocaleString()} />
+          <Stat label={i18n("Total parcels")} value={totals.total.toLocaleString(locale)} />
           <Stat
-            label="Delivered"
-            value={totals.success.toLocaleString()}
+            label={i18n("Delivered")}
+            value={totals.success.toLocaleString(locale)}
             tone="good"
           />
           <Stat
-            label="Cancelled"
-            value={totals.cancel.toLocaleString()}
+            label={i18n("Cancelled")}
+            value={totals.cancel.toLocaleString(locale)}
             tone="bad"
           />
           <Stat
-            label="Success rate"
-            value={formatPercent(totals.successRate)}
+            label={i18n("Success rate")}
+            value={formatPercent(totals.successRate, locale)}
             tone={tone === "neutral" ? "neutral" : tone}
           />
         </div>
@@ -78,8 +83,8 @@ export default function CourierReportPanel({
         {totals.total > 0 && (
           <div className="mt-4">
             <div className="mb-1 flex justify-between text-xs text-gray-500">
-              <span>Delivered {formatPercent(totals.successRate)}</span>
-              <span>Cancelled {formatPercent(totals.cancelRate)}</span>
+              <span>{i18n("Delivered")}{" "}{formatPercent(totals.successRate, locale)}</span>
+              <span>{i18n("Cancelled")}{" "}{formatPercent(totals.cancelRate, locale)}</span>
             </div>
             <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
               <div
@@ -98,8 +103,7 @@ export default function CourierReportPanel({
       {/* Per-courier breakdown */}
       {report.couriers.length === 0 ? (
         <div className="rounded-2xl border border-brand-border bg-white p-6 text-center text-sm text-gray-600 shadow-sm">
-          No courier-level breakdown is available for this number.
-        </div>
+          {i18n("No courier-level breakdown is available for this number.")}</div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {report.couriers.map((courier) => {
@@ -152,18 +156,18 @@ export default function CourierReportPanel({
                 <div className="mt-3 grid grid-cols-3 gap-2 text-center">
                   <MiniStat
                     icon={<Truck className="h-3.5 w-3.5" />}
-                    label="Total"
+                    label={i18n("Total")}
                     value={courier.total}
                   />
                   <MiniStat
                     icon={<PackageCheck className="h-3.5 w-3.5" />}
-                    label="OK"
+                    label={i18n("OK")}
                     value={courier.success}
                     tone="text-emerald-600"
                   />
                   <MiniStat
                     icon={<PackageX className="h-3.5 w-3.5" />}
-                    label="Cancel"
+                    label={i18n("Cancel")}
                     value={courier.cancel}
                     tone="text-rose-600"
                   />
@@ -172,8 +176,8 @@ export default function CourierReportPanel({
                 {courier.total > 0 && (
                   <div className="mt-3">
                     <div className="mb-1 flex justify-between text-[11px] text-gray-500">
-                      <span>Success</span>
-                      <span>{formatPercent(courier.successRate)}</span>
+                      <span>{i18n("Success")}</span>
+                      <span>{formatPercent(courier.successRate, locale)}</span>
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
                       <div

@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { ChevronDown, Grid3x3, List, SlidersHorizontal } from "lucide-react";
 import {
@@ -53,6 +55,7 @@ export default function ProductToolbar({
   sidebarOpen,
   onToggleSidebar,
 }: Props) {
+  const i18n = useInterfaceTranslations("InterfaceProductsComponentsProductToolbar");
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-brand-border bg-white px-3 py-2.5 shadow-sm transition-shadow duration-300 hover:shadow-md sm:flex-nowrap sm:px-4">
       <div className="flex min-w-0 items-center gap-2">
@@ -64,8 +67,7 @@ export default function ProductToolbar({
           className="h-10 bg-brand-light-bg text-brand-black transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-border active:translate-y-0 sm:h-7 lg:hidden"
         >
           <SlidersHorizontal className="size-4" />
-          Filters
-          {activeFilterCount > 0 && (
+          {i18n("Filters")}{activeFilterCount > 0 && (
             <span className="rounded-full bg-brand-red px-1.5 py-0.5 text-[10px] leading-none text-white">
               {activeFilterCount}
             </span>
@@ -77,7 +79,7 @@ export default function ProductToolbar({
           onClick={onToggleSidebar}
           variant="secondary"
           size="sm"
-          aria-label={sidebarOpen ? "Hide filters" : "Show filters"}
+          aria-label={sidebarOpen ? i18n("Hide filters") : i18n("Show filters")}
           aria-pressed={sidebarOpen}
           className="hidden bg-brand-light-bg text-brand-black transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-border active:translate-y-0 lg:flex"
         >
@@ -87,20 +89,17 @@ export default function ProductToolbar({
               sidebarOpen ? "rotate-0" : "rotate-180",
             )}
           />
-          {sidebarOpen ? "Hide Filters" : "Show Filters"}
+          {sidebarOpen ? i18n("Hide Filters") : i18n("Show Filters")}
         </Button>
 
         <p className="hidden text-xs text-gray-600 sm:block sm:text-sm">
-          Showing <span className="font-semibold text-gray-900">{resultsCount}</span>{" "}
-          of <span className="font-semibold text-gray-900">{totalCount}</span>
+          {i18n("Showing {shown, number} of {total, number}", { shown: resultsCount, total: totalCount })}
         </p>
         <p className="min-w-0 truncate text-xs text-gray-600 sm:hidden">
-          <span className="font-semibold text-gray-900">{totalCount}</span>{" "}
-          results
-        </p>
+          {i18n("{count, plural, one {# result} other {# results}}", { count: totalCount })}</p>
       </div>
 
-      <div className="ml-auto flex min-w-0 items-center gap-2">
+      <div className="ms-auto flex min-w-0 items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -109,8 +108,8 @@ export default function ProductToolbar({
               size="sm"
               className="group h-10 max-w-full bg-brand-light-bg text-brand-black transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand-light-bg hover:text-brand-red active:translate-y-0 data-[state=open]:bg-brand-light-bg data-[state=open]:text-brand-red sm:h-7"
             >
-              <span className="hidden sm:inline">Sort:</span>
-              <span className="font-semibold">{SORT_LABELS[sort]}</span>
+              <span className="hidden sm:inline">{i18n("Sort:")}</span>
+              <span className="font-semibold">{i18n(SORT_LABELS[sort])}</span>
               <ChevronDown className="size-3.5 transition-transform duration-300 group-data-[state=open]:rotate-180" />
             </Button>
           </DropdownMenuTrigger>
@@ -123,7 +122,7 @@ export default function ProductToolbar({
             >
               {SORT_OPTIONS.map((opt) => (
                 <DropdownMenuRadioItem key={opt} value={opt}>
-                  {SORT_LABELS[opt]}
+                  {i18n(SORT_LABELS[opt])}
                 </DropdownMenuRadioItem>
               ))}
             </DropdownMenuRadioGroup>
@@ -131,12 +130,11 @@ export default function ProductToolbar({
         </DropdownMenu>
 
         <label className="hidden items-center gap-1 text-xs text-gray-500 md:flex">
-          Show
-          <select
+          {i18n("Show")}<select
             value={pageSize}
             onChange={(event) => onPageSizeChange(Number(event.target.value))}
             className="h-8 rounded-md border border-gray-200 bg-white px-1.5 text-xs font-semibold text-gray-800 outline-none focus:border-brand-red"
-            aria-label="Products per page"
+            aria-label={i18n("Products per page")}
           >
             {[12, 24, 48].map((size) => (
               <option key={size} value={size}>
@@ -150,14 +148,14 @@ export default function ProductToolbar({
           <ViewToggle
             active={viewMode === "grid"}
             onClick={() => onViewModeChange("grid")}
-            label="Grid view"
+            label={i18n("Grid view")}
           >
             <Grid3x3 className="size-4" />
           </ViewToggle>
           <ViewToggle
             active={viewMode === "list"}
             onClick={() => onViewModeChange("list")}
-            label="List view"
+            label={i18n("List view")}
           >
             <List className="size-4" />
           </ViewToggle>
@@ -178,11 +176,12 @@ function ViewToggle({
   label: string;
   children: React.ReactNode;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceProductsComponentsProductToolbar");
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label={label}
+      aria-label={i18n(label)}
       aria-pressed={active}
       className={cn(
         "rounded-md p-1.5 transition-all duration-200",

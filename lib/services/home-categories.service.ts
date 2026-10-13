@@ -4,6 +4,8 @@ import { unstable_cache } from "next/cache";
 
 import { catalogCacheTags } from "@/lib/cache/catalog-tags";
 import { prisma } from "@/lib/db/prisma";
+import { getRequestLocale } from "@/lib/i18n/server";
+import { localizeBannerSnapshots, localizeCategorySnapshots } from "@/lib/translations/public";
 
 export type HomeCategoryProduct = {
   id: string;
@@ -297,12 +299,17 @@ const getCachedHomeCategories = unstable_cache(
   },
 );
 
-export function getHomeCategories(options?: {
+export async function getHomeCategories(options?: {
   categoryLimit?: number;
   productsPerCategory?: number;
 }) {
-  return getCachedHomeCategories(
+  const original=await getCachedHomeCategories(
     options?.categoryLimit ?? DEFAULT_CATEGORY_LIMIT,
     options?.productsPerCategory ?? DEFAULT_PRODUCTS_PER_CATEGORY,
   );
+  const locale=await getRequestLocale();
+  const categories=await localizeCategorySnapshots(original,locale);
+  const banners=await localizeBannerSnapshots(original.flatMap(category=>category.categoryBanner?[category.categoryBanner]:[]),locale);
+  const byId=new Map(banners.map(banner=>[banner.id,banner]));
+  return categories.map(category=>({...category,categoryBanner:category.categoryBanner?byId.get(category.categoryBanner.id)??category.categoryBanner:null}));
 }

@@ -1,10 +1,11 @@
+
 import type { Metadata } from "next";
 
 import PolicyContactBlock from "@/components/policy/PolicyContactBlock";
 import PolicyLayout from "@/components/policy/PolicyLayout";
 import PolicyList from "@/components/policy/PolicyList";
 import PolicySection from "@/components/policy/PolicySection";
-import { buildMetadata } from "@/lib/seo/metadata";
+import { buildLocalizedMetadata } from "@/lib/seo/localized-metadata";
 import { siteConfig } from "@/lib/seo/site";
 
 export const revalidate = 21600;
@@ -19,30 +20,34 @@ export const revalidate = 21600;
  * in production, as legal requirements vary by jurisdiction.
  */
 
-export const metadata: Metadata = buildMetadata({
+export async function generateMetadata(): Promise<Metadata> {
+  return buildLocalizedMetadata({
   title: "Terms & Conditions",
   description: `Read the Terms & Conditions that govern your use of ${siteConfig.name}, including ordering, payment, delivery, and customer responsibilities.`,
   path: "/terms-and-conditions",
   keywords: ["terms and conditions", "terms of service", "user agreement", siteConfig.name],
-});
+}, "InterfaceTermsAndConditionsPage");
+}
 
 const LAST_UPDATED = "2026-08-23";
 
 export default function TermsAndConditionsPage() {
+  // Contractual content stays in its original language until a reviewed translation is published.
+  const i18n = (source: string) => source;
   return (
     <PolicyLayout
-      title="Terms & Conditions"
+      title={i18n("Terms & Conditions")}
       description={`Welcome to ${siteConfig.name}. These Terms & Conditions govern your access to and use of our website, products, and services. Please read them carefully before placing an order.`}
       lastUpdated={LAST_UPDATED}
       currentPath="/terms-and-conditions"
     >
       <PolicySection
-        title="1. Acceptance of Terms"
+        title={i18n("1. Acceptance of Terms")}
         intro={`By accessing, browsing, or placing an order on ${siteConfig.name} ("the Site"), you agree to be bound by these Terms & Conditions and all applicable laws and regulations. If you do not agree, please do not use the Site.`}
       />
 
       <PolicySection
-        title="2. Website Usage Rules"
+        title={i18n("2. Website Usage Rules")}
         intro="When using BangBuy, you agree to behave responsibly and lawfully."
       >
         <PolicyList
@@ -56,13 +61,11 @@ export default function TermsAndConditionsPage() {
           ]}
         />
         <p>
-          We reserve the right to suspend or terminate access to any user who violates these rules,
-          without prior notice where necessary.
-        </p>
+          {i18n("We reserve the right to suspend or terminate access to any user who violates these rules, without prior notice where necessary.")}</p>
       </PolicySection>
 
       <PolicySection
-        title="3. Account Responsibility"
+        title={i18n("3. Account Responsibility")}
         intro="You may create an account using email & password or by signing in with Google."
       >
         <PolicyList
@@ -75,13 +78,11 @@ export default function TermsAndConditionsPage() {
           ]}
         />
         <p>
-          Guest users who place orders without registering are also responsible for the accuracy of
-          the contact, shipping, and order information they provide.
-        </p>
+          {i18n("Guest users who place orders without registering are also responsible for the accuracy of the contact, shipping, and order information they provide.")}</p>
       </PolicySection>
 
       <PolicySection
-        title="4. Product Information and Pricing"
+        title={i18n("4. Product Information and Pricing")}
         intro="We strive to display accurate product details, images, and prices, but errors can occasionally occur."
       >
         <PolicyList
@@ -96,7 +97,7 @@ export default function TermsAndConditionsPage() {
       </PolicySection>
 
       <PolicySection
-        title="5. Order Placement"
+        title={i18n("5. Order Placement")}
         intro="Placing an order is a two-step process."
       >
         <PolicyList
@@ -110,46 +111,34 @@ export default function TermsAndConditionsPage() {
       </PolicySection>
 
       <PolicySection
-        title="6. Order Cancellation"
+        title={i18n("6. Order Cancellation")}
         intro="You may request to cancel an order before it has been shipped."
       >
         <p>
-          Once your order has been handed over to our courier partner, it cannot be cancelled but may
-          still be eligible for return under our{" "}
+          {i18n("Once your order has been handed over to our courier partner, it cannot be cancelled but may still be eligible for return under our")}{" "}
           <a href="/return-policy" className="font-semibold text-brand-red hover:underline">
-            Return Policy
-          </a>
-          . We also reserve the right to cancel orders at our discretion, in which case any amount
-          already paid will be refunded.
-        </p>
+            {i18n("Return Policy")}</a>
+          {i18n(". We also reserve the right to cancel orders at our discretion, in which case any amount already paid will be refunded.")}</p>
       </PolicySection>
 
       <PolicySection
-        title="7. Payment Terms"
+        title={i18n("7. Payment Terms")}
         intro="We currently support the following payment options:"
       >
         <PolicyList
           items={[
             <>
-              <span className="font-semibold text-gray-900">Cash on Delivery (COD):</span> Pay in cash
-              when your order is delivered to your address. Please keep the exact amount ready when
-              possible to make delivery smooth for you and our courier partners.
-            </>,
+              <span className="font-semibold text-gray-900">{"Cash on Delivery (COD):"}</span> {"Pay in cash when your order is delivered to your address. Please keep the exact amount ready when possible to make delivery smooth for you and our courier partners."}</>,
             <>
-              <span className="font-semibold text-gray-900">Pay Now (Coming Soon):</span> Online
-              payment options are being developed and will be enabled soon. Until then, the Pay Now
-              option may appear on the Site but is not yet active for placing orders.
-            </>,
+              <span className="font-semibold text-gray-900">{"Pay Now (Coming Soon):"}</span> {"Online payment options are being developed and will be enabled soon. Until then, the Pay Now option may appear on the Site but is not yet active for placing orders."}</>,
           ]}
         />
         <p>
-          By choosing a payment method at checkout, you agree to honor the corresponding terms,
-          including paying the full order amount and any applicable delivery charges.
-        </p>
+          {i18n("By choosing a payment method at checkout, you agree to honor the corresponding terms, including paying the full order amount and any applicable delivery charges.")}</p>
       </PolicySection>
 
       <PolicySection
-        title="8. Cash on Delivery (COD) Terms"
+        title={i18n("8. Cash on Delivery (COD) Terms")}
         intro="To keep COD reliable for everyone, please note the following:"
       >
         <PolicyList
@@ -163,7 +152,7 @@ export default function TermsAndConditionsPage() {
       </PolicySection>
 
       <PolicySection
-        title="9. Shipping and Delivery"
+        title={i18n("9. Shipping and Delivery")}
         intro="We work with trusted courier partners to deliver your orders safely and on time."
       >
         <PolicyList
@@ -178,21 +167,18 @@ export default function TermsAndConditionsPage() {
       </PolicySection>
 
       <PolicySection
-        title="10. Returns and Refunds"
+        title={i18n("10. Returns and Refunds")}
         intro="Returns, exchanges, and refunds are governed by our Return Policy."
       >
         <p>
-          Please review the full{" "}
+          {i18n("Please review the full")}{" "}
           <a href="/return-policy" className="font-semibold text-brand-red hover:underline">
-            Return Policy
-          </a>{" "}
-          for eligibility, time limits, non-returnable items, and the refund process. By placing an
-          order, you agree to those terms in addition to these Terms & Conditions.
-        </p>
+            {i18n("Return Policy")}</a>{" "}
+          {i18n("for eligibility, time limits, non-returnable items, and the refund process. By placing an order, you agree to those terms in addition to these Terms & Conditions.")}</p>
       </PolicySection>
 
       <PolicySection
-        title="11. Reviews and User Content"
+        title={i18n("11. Reviews and User Content")}
         intro="You may submit reviews, ratings, and other content related to products."
       >
         <PolicyList
@@ -207,76 +193,62 @@ export default function TermsAndConditionsPage() {
       </PolicySection>
 
       <PolicySection
-        title="12. Intellectual Property"
+        title={i18n("12. Intellectual Property")}
         intro="All content on the Site — including logos, designs, text, images, and software — is owned by or licensed to BangBuy."
       >
         <p>
-          You may not copy, reproduce, distribute, or create derivative works from any part of the
-          Site without our prior written permission, except for personal, non-commercial use as
-          intended by the platform.
-        </p>
+          {i18n("You may not copy, reproduce, distribute, or create derivative works from any part of the Site without our prior written permission, except for personal, non-commercial use as intended by the platform.")}</p>
       </PolicySection>
 
       <PolicySection
-        title="13. Limitation of Liability"
+        title={i18n("13. Limitation of Liability")}
         intro="To the maximum extent permitted by law:"
       >
         <PolicyList
           items={[
-            'BangBuy is provided on an "as is" and "as available" basis',
+            "BangBuy is provided on an \"as is\" and \"as available\" basis",
             "We do not guarantee uninterrupted, error-free, or completely secure operation of the Site",
             "We are not liable for indirect, incidental, or consequential damages arising from your use of the Site",
             "Our total liability for any claim related to an order shall not exceed the amount paid for that order",
           ]}
         />
         <p>
-          Nothing in these terms excludes any liability that cannot be excluded under applicable law,
-          including your statutory consumer rights.
-        </p>
+          {i18n("Nothing in these terms excludes any liability that cannot be excluded under applicable law, including your statutory consumer rights.")}</p>
       </PolicySection>
 
       <PolicySection
-        title="14. Privacy"
+        title={i18n("14. Privacy")}
         intro="Your use of BangBuy is also governed by our Privacy Policy."
       >
         <p>
-          Please review our{" "}
+          {i18n("Please review our")}{" "}
           <a href="/privacy-policy" className="font-semibold text-brand-red hover:underline">
-            Privacy Policy
-          </a>{" "}
-          to understand how we collect, use, and protect your information.
-        </p>
+            {i18n("Privacy Policy")}</a>{" "}
+          {i18n("to understand how we collect, use, and protect your information.")}</p>
       </PolicySection>
 
       <PolicySection
-        title="15. Changes to These Terms"
+        title={i18n("15. Changes to These Terms")}
         intro="We may update these Terms & Conditions from time to time to reflect changes in our services, technology, or applicable laws."
       >
         <p>
-          When we make material changes, we will update the &quot;Last updated&quot; date at the top
-          of this page. Your continued use of the Site after changes are posted constitutes
-          acceptance of the updated terms.
-        </p>
+          {i18n("When we make material changes, we will update the \"Last updated\" date at the top of this page. Your continued use of the Site after changes are posted constitutes acceptance of the updated terms.")}</p>
       </PolicySection>
 
       <PolicySection
-        title="16. Governing Law"
+        title={i18n("16. Governing Law")}
         intro="These Terms & Conditions are governed by the laws of the People's Republic of Bangladesh, without regard to its conflict-of-laws principles. Any disputes arising from these terms shall be subject to the jurisdiction of the competent courts located in Hong Kong, China"
       />
 
       <PolicySection
-        title="17. Contact Information"
+        title={i18n("17. Contact Information")}
         intro="If you have any questions about these Terms & Conditions, please reach out to us."
       >
         <div className="space-y-1">
           <p>
-            <span className="font-semibold text-gray-900">Company name:</span> Xianhao Yida (Hong
-            Kong) Limited
-          </p>
+            <span className="font-semibold text-gray-900">{i18n("Company name:")}</span> {i18n("Xianhao Yida (Hong Kong) Limited")}</p>
           <p>
-            <span className="font-semibold text-gray-900">Company address:</span> S027, 2/F,
-            Capital Plaza, 61-65 Chatham Rd S, TST, Hong Kong
-          </p>
+            <span className="font-semibold text-gray-900">{i18n("Company address:")}</span> {i18n("S027, 2/F, Capital Plaza, 61-65 Chatham Rd S, TST, Hong Kong")}</p>
         </div>
         <PolicyContactBlock />
       </PolicySection>

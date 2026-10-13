@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Plus, RotateCcw, Search, X } from "lucide-react";
 
@@ -38,6 +40,7 @@ export default function ReviewsToolbar({
   onToggleAddForm: () => void;
   onRefresh: () => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminReviewsComponentsReviewsToolbar");
   return (
     <div className="rounded-2xl border border-brand-border bg-brand-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -48,8 +51,8 @@ export default function ReviewsToolbar({
               type="text"
               value={query}
               onChange={(event) => onQueryChange(event.target.value)}
-              placeholder="Search by author, phone, product, title, comment..."
-              className="h-10 w-full rounded-xl border border-brand-border pl-9 pr-3 text-sm outline-none transition focus:border-brand-red"
+              placeholder={i18n("Search by author, phone, product, title, comment...")}
+              className="h-10 w-full rounded-xl border border-brand-border ps-9 pe-3 text-sm outline-none transition focus:border-brand-red"
             />
           </label>
 
@@ -58,7 +61,7 @@ export default function ReviewsToolbar({
             onChange={(event) => onSourceChange(event.target.value as SourceFilter)}
             className="h-10 rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
           >
-            <option value="ALL">All sources</option>
+            <option value="ALL">{i18n("All sources")}</option>
             {REVIEW_SOURCE_VALUES.map((source) => (
               <option key={source} value={source}>
                 {source}
@@ -76,10 +79,10 @@ export default function ReviewsToolbar({
             }}
             className="h-10 rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
           >
-            <option value="ALL">All ratings</option>
+            <option value="ALL">{i18n("All ratings")}</option>
             {[5, 4, 3, 2, 1].map((star) => (
               <option key={star} value={star}>
-                {star} star{star === 1 ? "" : "s"}
+                {i18n("{count, plural, one {# star} other {# stars}}", { count: star })}
               </option>
             ))}
           </select>
@@ -92,7 +95,7 @@ export default function ReviewsToolbar({
             className="inline-flex h-10 items-center gap-2 rounded-xl bg-brand-red px-3 text-sm font-semibold text-brand-white shadow-sm transition hover:bg-brand-red-hover"
           >
             {showAddForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-            {showAddForm ? "Close" : "Add review"}
+            {showAddForm ? i18n("Close") : i18n("Add review")}
           </button>
           <button
             type="button"
@@ -106,20 +109,18 @@ export default function ReviewsToolbar({
             ) : (
               <RotateCcw className="h-4 w-4" />
             )}
-            {isLoading ? "Refreshing..." : "Refresh"}
+            {isLoading ? i18n("Refreshing...") : i18n("Refresh")}
           </button>
         </div>
       </div>
 
       <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
         <span>
-          {visibleCount} / {totalCount} reviews
-        </span>
+          {visibleCount} / {totalCount} {i18n("reviews")}</span>
         {isLoading && (
           <span className="inline-flex items-center gap-1.5">
             <LoadingSpinner decorative size="xs" />
-            Syncing reviews...
-          </span>
+            {i18n("Syncing reviews...")}</span>
         )}
       </div>
     </div>

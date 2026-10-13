@@ -1,3 +1,5 @@
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 import type { SpecificationTableBlock } from "@/lib/types/product-description-blocks";
 
 export default function SpecificationTableBlockView({
@@ -5,6 +7,7 @@ export default function SpecificationTableBlockView({
 }: {
   block: SpecificationTableBlock;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceProductProductDescriptionBlocksSpecificationTableBlockView");
   const visibleRows = block.rows.filter(
     (row) => row.label.trim() && row.value.trim(),
   );
@@ -26,9 +29,9 @@ export default function SpecificationTableBlockView({
         </h2>
       )}
       <div className="max-w-full overflow-x-auto rounded-2xl border border-brand-border">
-        <table className="w-full border-collapse text-left text-sm">
+        <table className="w-full border-collapse text-start text-sm">
           <caption className="sr-only">
-            {block.heading?.trim() ?? "Specification table"}
+            {block.heading?.trim() ?? i18n("Specification table")}
           </caption>
           <tbody className="divide-y divide-gray-100">
             {visibleRows.map((row) => (
@@ -37,7 +40,7 @@ export default function SpecificationTableBlockView({
                   scope="row"
                   className="w-2/5 px-4 py-3 align-top font-semibold text-gray-900 [overflow-wrap:anywhere] sm:px-5"
                 >
-                  {row.label}
+                  {i18n(row.label)}
                 </th>
                 <td className="px-4 py-3 text-gray-600 [overflow-wrap:anywhere] sm:px-5">
                   {row.value}

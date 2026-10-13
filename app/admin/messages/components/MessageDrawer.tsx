@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Archive, Inbox, MailOpen, Trash2, X } from "lucide-react";
 
@@ -25,6 +29,8 @@ export default function MessageDrawer({
   onDelete: () => void;
   isBusy: boolean;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminMessagesComponentsMessageDrawer");
   return (
     <div
       className="fixed inset-0 z-70 flex items-end justify-end bg-gray-900/40 backdrop-blur-sm sm:items-center sm:justify-center"
@@ -44,13 +50,13 @@ export default function MessageDrawer({
               {message.phone ? ` · ${message.phone}` : ""}
             </p>
             <p className="mt-1 text-[11px] uppercase tracking-wide text-brand-text-muted">
-              Received {formatDateTime(message.createdAt)}
+              {i18n("Received")}{" "}{formatDateTime(message.createdAt, locale)}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={i18n("Close")}
             className="rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-white"
           >
             <X className="h-5 w-5" />
@@ -78,7 +84,7 @@ export default function MessageDrawer({
               busy={isBusy}
               onClick={() => onSetStatus("READ")}
               icon={<MailOpen className="h-3.5 w-3.5" />}
-              label="Mark as read"
+              label={i18n("Mark as read")}
             />
           )}
           {message.status !== "ARCHIVED" && (
@@ -87,7 +93,7 @@ export default function MessageDrawer({
               busy={isBusy}
               onClick={() => onSetStatus("ARCHIVED")}
               icon={<Archive className="h-3.5 w-3.5" />}
-              label="Archive"
+              label={i18n("Archive")}
             />
           )}
           {message.status === "ARCHIVED" && (
@@ -96,7 +102,7 @@ export default function MessageDrawer({
               busy={isBusy}
               onClick={() => onSetStatus("NEW")}
               icon={<Inbox className="h-3.5 w-3.5" />}
-              label="Move to inbox"
+              label={i18n("Move to inbox")}
             />
           )}
           <MessageActionButton
@@ -104,7 +110,7 @@ export default function MessageDrawer({
             busy={isBusy}
             onClick={onDelete}
             icon={<Trash2 className="h-3.5 w-3.5" />}
-            label="Delete"
+            label={i18n("Delete")}
           />
         </div>
       </div>

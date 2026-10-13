@@ -1,3 +1,4 @@
+import LocaleSection from "@/components/i18n/LocaleSection";
 import type { Metadata } from "next";
 
 import { noIndexMetadata } from "@/lib/seo/metadata";
@@ -18,5 +19,5 @@ export default function CartLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return <LocaleSection pathname="/cart">{children}</LocaleSection>;
 }

@@ -16,6 +16,12 @@ import { getActiveCategoryTree } from "@/lib/services/category.service";
 import { getRequestCurrencyContext } from "@/lib/currency/request-currency";
 
 import Providers from "./providers";
+import IntlProvider from "@/components/i18n/IntlProvider";
+import { getPublishedLanguages, getRequestLocale, getRequestPath } from "@/lib/i18n/server";
+import { loadMessages, selectClientMessages } from "@/lib/i18n/catalogs";
+import { getLocaleDefinition } from "@/lib/i18n/registry";
+import { getTranslations } from "next-intl/server";
+import { buildLocalizedMetadata } from "@/lib/seo/localized-metadata";
 
 // The request-scoped currency context depends on trusted headers/cookies.
 // Canonical catalog queries retain their own data caches, while the HTML/RSC
@@ -32,7 +38,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
   title: {
     default: "Shop Industrial Automation, Electronics & More Online",
@@ -75,6 +81,12 @@ export const metadata: Metadata = {
   },
 };
 
+export async function generateMetadata(): Promise<Metadata> {
+  const [path, t] = await Promise.all([getRequestPath(), getTranslations("Seo")]);
+  const localized = await buildLocalizedMetadata({ title: siteConfig.name, description: t("siteDescription"), path }, "Seo");
+  return { ...baseMetadata, ...localized, metadataBase: new URL(siteConfig.url), title: { default: siteConfig.name, template: `%s | ${siteConfig.name}` } };
+}
+
 export const viewport: Viewport = {
   themeColor: "#8140DF",
   width: "device-width",
@@ -98,10 +110,15 @@ export default async function RootLayout({
 
   const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim() ?? "";
   const isMetaPixelEnabled = /^\d+$/.test(metaPixelId);
+  const [locale, pathname, publishedLanguages] = await Promise.all([getRequestLocale(), getRequestPath(), getPublishedLanguages()]);
+  const messages = selectClientMessages(await loadMessages(locale), pathname);
+  const languages = publishedLanguages.map(({ code, englishName, nativeName, direction }) => ({ code, englishName, nativeName, direction }));
+  const seo = await getTranslations("Seo");
 
   return (
     <html
-      lang="en"
+      lang={locale}
+      dir={getLocaleDefinition(locale).direction}
       className={`${geistSans.className} ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       {/* Browser extensions add attributes to <body> before React hydrates. */}
@@ -118,16 +135,18 @@ export default async function RootLayout({
             />
           </>
         )}
-        <JsonLd data={[organizationJsonLd(), websiteJsonLd()]} />
+        <JsonLd data={[organizationJsonLd(seo("siteDescription")), websiteJsonLd(locale, seo("siteDescription"))]} />
+        <IntlProvider locale={locale} messages={messages}>
         <Providers initialCurrencyContext={currencyContext}>
           <SiteChrome
             banner={<TopBanner />}
-            navbar={<Navbar categories={categories} />}
+            navbar={<Navbar categories={categories} languages={languages} />}
             footer={<Footer />}
           >
             {children}
           </SiteChrome>
         </Providers>
+        </IntlProvider>
       </body>
     </html>
   );

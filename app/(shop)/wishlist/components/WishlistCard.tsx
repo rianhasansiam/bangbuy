@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import {
   Heart,
@@ -10,7 +14,7 @@ import {
   Check,
 } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/lib/i18n/navigation";
 
 import { CurrencyAmount } from "@/components/currency/CurrencyAmount";
 import { cn } from "@/lib/utils";
@@ -47,6 +51,8 @@ export default function WishlistCard({
   onMoveToCart,
   onShare,
 }: WishlistCardProps) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("InterfaceWishlistComponentsWishlistCard");
   const discount = item.originalPrice
     ? Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)
     : 0;
@@ -67,7 +73,7 @@ export default function WishlistCard({
         <SelectCheckbox
           selected={selected}
           onToggle={() => onToggleSelect(item.id)}
-          className="absolute left-5 top-5 z-10 sm:static"
+          className="absolute start-5 top-5 z-10 sm:static"
         />
 
         <Link
@@ -83,8 +89,7 @@ export default function WishlistCard({
           />
           {!item.inStock && (
             <span className="absolute inset-0 grid place-items-center bg-black/40 text-[11px] font-semibold uppercase tracking-wide text-white">
-              Out of stock
-            </span>
+              {i18n("Out of stock")}</span>
           )}
         </Link>
 
@@ -106,9 +111,9 @@ export default function WishlistCard({
 
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500 sm:flex-nowrap">
             <RatingStars rating={item.rating} />
-            <span>({item.reviewCount.toLocaleString()})</span>
+            <span>({item.reviewCount.toLocaleString(locale)})</span>
             <span aria-hidden>•</span>
-            <span>Saved {timeAgo(item.addedAt)}</span>
+            <span>{i18n("Saved")}{timeAgo(item.addedAt)}</span>
           </div>
 
           <div className="mt-auto flex flex-wrap items-end justify-between gap-3 pt-3">
@@ -158,14 +163,14 @@ export default function WishlistCard({
           />
           <div className="flex flex-col gap-1.5">
             <IconAction
-              label="Share"
+              label={i18n("Share")}
               onClick={() => onShare(item.id)}
               tone="neutral"
             >
               <Share2 className="h-4 w-4" />
             </IconAction>
             <IconAction
-              label="Remove from wishlist"
+              label={i18n("Remove from wishlist")}
               onClick={() => onRemove(item.id)}
               tone="danger"
             >
@@ -175,7 +180,7 @@ export default function WishlistCard({
         </div>
 
         {/* Badges (left) */}
-        <div className="pointer-events-none absolute left-2.5 top-16 flex max-w-[calc(100%-1.25rem)] flex-col gap-1.5">
+        <div className="pointer-events-none absolute start-2.5 top-16 flex max-w-[calc(100%-1.25rem)] flex-col gap-1.5">
           {item.badge && (
             <span className="block max-w-full truncate rounded-full bg-brand-red px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-brand-white shadow-md">
               {item.badge}
@@ -189,10 +194,10 @@ export default function WishlistCard({
         </div>
 
         {hasPriceDrop && (
-          <div className="absolute bottom-2.5 left-2.5 inline-flex max-w-[calc(100%-1.25rem)] items-center gap-1.5 rounded-full bg-emerald-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-md">
+          <div className="absolute bottom-2.5 start-2.5 inline-flex max-w-[calc(100%-1.25rem)] items-center gap-1.5 rounded-full bg-emerald-500 px-2.5 py-1 text-[11px] font-bold text-white shadow-md">
             <TrendingDown className="h-3 w-3 shrink-0" />
             <span className="min-w-0 truncate">
-              <span className="hidden min-[360px]:inline">Dropped </span>
+              <span className="hidden min-[360px]:inline">{i18n("Dropped")}</span>
               <CurrencyAmount amountBDT={item.priceDropFromAdded ?? 0} />
             </span>
             <span className="absolute inset-0 -z-10 animate-ping rounded-full bg-emerald-400 opacity-60" />
@@ -201,8 +206,7 @@ export default function WishlistCard({
 
         {!item.inStock && (
           <div className="absolute inset-x-0 bottom-0 bg-black/55 px-3 py-1.5 text-center text-[11px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
-            Out of stock
-          </div>
+            {i18n("Out of stock")}</div>
         )}
       </div>
 
@@ -220,14 +224,14 @@ export default function WishlistCard({
         <div className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[11px] text-gray-500">
           <RatingStars rating={item.rating} />
           <span className="min-w-0 truncate">
-            ({item.reviewCount.toLocaleString()})
+            ({item.reviewCount.toLocaleString(locale)})
           </span>
         </div>
 
         <div className="mt-auto pt-3">
           <PriceBlock item={item} hasPriceDrop={hasPriceDrop} />
           <p className="mt-1 text-[11px] text-gray-400">
-            Saved {timeAgo(item.addedAt)}
+            {i18n("Saved")}{timeAgo(item.addedAt)}
           </p>
 
           <button
@@ -244,11 +248,11 @@ export default function WishlistCard({
             <ShoppingCart className="h-4 w-4" />
             {item.inStock ? (
               <>
-                <span className="min-[360px]:hidden">Add</span>
-                <span className="hidden min-[360px]:inline">Move to cart</span>
+                <span className="min-[360px]:hidden">{i18n("Add")}</span>
+                <span className="hidden min-[360px]:inline">{i18n("Move to cart")}</span>
               </>
             ) : (
-              "Notify me"
+              i18n("Notify me")
             )}
           </button>
         </div>
@@ -289,6 +293,7 @@ function PriceBlock({
   item: WishlistItem;
   hasPriceDrop: boolean;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceWishlistComponentsWishlistCard");
   return (
     <div className="flex max-w-full flex-wrap items-baseline gap-x-2 gap-y-1">
       <span className="max-w-full text-base font-extrabold text-brand-red [overflow-wrap:anywhere] sm:text-lg">
@@ -302,8 +307,7 @@ function PriceBlock({
       {hasPriceDrop && (
         <span className="inline-flex items-center gap-0.5 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
           <TrendingDown className="h-3 w-3" />
-          Drop
-        </span>
+          {i18n("Drop")}</span>
       )}
     </div>
   );
@@ -336,12 +340,13 @@ function SelectCheckbox({
   onToggle: () => void;
   className?: string;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceWishlistComponentsWishlistCard");
   return (
     <button
       type="button"
       onClick={onToggle}
       aria-pressed={selected}
-      aria-label={selected ? "Deselect item" : "Select item"}
+      aria-label={selected ? i18n("Deselect item") : i18n("Select item")}
       className={cn(
         "grid h-11 w-11 place-items-center rounded-xl border-2 backdrop-blur-md transition-all duration-200",
         selected
@@ -366,11 +371,12 @@ function IconAction({
   tone: "neutral" | "danger";
   children: React.ReactNode;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceWishlistComponentsWishlistCard");
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label={label}
+      aria-label={i18n(label)}
       className={cn(
         "grid h-11 w-11 place-items-center rounded-full bg-white/90 shadow-sm backdrop-blur-md transition-all duration-200 hover:scale-105 active:scale-95",
         tone === "danger"
@@ -394,12 +400,13 @@ function ActionButtons({
   onMoveToCart: () => void;
   onShare: () => void;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceWishlistComponentsWishlistCard");
   return (
     <div className="flex max-w-full flex-wrap items-center gap-2">
       <button
         type="button"
         onClick={onShare}
-        aria-label="Share"
+        aria-label={i18n("Share")}
         className="grid h-11 w-11 place-items-center rounded-xl border border-brand-border bg-brand-white text-gray-600 transition-colors hover:border-brand-red hover:bg-brand-light-bg hover:text-brand-red"
       >
         <Share2 className="h-4 w-4" />
@@ -407,7 +414,7 @@ function ActionButtons({
       <button
         type="button"
         onClick={onRemove}
-        aria-label="Remove from wishlist"
+        aria-label={i18n("Remove from wishlist")}
         className="grid h-11 w-11 place-items-center rounded-xl border border-rose-200 bg-rose-50 text-rose-600 transition-colors hover:bg-rose-100"
       >
         <Heart className="h-4 w-4 fill-current" />
@@ -426,11 +433,11 @@ function ActionButtons({
         <ShoppingCart className="h-4 w-4" />
         {inStock ? (
           <>
-            <span className="min-[380px]:hidden">Cart</span>
-            <span className="hidden min-[380px]:inline">Add to cart</span>
+            <span className="min-[380px]:hidden">{i18n("Cart")}</span>
+            <span className="hidden min-[380px]:inline">{i18n("Add to cart")}</span>
           </>
         ) : (
-          "Notify"
+          i18n("Notify")
         )}
       </button>
     </div>

@@ -1,10 +1,11 @@
+
 import type { Metadata } from "next";
 
 import PolicyContactBlock from "@/components/policy/PolicyContactBlock";
 import PolicyLayout from "@/components/policy/PolicyLayout";
 import PolicyList from "@/components/policy/PolicyList";
 import PolicySection from "@/components/policy/PolicySection";
-import { buildMetadata } from "@/lib/seo/metadata";
+import { buildLocalizedMetadata } from "@/lib/seo/localized-metadata";
 import { siteConfig } from "@/lib/seo/site";
 
 export const revalidate = 21600;
@@ -18,30 +19,34 @@ export const revalidate = 21600;
  * adapt the content to your jurisdiction before going to production.
  */
 
-export const metadata: Metadata = buildMetadata({
+export async function generateMetadata(): Promise<Metadata> {
+  return buildLocalizedMetadata({
   title: "Return Policy",
   description: `Learn about ${siteConfig.name}'s return and refund policy, including eligibility, time limits, and how to request a return or exchange.`,
   path: "/return-policy",
   keywords: ["return policy", "refund", "exchange", "returns", siteConfig.name],
-});
+}, "InterfaceReturnPolicyPage");
+}
 
 const LAST_UPDATED = "2026-06-03";
 
 export default function ReturnPolicyPage() {
+  // Contractual content stays in its original language until a reviewed translation is published.
+  const i18n = (source: string) => source;
   return (
     <PolicyLayout
-      title="Return Policy"
+      title={i18n("Return Policy")}
       description={`We want you to love every purchase from ${siteConfig.name}. If something isn't right, this policy explains how returns, exchanges, and refunds work.`}
       lastUpdated={LAST_UPDATED}
       currentPath="/return-policy"
     >
       <PolicySection
-        title="1. Overview"
+        title={i18n("1. Overview")}
         intro={`This Return Policy applies to all orders placed on ${siteConfig.name}. By placing an order, you agree to the terms set out below. Specific product categories may have additional rules, which will be noted on the product page or during checkout.`}
       />
 
       <PolicySection
-        title="2. Return Eligibility"
+        title={i18n("2. Return Eligibility")}
         intro="A product is eligible for return when all of the following conditions are met:"
       >
         <PolicyList
@@ -56,18 +61,15 @@ export default function ReturnPolicyPage() {
       </PolicySection>
 
       <PolicySection
-        title="3. Return Request Time Limit"
+        title={i18n("3. Return Request Time Limit")}
         intro="Return requests must be initiated within 7 (seven) days from the date of delivery."
       >
         <p>
-          Requests submitted after this window may not be accepted, except in cases of a verified
-          manufacturing defect or where required by applicable law. To start a return, please contact
-          our customer support team with your order ID and a brief description of the issue.
-        </p>
+          {i18n("Requests submitted after this window may not be accepted, except in cases of a verified manufacturing defect or where required by applicable law. To start a return, please contact our customer support team with your order ID and a brief description of the issue.")}</p>
       </PolicySection>
 
       <PolicySection
-        title="4. Product Condition Requirements"
+        title={i18n("4. Product Condition Requirements")}
         intro="To keep returns fair for everyone, returned items must arrive at our facility in resellable condition."
       >
         <PolicyList
@@ -79,13 +81,11 @@ export default function ReturnPolicyPage() {
           ]}
         />
         <p>
-          If a returned product fails our quality inspection, we reserve the right to refuse the return
-          or apply a partial refund reflecting the reduced condition of the item.
-        </p>
+          {i18n("If a returned product fails our quality inspection, we reserve the right to refuse the return or apply a partial refund reflecting the reduced condition of the item.")}</p>
       </PolicySection>
 
       <PolicySection
-        title="5. Non-Returnable Items"
+        title={i18n("5. Non-Returnable Items")}
         intro="For hygiene, safety, and product integrity reasons, the following items are not eligible for return or exchange (unless damaged or incorrect on arrival):"
       >
         <PolicyList
@@ -95,13 +95,13 @@ export default function ReturnPolicyPage() {
             "Food, beverages, and other perishable goods",
             "Custom-made, personalized, or made-to-order products",
             "Digital products, downloadable content, and gift cards",
-            'Items marked as "Final Sale" or "Non-returnable" on the product page',
+            "Items marked as \"Final Sale\" or \"Non-returnable\" on the product page",
           ]}
         />
       </PolicySection>
 
       <PolicySection
-        title="6. Damaged, Defective, or Wrong Products"
+        title={i18n("6. Damaged, Defective, or Wrong Products")}
         intro="If your order arrives damaged, defective, or different from what you ordered, we're sorry — and we'll make it right."
       >
         <PolicyList
@@ -113,13 +113,11 @@ export default function ReturnPolicyPage() {
           ]}
         />
         <p>
-          Once verified, we will offer a replacement, exchange, or refund at no extra cost to you,
-          based on stock availability and your preference.
-        </p>
+          {i18n("Once verified, we will offer a replacement, exchange, or refund at no extra cost to you, based on stock availability and your preference.")}</p>
       </PolicySection>
 
       <PolicySection
-        title="7. Refund and Exchange Process"
+        title={i18n("7. Refund and Exchange Process")}
         intro="Once your return is received and inspected, we'll notify you of the outcome."
       >
         <PolicyList
@@ -134,7 +132,7 @@ export default function ReturnPolicyPage() {
       </PolicySection>
 
       <PolicySection
-        title="8. Cash on Delivery (COD) Orders"
+        title={i18n("8. Cash on Delivery (COD) Orders")}
         intro="For orders paid via Cash on Delivery, refunds are handled a bit differently since no card or digital payment was made."
       >
         <PolicyList
@@ -148,18 +146,15 @@ export default function ReturnPolicyPage() {
       </PolicySection>
 
       <PolicySection
-        title="9. Cancellations"
+        title={i18n("9. Cancellations")}
         intro="You may request to cancel an order before it has been shipped."
       >
         <p>
-          Once an order has been handed over to our courier partner, it can no longer be cancelled but
-          may still be eligible for return under the conditions described above. To request a
-          cancellation, contact our customer support as soon as possible with your order ID.
-        </p>
+          {i18n("Once an order has been handed over to our courier partner, it can no longer be cancelled but may still be eligible for return under the conditions described above. To request a cancellation, contact our customer support as soon as possible with your order ID.")}</p>
       </PolicySection>
 
       <PolicySection
-        title="10. How to Request a Return"
+        title={i18n("10. How to Request a Return")}
         intro="Starting a return is simple."
       >
         <PolicyList
@@ -173,7 +168,7 @@ export default function ReturnPolicyPage() {
       </PolicySection>
 
       <PolicySection
-        title="11. Customer Support"
+        title={i18n("11. Customer Support")}
         intro="Our team is here to help with any return-related question."
       >
         <PolicyContactBlock />

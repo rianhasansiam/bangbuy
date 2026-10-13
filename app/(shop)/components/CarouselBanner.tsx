@@ -1,7 +1,9 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/lib/i18n/navigation";
 import { useEffect, useState } from "react";
 
 import { resolveBannerBackground } from "@/components/ui/tailwind-palette";
@@ -58,6 +60,7 @@ function cardBackground(slide: CarouselSlide): string {
 }
 
 export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
+  const i18n = useInterfaceTranslations("InterfaceComponentsCarouselBanner");
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
@@ -86,8 +89,8 @@ export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
       >
         {/* Background Effects */}
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-72 h-72 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full translate-x-1/3 translate-y-1/3" />
+          <div className="absolute top-0 start-0 w-72 h-72 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute bottom-0 end-0 w-96 h-96 bg-white rounded-full translate-x-1/3 translate-y-1/3" />
           <div className="absolute top-1/2 left-1/2 w-48 h-48 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
         </div>
 
@@ -95,20 +98,20 @@ export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
           {/* Text Content */}
           <div
             key={activeDeal.id}
-            className="min-w-0 flex-1 max-w-lg text-left text-white animate-in fade-in slide-in-from-left-5 duration-700"
+            className="min-w-0 flex-1 max-w-lg text-start text-white animate-in fade-in slide-in-from-start-5 duration-700"
           >
             <span className="mb-2 inline-block max-w-full truncate rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-medium backdrop-blur-sm sm:px-3 sm:py-1 sm:text-xs md:mb-3">
-              🎉 {activeDeal.badge}
+              🎉 {i18n(activeDeal.badge)}
             </span>
 
             <h1 className="mb-2 text-xl font-black leading-tight [overflow-wrap:anywhere] sm:text-3xl md:mb-3 md:text-4xl lg:text-5xl">
-              {activeDeal.title}
+              {i18n(activeDeal.title)}
               <br />
-              <span className="text-brand-gold">{activeDeal.subtitle}</span>
+              <span className="text-brand-gold">{i18n(activeDeal.subtitle)}</span>
             </h1>
 
             <p className="mb-3 line-clamp-2 max-w-md text-[11px] leading-snug text-white/80 sm:line-clamp-3 sm:text-sm md:mb-5 md:line-clamp-none md:text-base">
-              {activeDeal.description}
+              {i18n(activeDeal.description)}
             </p>
 
             <div className="flex flex-wrap justify-start gap-2 md:gap-3">
@@ -116,15 +119,13 @@ export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
                 href={activeDeal.link ?? "/products"}
                 className="rounded-full bg-brand-red px-3 py-1.5 text-[11px] font-bold text-brand-white shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-red-hover hover:shadow-xl sm:px-4 sm:py-2 sm:text-xs md:px-6 md:py-2.5 md:text-sm"
               >
-                Shop Now
-              </Link>
+                {i18n("Shop Now")}</Link>
 
               <Link
                 href="/products"
                 className="rounded-full border border-white/50 px-3 py-1.5 text-[11px] font-semibold text-white transition-all duration-300 hover:bg-white/10 sm:px-4 sm:py-2 sm:text-xs md:border-2 md:px-6 md:py-2.5 md:text-sm"
               >
-                View Offers
-              </Link>
+                {i18n("View Offers")}</Link>
             </div>
           </div>
 
@@ -135,15 +136,15 @@ export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
           >
             <Image
               src={activeDeal.image}
-              alt={activeDeal.subtitle}
+              alt={i18n(activeDeal.subtitle)}
               fill
               className="rounded-full border-2 border-white/30 object-cover shadow-2xl md:border-4"
               sizes="(max-width: 359px) 80px, (max-width: 640px) 96px, (max-width: 768px) 144px, (max-width: 1024px) 256px, 288px"
               preload
             />
 
-            <div className="absolute -right-1 -top-1 max-w-full animate-bounce truncate rounded-full bg-brand-red px-2 py-1 text-[9px] font-black text-brand-white shadow-lg sm:text-[10px] md:-right-2 md:-top-2 md:px-3 md:py-1.5 md:text-sm">
-              {activeDeal.title}
+            <div className="absolute -end-1 -top-1 max-w-full animate-bounce truncate rounded-full bg-brand-red px-2 py-1 text-[9px] font-black text-brand-white shadow-lg sm:text-[10px] md:-end-2 md:-top-2 md:px-3 md:py-1.5 md:text-sm">
+              {i18n(activeDeal.title)}
             </div>
           </div>
         </div>
@@ -164,7 +165,7 @@ export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
                   style={{ background: cardBackground(card) }}
                   className={`rounded-xl min-w-[160px] sm:min-w-[180px] h-28 sm:h-32 shrink-0
                   shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300
-                  cursor-pointer relative overflow-hidden group flex-1 text-left
+                  cursor-pointer relative overflow-hidden group flex-1 text-start
                   ${
                     isActive
                       ? "ring-4 ring-brand-red ring-offset-2 ring-offset-white scale-[1.03]"

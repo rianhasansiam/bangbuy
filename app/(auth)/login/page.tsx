@@ -1,7 +1,10 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Suspense, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "@/lib/i18n/navigation";
 import { signIn } from "next-auth/react";
 
 import AuthAnimations from "@/app/(auth)/_components/AuthAnimations";
@@ -65,6 +68,7 @@ export default function LoginPage() {
 }
 
 function LoginPageInner() {
+  const i18n = useInterfaceTranslations("InterfaceLoginPage");
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = getSafeCallbackUrl(searchParams.get("callbackUrl"));
@@ -147,10 +151,10 @@ function LoginPageInner() {
 
       <section className="relative z-10 mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 px-4 py-8 sm:px-6 lg:grid-cols-12 lg:gap-8 lg:py-12">
         <BrandPanel
-          badgeText="BangBuy · Sign in"
-          headlineLead="Welcome back to"
-          headlineEmphasis="BangBuy."
-          subheading="Sign in to keep shopping where you left off, with deals from premium stores in your neighborhood."
+          badgeText={i18n("BangBuy · Sign in")}
+          headlineLead={i18n("Welcome back to")}
+          headlineEmphasis={i18n("BangBuy.")}
+          subheading={i18n("Sign in to keep shopping where you left off, with deals from premium stores in your neighborhood.")}
           perks={BRAND_PERKS}
           stats={BRAND_STATS}
           activePerkIndex={activePerkIndex}
@@ -159,7 +163,7 @@ function LoginPageInner() {
 
         <section className="lg:col-span-7">
           <div className="relative overflow-hidden rounded-3xl bg-white p-6 shadow-xl ring-1 ring-brand-border sm:p-9">
-            <div className="pointer-events-none absolute -top-px left-0 h-1 w-full bg-brand-red" />
+            <div className="pointer-events-none absolute -top-px start-0 h-1 w-full bg-brand-red" />
 
             <LoginHeader />
 

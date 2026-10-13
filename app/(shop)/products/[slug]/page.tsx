@@ -1,6 +1,10 @@
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+import { getInterfaceTranslations } from "@/components/i18n/server";
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/lib/i18n/navigation";
 import { notFound, permanentRedirect } from "next/navigation";
+
 import { cache } from "react";
 
 import {
@@ -22,6 +26,7 @@ import ProductView from "@/components/analytics/ProductView";
 import {
   productFallbackDescription,
   productFallbackTitle,
+  type CatalogMetadataTranslator,
 } from "@/lib/seo/catalog-metadata";
 import {
   clampDescription,
@@ -51,6 +56,13 @@ import PromoBanners from "./components/PromoBanners";
 import RecentProducts from "./components/RecentProducts";
 import { initialVariantSelectionId } from "./components/variant-selection";
 import CurrencyAmount from "@/components/currency/CurrencyAmount";
+import { localizeProductDetail, localizeProductSnapshots } from "@/lib/translations/public";
+import { getRequestLocale } from "@/lib/i18n/server";
+import PublicContentNotice from "@/components/i18n/PublicContentNotice";
+import { buildLocalizedMetadata } from "@/lib/seo/localized-metadata";
+import { getPublishedEntityLocales } from "@/lib/translations/service";
+import { localizeHref } from "@/lib/i18n/paths";
+import { getTranslations } from "next-intl/server";
 
 export const revalidate = 900;
 export const dynamicParams = true;
@@ -59,7 +71,7 @@ const FALLBACK_PRODUCT_IMAGE =
   "https://images.unsplash.com/photo-1542838132-92c53300491e?w=1200&h=630&fit=crop";
 const PRODUCT_STATIC_PARAM_LIMIT = 100;
 
-const getProductPageData = cache(getActiveProductBySlug);
+const getProductPageData = cache(async (slug:string)=>localizeProductDetail(await getActiveProductBySlug(slug)));
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -99,14 +111,14 @@ function discountPercent(price: number, originalPrice: number) {
   return Math.round(((originalPrice - price) / originalPrice) * 100);
 }
 
-function productShortDescription(product: ProductWithCategory, price: number) {
+function productShortDescription(product: ProductWithCategory, price: number, locale = "en", translator?: CatalogMetadataTranslator) {
   return productFallbackDescription({
     name: product.name,
     productCode: product.productCode,
     description: product.description,
     categoryName: product.category.name,
     price,
-  });
+  }, locale, translator);
 }
 
 function productImageUrlsForSeo(
@@ -256,35 +268,36 @@ function ProductCrawlerFacts({
   stockCount: number;
   availabilityLabel: string;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceProductsSlugPage");
   return (
-    <section className="sr-only" aria-label={`${name} product summary`}>
+    <section className="sr-only" aria-label={i18n("{value0} product summary", { value0: name })}>
       <h2>{name}</h2>
-      <p>{description}</p>
-      {brand && <p>Brand: {brand}</p>}
-      {manufacturer && <p>Manufacturer: {manufacturer}</p>}
+      <p>{i18n(description)}</p>
+      {brand && <p>{i18n("Brand:")}{brand}</p>}
+      {manufacturer && <p>{i18n("Manufacturer:")}{manufacturer}</p>}
       <p>
-        Category: <Link href={categoryHref}>{category}</Link>
+        {i18n("Category:")}<Link href={categoryHref}>{category}</Link>
       </p>
       <p>
-        Current price: <CurrencyAmount amountBDT={currentPrice} />
+        {i18n("Current price:")}<CurrencyAmount amountBDT={currentPrice} />
       </p>
       <p>
-        Regular price: <CurrencyAmount amountBDT={regularPrice} />
+        {i18n("Regular price:")}<CurrencyAmount amountBDT={regularPrice} />
       </p>
       {hasDiscount && (
         <p>
-          Discounted price: <CurrencyAmount amountBDT={currentPrice} />
+          {i18n("Discounted price:")}<CurrencyAmount amountBDT={currentPrice} />
         </p>
       )}
-      <p>Availability: {availabilityLabel}</p>
-      <p>Stock available: {stockCount}</p>
+      <p>{i18n("Availability:")}{availabilityLabel}</p>
+      <p>{i18n("Stock available:")}{stockCount}</p>
       <p>
-        Product URL: <a href={productUrl}>{productUrl}</a>
+        {i18n("Product URL:")}<a href={productUrl}>{productUrl}</a>
       </p>
       <ul>
         {imageUrls.map((url, index) => (
           <li key={url}>
-            Product image {index + 1}: <a href={url}>{url}</a>
+            {i18n("Product image")}{index + 1}: <a href={url}>{url}</a>
           </li>
         ))}
       </ul>
@@ -293,6 +306,8 @@ function ProductCrawlerFacts({
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const locale = await getRequestLocale();
+  const translate = await getTranslations("Seo");
   const { slug } = await params;
   // Only ACTIVE products get rich, indexable metadata. Inactive or
   // missing products are marked noindex so they never surface in search.
@@ -317,9 +332,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const regularPrice = listPrice(product);
   const hasDiscount = price < regularPrice;
   const description = clampDescription(
-    product.metaDescription || productShortDescription(product, price),
+    product.metaDescription || productShortDescription(product, price, locale, translate),
   );
-  const canonical = absoluteUrl(`/products/${product.slug}`);
+  const canonical = absoluteUrl(localizeHref(`/products/${product.slug}`, locale));
   const imageUrl = absoluteUrl(
     product.ogImage?.trim() || product.images[0]?.url || FALLBACK_PRODUCT_IMAGE,
   );
@@ -332,6 +347,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     });
   const brandName = product.brand?.name ?? null;
   const manufacturerName = product.manufacturer?.name ?? null;
+  const readyLocales = await getPublishedEntityLocales("product", [product.id], ["name", "description", "descriptionBlocks", "seoTitle", "metaDescription"]);
+  const localizedMetadata = await buildLocalizedMetadata({
+    title, description, path: `/products/${product.slug}`,
+    preparedLocales: readyLocales.get(product.id) ?? [],
+    index: product.translationAvailable,
+  }, "InterfaceProductsSlugPage");
 
   return {
     title: { absolute: title },
@@ -348,13 +369,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       "online shopping",
       siteConfig.currency,
     ].filter((keyword): keyword is string => Boolean(keyword)),
-    alternates: { canonical },
+    alternates: localizedMetadata.alternates,
     openGraph: {
       url: canonical,
       siteName: siteConfig.name,
       title,
       description,
-      locale: siteConfig.locale,
+      locale: locale.replace(/-/g, "_"),
       images: [
         {
           url: imageUrl,
@@ -388,21 +409,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
           }
         : {}),
     },
-    robots: {
-      index: true,
-      follow: true,
-      googleBot: {
-        index: true,
-        follow: true,
-        "max-image-preview": "large",
-        "max-snippet": -1,
-        "max-video-preview": -1,
-      },
-    },
+    robots: localizedMetadata.robots,
   };
 }
 
 export default async function ProductDetailsPage({ params }: Props) {
+  const locale = await getRequestLocale();
+  const translate = await getTranslations("Seo");
+  const i18n = await getInterfaceTranslations("InterfaceProductsSlugPage");
   const { slug } = await params;
   const product = await getProductPageData(slug);
 
@@ -442,7 +456,7 @@ export default async function ProductDetailsPage({ params }: Props) {
     ],
   );
 
-  const others = relatedRows.filter(
+  const others = (await localizeProductSnapshots(relatedRows,await getRequestLocale())).filter(
     (row: ProductWithCategory) => row.id !== product.id,
   );
 
@@ -496,7 +510,7 @@ export default async function ProductDetailsPage({ params }: Props) {
   const inStock = productIsInStock(product);
   const stockCount = productStockCount(product);
   const availabilityLabel = inStock ? "in stock" : "out of stock";
-  const shortDescription = productShortDescription(product, currentPrice);
+  const shortDescription = productShortDescription(product, currentPrice, locale, translate);
   const productUrl = absoluteUrl(`/products/${product.slug}`);
   const seoImageUrls = productImageUrlsForSeo(
     productImageUrls,
@@ -521,7 +535,7 @@ export default async function ProductDetailsPage({ params }: Props) {
         ];
   const categoryLabel = categoryBreadcrumb.map((item) => item.name).join(" › ");
   const breadcrumbItems = [
-    { label: "Products", href: "/products" },
+    { label: i18n("Products"), href: "/products" },
     ...categoryBreadcrumb.map((item) => ({
       label: item.name,
       href: `/categories/${item.path}`,
@@ -557,6 +571,7 @@ export default async function ProductDetailsPage({ params }: Props) {
         description: shortDescription,
         images: seoImageUrls,
         path: `/products/${product.slug}`,
+        locale,
         price: currentPrice,
         inStock,
         category: categoryLabel,
@@ -577,6 +592,7 @@ export default async function ProductDetailsPage({ params }: Props) {
           description: shortDescription,
           images: seoImageUrls,
           path: `/products/${product.slug}`,
+          locale,
           price: currentPrice,
           category: categoryLabel,
           brand: brandName,
@@ -604,14 +620,14 @@ export default async function ProductDetailsPage({ params }: Props) {
       : null;
   const breadcrumbSchema = isPublic
     ? breadcrumbJsonLd([
-        { name: "Home", path: "/" },
-        { name: "Products", path: "/products" },
+        { name: i18n("Home"), path: "/" },
+        { name: i18n("Products"), path: "/products" },
         ...categoryBreadcrumb.map((item) => ({
           name: item.name,
           path: `/categories/${item.path}`,
         })),
         { name: product.name, path: `/products/${product.slug}` },
-      ])
+      ], locale)
     : null;
 
   return (
@@ -633,6 +649,7 @@ export default async function ProductDetailsPage({ params }: Props) {
         />
       )}
       <div className="max-w-7xl mx-auto px-3 py-6 sm:px-4 lg:px-6">
+        <PublicContentNotice available={product.translationAvailable}/>
         <Breadcrumbs items={breadcrumbItems} />
 
         <ProductCrawlerFacts
@@ -696,6 +713,7 @@ export default async function ProductDetailsPage({ params }: Props) {
             <div className="min-w-0 rounded-2xl border border-gray-100 bg-white p-4 sm:p-6">
               <ProductInfo
                 name={product.name}
+                nameLocale={product.fieldLocales.name}
                 productCode={product.productCode}
                 modelNumber={product.modelNumber}
                 gtin={product.gtin}
@@ -742,7 +760,7 @@ export default async function ProductDetailsPage({ params }: Props) {
           </div>
 
           <div className="min-w-0 md:col-span-12 lg:col-span-3">
-            <RecentProducts products={recentProducts} title="Recent Product" />
+            <RecentProducts products={recentProducts} title={i18n("Recent Product")} />
           </div>
         </div>
 
@@ -755,8 +773,8 @@ export default async function ProductDetailsPage({ params }: Props) {
           return (
             <>
               {hasBlocks && (
-                <div className="mt-10">
-                  <h2 className="sr-only">Product description</h2>
+                <div className="mt-10" lang={product.fieldLocales.descriptionBlocks} dir="auto">
+                  <h2 className="sr-only">{i18n("Product description")}</h2>
                   <ProductDescriptionRenderer
                     blocks={product.descriptionBlocks}
                     legacyDescription={product.description}
@@ -766,7 +784,7 @@ export default async function ProductDetailsPage({ params }: Props) {
 
               {/* Legacy tabs: always show specs; only show description tab when no block-based content */}
               {(!hasBlocks && hasLegacyTabs || specifications) && (
-                <div className="mt-10">
+                <div className="mt-10" lang={product.fieldLocales.description} dir="auto">
                   <ProductTabs
                     description={hasBlocks ? null : product.description}
                     specifications={specifications}
@@ -780,7 +798,7 @@ export default async function ProductDetailsPage({ params }: Props) {
         <div className="mt-10">
           <DeferredDealsCarousel
             deals={dealBanners}
-            title="Black Friday Deals"
+            title={i18n("Black Friday Deals")}
           />
         </div>
 
@@ -792,7 +810,7 @@ export default async function ProductDetailsPage({ params }: Props) {
           <div className="min-w-0 lg:col-span-9">
             <DeferredRelatedProducts
               products={relatedProducts}
-              title="More Relevant Products"
+              title={i18n("More Relevant Products")}
             />
           </div>
 

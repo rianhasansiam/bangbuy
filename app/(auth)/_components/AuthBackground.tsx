@@ -1,5 +1,6 @@
 "use client";
 
+
 /**
  * Decorative background used by both the login and register pages.
  *
@@ -22,19 +23,19 @@ export default function AuthBackground() {
 
       <div
         aria-hidden
-        className="pointer-events-none absolute left-[10%] top-[15%] z-0 h-72 w-72 rounded-full bg-brand-red/10 blur-3xl"
+        className="pointer-events-none absolute start-[10%] top-[15%] z-0 h-72 w-72 rounded-full bg-brand-red/10 blur-3xl"
         style={{ animation: "drift 14s ease-in-out infinite" }}
       />
 
       <div
         aria-hidden
-        className="pointer-events-none absolute bottom-[12%] right-[8%] z-0 h-80 w-80 rounded-full bg-brand-white/50 blur-3xl"
+        className="pointer-events-none absolute bottom-[12%] end-[8%] z-0 h-80 w-80 rounded-full bg-brand-white/50 blur-3xl"
         style={{ animation: "drift 18s ease-in-out infinite reverse" }}
       />
 
       <div
         aria-hidden
-        className="pointer-events-none absolute right-[40%] top-[40%] z-0 h-56 w-56 rounded-full bg-brand-red/5 blur-3xl"
+        className="pointer-events-none absolute end-[40%] top-[40%] z-0 h-56 w-56 rounded-full bg-brand-red/5 blur-3xl"
         style={{ animation: "drift 22s ease-in-out infinite" }}
       />
 

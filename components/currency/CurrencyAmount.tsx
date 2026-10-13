@@ -1,6 +1,7 @@
 "use client";
 
 import type { ComponentPropsWithoutRef } from "react";
+import { useLocale } from "next-intl";
 
 import { formatMoney } from "@/lib/currency/format-money";
 import { priceFromBDT } from "@/lib/currency/pricing.service";
@@ -18,9 +19,10 @@ type CurrencyAmountProps = Omit<
 /** Converts a canonical BDT amount once, then formats the selected currency. */
 export function CurrencyAmount({ amountBDT, ...props }: CurrencyAmountProps) {
   const context = useCurrency();
+  const locale = useLocale();
   const price = priceFromBDT({ baseAmount: amountBDT, context });
 
-  return <span {...props}>{formatMoney(price.amount, price.currency)}</span>;
+  return <span dir="auto" {...props}>{formatMoney(price.amount, price.currency, { locale })}</span>;
 }
 
 export default CurrencyAmount;

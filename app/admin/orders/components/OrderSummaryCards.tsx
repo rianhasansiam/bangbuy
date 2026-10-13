@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/features/admin-orders/api";
@@ -48,20 +52,22 @@ export default function OrderSummaryCards({
   pending: number;
   unpaid: number;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminOrdersComponentsOrderSummaryCards");
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       <SummaryCard
-        label="Total orders"
-        value={totalOrders.toLocaleString()}
+        label={i18n("Total orders")}
+        value={totalOrders.toLocaleString(locale)}
         accent="violet"
       />
       <SummaryCard
-        label="Revenue (excl. cancelled)"
-        value={formatCurrency(revenue)}
+        label={i18n("Revenue (excl. cancelled)")}
+        value={formatCurrency(revenue, locale)}
         accent="emerald"
       />
       <SummaryCard
-        label="Pending / unpaid"
+        label={i18n("Pending / unpaid")}
         value={`${pending} pending · ${unpaid} unpaid`}
         accent="amber"
       />

@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import * as React from "react";
 import { HexColorPicker } from "react-colorful";
@@ -89,6 +91,7 @@ export function AdvancedColorPicker({
   disabled = false,
   className,
 }: AdvancedColorPickerProps) {
+  const i18n = useInterfaceTranslations("InterfaceUiAdvancedColorPicker");
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -146,7 +149,7 @@ export function AdvancedColorPicker({
         onClick={() => setOpen((prev) => !prev)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        aria-label={`${label}: ${value || "none"}. Click to edit.`}
+        aria-label={i18n("{value0}: {value1}. Click to edit.", { value0: label, value1: value || i18n("none") })}
         className={cn(
           "group flex h-10 w-full items-center gap-2.5 rounded-xl border border-violet-200 bg-white px-1.5 text-sm outline-none transition",
           "hover:border-violet-400 focus-visible:border-violet-500 focus-visible:ring-2 focus-visible:ring-violet-200",
@@ -171,16 +174,16 @@ export function AdvancedColorPicker({
         </span>
 
 
-        <span className="min-w-0 flex-1 truncate text-left font-mono text-xs uppercase text-gray-700">
-          {value || "Choose a color"}
+        <span className="min-w-0 flex-1 truncate text-start font-mono text-xs uppercase text-gray-700">
+          {value || i18n("Choose a color")}
         </span>
       </button>
 
       {open && (
         <div
           role="dialog"
-          aria-label={`${label} picker`}
-          className="absolute -left-24  z-50 mt-2 w-[min(20rem,calc(100vw-3rem))] rounded-2xl border border-violet-100 bg-white p-3 shadow-xl ring-1 ring-black/5"
+          aria-label={i18n("{value0} picker", { value0: label })}
+          className="absolute -start-24  z-50 mt-2 w-[min(20rem,calc(100vw-3rem))] rounded-2xl border border-violet-100 bg-white p-3 shadow-xl ring-1 ring-black/5"
         >
           <HexColorPicker
             color={base}
@@ -190,14 +193,14 @@ export function AdvancedColorPicker({
 
           {alpha && (
             <div className="mt-3 flex items-center gap-3">
-              <span className="text-sm font-semibold text-violet-600">Opacity</span>
+              <span className="text-sm font-semibold text-violet-600">{i18n("Opacity")}</span>
               <input
                 type="range"
                 min={0}
                 max={100}
                 value={opacityPct}
                 onChange={handleOpacity}
-                aria-label="Opacity"
+                aria-label={i18n("Opacity")}
                 className="advanced-opacity-slider h-2 flex-1 cursor-pointer appearance-none rounded-full"
                 style={{
                   // Checkerboard base + a transparent→color gradient overlay.
@@ -207,7 +210,7 @@ export function AdvancedColorPicker({
                     "0 0, 0 0, 0 5px, 5px -5px, -5px 0",
                 }}
               />
-              <span className="w-10 text-right text-sm font-bold text-gray-700">
+              <span className="w-10 text-end text-sm font-bold text-gray-700">
                 {opacityPct}%
               </span>
             </div>
@@ -220,7 +223,7 @@ export function AdvancedColorPicker({
                 value={(value || "#000000").replace(/^#/, "").toUpperCase()}
                 onChange={handleHexInput}
                 spellCheck={false}
-                aria-label={`${label} hex value`}
+                aria-label={i18n("{value0} hex value", { value0: label })}
                 className="w-full bg-transparent px-1 font-mono text-base font-bold uppercase tracking-wider text-white outline-none"
               />
             </div>

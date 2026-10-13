@@ -1,10 +1,12 @@
 import { LoadingPage } from "@/components/ui/loading";
+import { useTranslations } from "next-intl";
 
 export default function Loading() {
+  const t = useTranslations("Loading");
   return (
     <LoadingPage
-      title="Loading..."
-      message="Preparing your page..."
+      title={t("title")}
+      message={t("description")}
     />
   );
 }

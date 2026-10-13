@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 /**
  * ConfirmDialog — SweetAlert-style confirmation modal.
@@ -52,6 +54,7 @@ function Dialog({
   dialog: ActiveDialog;
   onClose: (value: boolean) => void;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceUiConfirmDialog");
   const variant = dialog.variant ?? "danger";
   const Icon = ICON_MAP[variant];
 
@@ -97,14 +100,14 @@ function Dialog({
           id="confirm-title"
           className="text-center text-lg font-bold text-gray-900 [overflow-wrap:anywhere]"
         >
-          {dialog.title}
+          {i18n(dialog.title)}
         </h2>
         {dialog.description && (
           <p
             id="confirm-desc"
             className="mt-2 text-center text-sm leading-relaxed text-gray-500 [overflow-wrap:anywhere]"
           >
-            {dialog.description}
+            {i18n(dialog.description)}
           </p>
         )}
 
@@ -115,7 +118,7 @@ function Dialog({
             onClick={() => onClose(false)}
             className="min-h-11 rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50"
           >
-            {dialog.cancelLabel ?? "Cancel"}
+            {dialog.cancelLabel ?? i18n("Cancel")}
           </button>
           <button
             type="button"
@@ -125,7 +128,7 @@ function Dialog({
               CONFIRM_BTN[variant],
             )}
           >
-            {dialog.confirmLabel ?? "Confirm"}
+            {dialog.confirmLabel ?? i18n("Confirm")}
           </button>
         </div>
       </div>

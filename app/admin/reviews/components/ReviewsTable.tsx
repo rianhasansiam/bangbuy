@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { MessageSquareText, Phone, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -35,6 +39,8 @@ export default function ReviewsTable({
   busyId: string | null;
   onDelete: (id: string) => void;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminReviewsComponentsReviewsTable");
   if (isLoading && totalCount === 0) {
     return <TableSkeleton rows={6} columns={7} ariaLabel="Loading reviews" />;
   }
@@ -43,8 +49,7 @@ export default function ReviewsTable({
     return (
       <div className="rounded-2xl border border-brand-border bg-brand-white p-10 text-center text-sm text-gray-600 shadow-sm">
         <MessageSquareText className="mx-auto mb-2 h-8 w-8 text-brand-text-muted" />
-        No reviews match the current filters.
-      </div>
+        {i18n("No reviews match the current filters.")}</div>
     );
   }
 
@@ -52,15 +57,15 @@ export default function ReviewsTable({
     <div className="overflow-hidden rounded-2xl border border-brand-border bg-brand-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
-          <thead className="bg-brand-light-bg text-left text-xs uppercase tracking-wider text-brand-text-muted">
+          <thead className="bg-brand-light-bg text-start text-xs uppercase tracking-wider text-brand-text-muted">
             <tr>
-              <th className="px-4 py-3">Product</th>
-              <th className="px-4 py-3">Author</th>
-              <th className="px-4 py-3">Rating</th>
-              <th className="px-4 py-3">Review</th>
-              <th className="px-4 py-3">Source</th>
-              <th className="px-4 py-3">Date</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">{i18n("Product")}</th>
+              <th className="px-4 py-3">{i18n("Author")}</th>
+              <th className="px-4 py-3">{i18n("Rating")}</th>
+              <th className="px-4 py-3">{i18n("Review")}</th>
+              <th className="px-4 py-3">{i18n("Source")}</th>
+              <th className="px-4 py-3">{i18n("Date")}</th>
+              <th className="px-4 py-3 text-end">{i18n("Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -101,13 +106,12 @@ export default function ReviewsTable({
                     ) : (
                       <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-gray-400">
                         <Phone className="h-3 w-3" />
-                        {review.source === "ADMIN" ? "Admin-added" : "No phone"}
+                        {review.source === "ADMIN" ? i18n("Admin-added") : i18n("No phone")}
                       </p>
                     )}
                     {review.verified && (
                       <p className="text-xs text-emerald-600">
-                        Verified purchase
-                      </p>
+                        {i18n("Verified purchase")}</p>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -124,8 +128,7 @@ export default function ReviewsTable({
                     )}
                     {!review.title && !review.comment && (
                       <span className="text-xs text-gray-400">
-                        No written feedback
-                      </span>
+                        {i18n("No written feedback")}</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -139,7 +142,7 @@ export default function ReviewsTable({
                     </span>
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500">
-                    {formatDateTime(review.createdAt)}
+                    {formatDateTime(review.createdAt, locale)}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end">
@@ -155,8 +158,7 @@ export default function ReviewsTable({
                         ) : (
                           <Trash2 className="h-3 w-3" />
                         )}
-                        Delete
-                      </button>
+                        {i18n("Delete")}</button>
                     </div>
                   </td>
                 </motion.tr>

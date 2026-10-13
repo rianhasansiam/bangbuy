@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Package } from "lucide-react";
 
@@ -22,6 +24,7 @@ export default function CheckoutItemsCard({
   currency,
   isLoading,
 }: CheckoutItemsCardProps) {
+  const i18n = useInterfaceTranslations("InterfaceCheckoutComponentsCheckoutItemsCard");
   return (
     <section className="rounded-3xl border border-brand-border bg-brand-white p-5 shadow-sm sm:p-6">
       <header className="mb-3 flex items-center justify-between">
@@ -29,10 +32,10 @@ export default function CheckoutItemsCard({
           <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-light-bg text-brand-black">
             <Package className="h-4 w-4" />
           </span>
-          <h2 className="text-lg font-bold text-gray-900">Order items</h2>
+          <h2 className="text-lg font-bold text-gray-900">{i18n("Order items")}</h2>
         </div>
         <span className="text-xs text-gray-500">
-          {items.length} {items.length === 1 ? "product" : "products"}
+          {items.length} {items.length === 1 ? i18n("product") : i18n("products")}
         </span>
       </header>
 
@@ -51,8 +54,7 @@ export default function CheckoutItemsCard({
         </div>
       ) : items.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-brand-border bg-brand-light-bg p-6 text-center text-sm text-gray-600">
-          No items selected.
-        </div>
+          {i18n("No items selected.")}</div>
       ) : (
         <ul className="divide-y divide-brand-border">
           {items.map((item) => {
@@ -87,16 +89,15 @@ export default function CheckoutItemsCard({
                     </p>
                   )}
                   <p className="mt-0.5 text-xs text-gray-500">
-                    Qty {item.quantity} •{" "}
+                    {i18n("Qty")}{item.quantity} •{" "}
                     <FormattedCurrencyAmount
                       amount={item.unitPrice}
                       currency={currency}
                     />{" "}
-                    each
-                  </p>
+                    {i18n("each")}</p>
                   {savings > 0 && (
                     <p className="mt-0.5 text-[11px] font-semibold text-emerald-600">
-                      You save{" "}
+                      {i18n("You save")}{" "}
                       <FormattedCurrencyAmount
                         amount={savings}
                         currency={currency}

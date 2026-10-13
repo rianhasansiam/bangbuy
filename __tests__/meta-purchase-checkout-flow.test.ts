@@ -1,3 +1,7 @@
+import { createTranslator as createIntlTranslator } from "next-intl";
+import coreMessages from "@/messages/core-en.json";
+import interfaceMessages from "@/messages/interface-en.json";
+import adminMessages from "@/messages/admin-en.json";
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { Decimal } from "@prisma/client/runtime/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -515,3 +519,11 @@ describe("committed online checkout through verified receipt and mocked SDK deli
     expect(current.purchases()).toEqual([["trackSingle", "1234567890", "Purchase", expect.objectContaining({ currency: "BDT", value: 2010 }), { eventID: `purchase:${orderId}` }]]);
   });
 });
+
+vi.mock("next-intl", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next-intl")>()),
+  useLocale: () => "en",
+  useTranslations: () => createIntlTranslator({ locale: "en", messages: { ...coreMessages, ...interfaceMessages, ...adminMessages } }),
+}));
+vi.mock("@/components/i18n/useLocaleDraft", () => ({ useLocaleDraft: () => undefined, useLocaleSwitchGuard: () => undefined }));
+vi.mock("@/lib/i18n/navigation", async () => ({ ...(await import("next/navigation")), default: (await import("next/link")).default }));

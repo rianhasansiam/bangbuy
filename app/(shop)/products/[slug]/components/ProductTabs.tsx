@@ -1,10 +1,13 @@
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 import { FileText, ListChecks } from "lucide-react";
 
 type SpecificationValue = string | number | boolean;
 
-function displaySpecificationValue(value: SpecificationValue): string {
+function displaySpecificationValue(value: SpecificationValue, locale: string): string {
   if (typeof value === "boolean") return value ? "Yes" : "No";
-  if (typeof value === "number") return value.toLocaleString();
+  if (typeof value === "number") return value.toLocaleString(locale);
   return value;
 }
 
@@ -15,6 +18,8 @@ const ProductTabs = ({
   description: string | null;
   specifications: Record<string, SpecificationValue> | null;
 }) => {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("InterfaceProductsSlugComponentsProductTabs");
   const specificationEntries = Object.entries(specifications ?? {});
 
   return (
@@ -25,10 +30,10 @@ const ProductTabs = ({
             <FileText className="h-4 w-4" aria-hidden="true" />
             <h2
               id="product-description-heading"
+              lang={locale}
               className="min-w-0 [overflow-wrap:anywhere]"
             >
-              Description
-            </h2>
+              {i18n("Description")}</h2>
           </div>
           <div className="p-5 sm:p-6">
             <p className="whitespace-pre-line leading-relaxed text-gray-600 [overflow-wrap:anywhere]">
@@ -47,27 +52,26 @@ const ProductTabs = ({
             <ListChecks className="h-4 w-4" aria-hidden="true" />
             <h2
               id="product-specifications-heading"
+              lang={locale}
               className="min-w-0 [overflow-wrap:anywhere]"
             >
-              Technical specifications
-            </h2>
+              {i18n("Technical specifications")}</h2>
           </div>
           <div className="max-w-full overflow-x-auto p-5 sm:p-6">
-            <table className="w-full border-collapse text-left text-sm">
-              <caption className="sr-only">
-                Technical specifications for this product
-              </caption>
+            <table className="w-full border-collapse text-start text-sm">
+              <caption lang={locale} className="sr-only">
+                {i18n("Technical specifications for this product")}</caption>
               <tbody className="divide-y divide-gray-100">
                 {specificationEntries.map(([label, value]) => (
                   <tr key={label}>
                     <th
                       scope="row"
-                      className="w-2/5 py-3 pr-4 align-top font-semibold text-gray-900 [overflow-wrap:anywhere]"
+                      className="w-2/5 py-3 pe-4 align-top font-semibold text-gray-900 [overflow-wrap:anywhere]"
                     >
                       {label}
                     </th>
-                    <td className="py-3 text-gray-600 [overflow-wrap:anywhere]">
-                      {displaySpecificationValue(value)}
+                    <td lang={typeof value === "string" ? undefined : locale} className="py-3 text-gray-600 [overflow-wrap:anywhere]">
+                      {typeof value === "boolean" ? i18n(displaySpecificationValue(value, locale)) : displaySpecificationValue(value, locale)}
                     </td>
                   </tr>
                 ))}

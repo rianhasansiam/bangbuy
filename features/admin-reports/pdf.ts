@@ -574,6 +574,7 @@ export async function generateReportPdf(payload: ReportPayload): Promise<jsPDF> 
   // they adapt automatically.
   const orientation = payload.meta.type === "profit" ? "landscape" : "portrait";
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation });
+  doc.setLanguage("en");
 
   const logo = await loadBrandLogo();
   const def = REPORT_DEFS[payload.meta.type];

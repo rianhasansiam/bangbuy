@@ -1,4 +1,9 @@
 import { absoluteUrl, siteConfig, socialProfiles } from "./site";
+import { localizeHref } from "@/lib/i18n/paths";
+
+function contentUrl(path: string, locale?: string) {
+  return absoluteUrl(locale ? localizeHref(path, locale) : path);
+}
 
 /**
  * Strongly-typed-ish JSON-LD builders for BangBuy.
@@ -62,14 +67,14 @@ function prune<T extends JsonLd>(obj: T): T {
 }
 
 /** Organization schema for BangBuy (use once, app-wide). */
-export function organizationJsonLd(): JsonLd {
+export function organizationJsonLd(description: string = siteConfig.description): JsonLd {
   return prune({
     "@context": "https://schema.org",
     "@type": "Organization",
     name: siteConfig.name,
     url: siteConfig.url,
     logo: siteConfig.logo,
-    description: siteConfig.description,
+    description,
     sameAs: socialProfiles.length > 0 ? socialProfiles : undefined,
   });
 }
@@ -78,18 +83,19 @@ export function organizationJsonLd(): JsonLd {
  * WebSite schema with an optional SearchAction. BangBuy's search routes
  * to `/products?search=<query>`, so we wire the SearchAction there.
  */
-export function websiteJsonLd(): JsonLd {
+export function websiteJsonLd(locale?: string, description: string = siteConfig.description): JsonLd {
   return prune({
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: siteConfig.name,
-    url: siteConfig.url,
-    description: siteConfig.description,
+    url: contentUrl("/", locale),
+    description,
+    inLanguage: locale,
     potentialAction: {
       "@type": "SearchAction",
       target: {
         "@type": "EntryPoint",
-        urlTemplate: `${siteConfig.url}/products?search={search_term_string}`,
+        urlTemplate: `${contentUrl("/products", locale)}?search={search_term_string}`,
       },
       "query-input": "required name=search_term_string",
     },
@@ -99,7 +105,7 @@ export function websiteJsonLd(): JsonLd {
 export type BreadcrumbItem = { name: string; path: string };
 
 /** BreadcrumbList schema from an ordered list of {name, path} items. */
-export function breadcrumbJsonLd(items: BreadcrumbItem[]): JsonLd {
+export function breadcrumbJsonLd(items: BreadcrumbItem[], locale?: string): JsonLd {
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -107,7 +113,7 @@ export function breadcrumbJsonLd(items: BreadcrumbItem[]): JsonLd {
       "@type": "ListItem",
       position: index + 1,
       name: item.name,
-      item: absoluteUrl(item.path),
+      item: contentUrl(item.path, locale),
     })),
   };
 }
@@ -119,6 +125,7 @@ export type ProductJsonLdInput = {
   images?: string[];
   /** Product detail path, e.g. `/products/<id>`. */
   path: string;
+  locale?: string;
   /** Effective selling price (already resolved to sale price when valid). */
   price: number;
   currency?: string;
@@ -151,7 +158,7 @@ export type ProductJsonLdInput = {
  * Only emits optional catalog and rating fields when real values are passed.
  */
 export function productJsonLd(input: ProductJsonLdInput): JsonLd {
-  const url = absoluteUrl(input.path);
+  const url = contentUrl(input.path, input.locale);
   const mpn = input.mpn?.trim();
   const gtin = input.gtin?.trim();
   const manufacturer = input.manufacturer?.trim();
@@ -221,7 +228,7 @@ export type ProductGroupJsonLdInput = Omit<
 
 /** Emit variant markup only for a genuine multi-variant product group. */
 export function productGroupJsonLd(input: ProductGroupJsonLdInput): JsonLd {
-  const url = absoluteUrl(input.path);
+  const url = contentUrl(input.path, input.locale);
   const images = (input.images ?? [])
     .filter((src) => typeof src === "string" && src.length > 0)
     .map((src) => absoluteUrl(src));
@@ -293,6 +300,7 @@ export function collectionPageJsonLd(input: {
   name: string;
   description?: string | null;
   path: string;
+  locale?: string;
 }): JsonLd {
   return prune({
     "@context": "https://schema.org",
@@ -301,6 +309,7 @@ export function collectionPageJsonLd(input: {
     description: input.description
       ? plainJsonLdText(input.description)
       : undefined,
-    url: absoluteUrl(input.path),
+    url: contentUrl(input.path, input.locale),
+    inLanguage: input.locale,
   });
 }

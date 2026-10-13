@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { cn } from "@/lib/utils";
 import type { ImageTextBlock } from "@/lib/types/product-description-blocks";
@@ -18,6 +20,7 @@ type Props = {
 };
 
 export default function ImageTextBlockForm({ block, onChange, disabled }: Props) {
+  const i18n = useInterfaceTranslations("InterfaceProductDescriptionBlocksImageTextBlockForm");
   const patch = (fields: Partial<ImageTextBlock>) =>
     onChange({ ...block, ...fields });
 
@@ -26,13 +29,12 @@ export default function ImageTextBlockForm({ block, onChange, disabled }: Props)
       {/* Heading */}
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Heading (optional)
-        </label>
+          {i18n("Heading (optional)")}</label>
         <input
           type="text"
           value={block.heading ?? ""}
           onChange={(e) => patch({ heading: e.target.value || undefined })}
-          placeholder="Section heading…"
+          placeholder={i18n("Section heading…")}
           maxLength={200}
           disabled={disabled}
           className={cn(inputClass)}
@@ -42,13 +44,12 @@ export default function ImageTextBlockForm({ block, onChange, disabled }: Props)
       {/* Description */}
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Description (optional)
-        </label>
+          {i18n("Description (optional)")}</label>
         <textarea
           rows={3}
           value={block.description ?? ""}
           onChange={(e) => patch({ description: e.target.value || undefined })}
-          placeholder="Supporting paragraph text…"
+          placeholder={i18n("Supporting paragraph text…")}
           maxLength={2000}
           disabled={disabled}
           className={cn(textareaClass)}
@@ -60,44 +61,40 @@ export default function ImageTextBlockForm({ block, onChange, disabled }: Props)
       <div>
         <ImageUploader
           category="products"
-          label="Image *"
+          label={i18n("Image *")}
           value={block.imageUrl}
           onChange={(url) => patch({ imageUrl: url })}
           disabled={disabled}
         />
         {!block.imageUrl && (
           <p className="mt-1 text-xs text-gray-500">
-            Upload an image first, then add alt text.
-          </p>
+            {i18n("Upload an image first, then add alt text.")}</p>
         )}
       </div>
 
       {/* Alt text */}
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Image alt text *
-        </label>
+          {i18n("Image alt text *")}</label>
         <input
           type="text"
           value={block.imageAlt}
           onChange={(e) => patch({ imageAlt: e.target.value })}
-          placeholder="Describe the image for screen readers…"
+          placeholder={i18n("Describe the image for screen readers…")}
           maxLength={250}
           disabled={disabled}
           className={cn(inputClass)}
         />
         {block.imageUrl && !block.imageAlt.trim() && (
           <p className="mt-1 text-xs font-semibold text-red-500">
-            Alt text is required when an image is set.
-          </p>
+            {i18n("Alt text is required when an image is set.")}</p>
         )}
       </div>
 
       {/* Image position */}
       <div>
         <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Image position
-        </p>
+          {i18n("Image position")}</p>
         <div className="flex gap-2">
           {(["left", "right"] as const).map((pos) => (
             <button
@@ -112,7 +109,7 @@ export default function ImageTextBlockForm({ block, onChange, disabled }: Props)
                   : "border-brand-border text-gray-700 hover:border-brand-red hover:text-brand-red",
               )}
             >
-              Image {pos}
+              {i18n("Image")}{pos}
             </button>
           ))}
         </div>
@@ -122,15 +119,14 @@ export default function ImageTextBlockForm({ block, onChange, disabled }: Props)
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-            CTA label (optional)
-          </label>
+            {i18n("CTA label (optional)")}</label>
           <input
             type="text"
             value={block.ctaLabel ?? ""}
             onChange={(e) =>
               patch({ ctaLabel: e.target.value || undefined })
             }
-            placeholder="e.g. Shop Now"
+            placeholder={i18n("e.g. Shop Now")}
             maxLength={80}
             disabled={disabled}
             className={cn(inputClass)}
@@ -138,8 +134,7 @@ export default function ImageTextBlockForm({ block, onChange, disabled }: Props)
         </div>
         <div>
           <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-            CTA URL (optional)
-          </label>
+            {i18n("CTA URL (optional)")}</label>
           <input
             type="url"
             value={block.ctaUrl ?? ""}

@@ -1,3 +1,5 @@
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 import { MapPin, Navigation, Building2 } from "lucide-react";
 
 import { siteConfig } from "@/lib/seo/site";
@@ -11,17 +13,17 @@ const offices = [
 ];
 
 export default function ContactMap() {
+  const i18n = useInterfaceTranslations("InterfaceContactComponentsContactMap");
   return (
     <section id="location">
       <div className="mb-6">
         <div className="inline-flex items-center gap-2 rounded-full bg-brand-light-bg px-3 py-1.5">
           <Building2 className="h-3.5 w-3.5 text-brand-red" />
           <span className="text-[11px] font-bold uppercase tracking-wide text-brand-red">
-            Our Offices
-          </span>
+            {i18n("Our Offices")}</span>
         </div>
         <h2 className="mt-3 text-2xl font-black tracking-tight text-foreground sm:text-3xl lg:text-4xl">
-          Find us in <span className="text-brand-red">Dhaka</span>
+          {i18n.rich("Find us in <highlight>Dhaka</highlight>", { highlight: (chunks) => <span className="text-brand-red">{chunks}</span> })}
         </h2>
       </div>
 
@@ -32,7 +34,7 @@ export default function ContactMap() {
         <div className="lg:col-span-3">
           <div className="relative h-72 overflow-hidden rounded-3xl shadow-lg ring-1 ring-brand-border sm:h-80 lg:h-full lg:min-h-[420px]">
             <iframe
-              title={`${siteConfig.name} HQ`}
+              title={i18n("{value0} HQ", { value0: siteConfig.name })}
               src={`https://www.google.com/maps?q=${encodeURIComponent(siteConfig.contact.address)}&output=embed`}
               className="h-full w-full border-0"
               loading="lazy"
@@ -40,9 +42,9 @@ export default function ContactMap() {
               allowFullScreen
             />
             {/* Overlay badge */}
-            <div className="pointer-events-none absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 shadow-md ring-1 ring-brand-border backdrop-blur-sm">
+            <div className="pointer-events-none absolute start-4 top-4 inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-1.5 shadow-md ring-1 ring-brand-border backdrop-blur-sm">
               <MapPin className="h-3.5 w-3.5 text-brand-red" />
-              <span className="text-xs font-bold text-foreground">{siteConfig.name} HQ</span>
+              <span className="text-xs font-bold text-foreground">{i18n("{brand} headquarters", { brand: siteConfig.name })}</span>
             </div>
           </div>
         </div>
@@ -52,7 +54,7 @@ export default function ContactMap() {
           <div className="grid gap-3 sm:gap-4">
             {offices.map((o, i) => (
               <div
-                key={o.city}
+                key={i18n(o.city)}
                 className="group relative overflow-hidden rounded-2xl bg-white p-5 shadow-sm ring-1 ring-brand-border transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
               >
                 <div className="flex items-start gap-3">
@@ -66,11 +68,11 @@ export default function ContactMap() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="text-base font-black text-foreground">
-                        {o.city}
+                        {i18n(o.city)}
                       </h3>
                       {i === 0 && (
                         <span className="rounded-full bg-brand-gold px-2 py-0.5 text-[10px] font-bold text-brand-black">
-                          HQ
+                          {i18n("Headquarters")}
                         </span>
                       )}
                     </div>

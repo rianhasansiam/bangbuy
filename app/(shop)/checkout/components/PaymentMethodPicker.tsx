@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Banknote, CreditCard, ShieldCheck } from "lucide-react";
 
@@ -27,13 +29,13 @@ const OPTIONS: PaymentOption[] = [
     icon: <Banknote className="h-5 w-5" />,
     badge: "No prepayment",
   },
-  // {
-  //   value: "AIRWALLEX",
-  //   label: "Pay securely online",
-  //   description: "Continue to Airwallex's hosted checkout to complete payment.",
-  //   icon: <CreditCard className="h-5 w-5" />,
-  //   badge: "Card / wallet",
-  // },
+  {
+    value: "AIRWALLEX",
+    label: "Airwallex secure payment",
+    description: "Continue to Airwallex's hosted checkout to complete payment.",
+    icon: <CreditCard className="h-5 w-5" />,
+    badge: "Card / wallet",
+  },
   // {
   //   value: "SSLCOMMERZ",
   //   label: "Online payment",
@@ -48,6 +50,7 @@ export default function PaymentMethodPicker({
   onChange,
   airwallexEnabled,
 }: PaymentMethodPickerProps) {
+  const i18n = useInterfaceTranslations("InterfaceCheckoutComponentsPaymentMethodPicker");
   const options = airwallexEnabled
     ? OPTIONS
     : OPTIONS.filter((option) => option.value !== "AIRWALLEX");
@@ -55,15 +58,13 @@ export default function PaymentMethodPicker({
     <section className="rounded-3xl border border-brand-border bg-brand-white p-5 shadow-sm sm:p-6">
       <header className="mb-3 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-bold text-gray-900">Payment method</h2>
+          <h2 className="text-lg font-bold text-gray-900">{i18n("Payment method")}</h2>
           <p className="mt-0.5 text-xs text-gray-500">
-            Pick how you&apos;d like to pay. You can change it before placing the order.
-          </p>
+            {i18n("Pick how you'd like to pay. You can change it before placing the order.")}</p>
         </div>
         <span className="hidden items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 sm:inline-flex">
           <ShieldCheck className="h-3.5 w-3.5" />
-          Buyer protection
-        </span>
+          {i18n("Buyer protection")}</span>
       </header>
 
       <div className="grid gap-2.5 sm:grid-cols-2">
@@ -76,7 +77,7 @@ export default function PaymentMethodPicker({
               onClick={() => onChange(option.value)}
               aria-pressed={active}
               className={cn(
-                "group flex items-start gap-3 rounded-2xl border p-3.5 text-left transition-all duration-200",
+                "group flex items-start gap-3 rounded-2xl border p-3.5 text-start transition-all duration-200",
                 active
                   ? "border-brand-red bg-brand-red/5 shadow-sm ring-2 ring-brand-red/30"
                   : "border-brand-border bg-brand-white hover:border-brand-red/40 hover:bg-brand-light-bg",
@@ -95,7 +96,7 @@ export default function PaymentMethodPicker({
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-bold text-gray-900">
-                    {option.label}
+                    {i18n(option.label)}
                   </span>
                   {option.badge ? (
                     <span
@@ -106,12 +107,12 @@ export default function PaymentMethodPicker({
                           : "bg-brand-light-bg text-brand-black",
                       )}
                     >
-                      {option.badge}
+                      {i18n(option.badge)}
                     </span>
                   ) : null}
                 </span>
                 <span className="mt-1 block text-xs text-gray-600">
-                  {option.description}
+                  {i18n(option.description)}
                 </span>
               </span>
               <span

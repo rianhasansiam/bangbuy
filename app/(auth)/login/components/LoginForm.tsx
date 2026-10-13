@@ -1,6 +1,8 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 
-import Link from "next/link";
+
+import Link from "@/lib/i18n/navigation";
 import { ArrowRight, Lock, LogIn, Mail, ShieldAlert } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -41,6 +43,7 @@ export default function LoginFormView({
   onTogglePassword,
   onSubmit,
 }: LoginFormProps) {
+  const i18n = useInterfaceTranslations("InterfaceLoginComponentsLoginForm");
   const isSubmitting = status === "submitting";
   const isError = status === "error";
 
@@ -62,13 +65,13 @@ export default function LoginFormView({
           className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50/70 p-3 text-xs text-red-700"
         >
           <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-          <span className="leading-relaxed">{errorMessage}</span>
+          <span className="leading-relaxed">{i18n(errorMessage)}</span>
         </div>
       )}
 
       <FloatField
         icon={<Mail className="h-4 w-4" />}
-        label="Email address"
+        label={i18n("Email address")}
         value={form.email}
         onChange={(value) => onFieldChange("email", value)}
         type="email"
@@ -79,7 +82,7 @@ export default function LoginFormView({
 
       <FloatField
         icon={<Lock className="h-4 w-4" />}
-        label="Password"
+        label={i18n("Password")}
         value={form.password}
         onChange={(value) => onFieldChange("password", value)}
         type={showPassword ? "text" : "password"}
@@ -98,8 +101,7 @@ export default function LoginFormView({
           href="/login"
           className="text-xs font-semibold text-brand-red underline-offset-2 hover:underline"
         >
-          Forgot password?
-        </Link>
+          {i18n("Forgot password?")}</Link>
       </div>
 
       <button
@@ -111,12 +113,11 @@ export default function LoginFormView({
         <span className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
 
         {isSubmitting ? (
-          <ButtonLoader label="Signing you in..." />
+          <ButtonLoader label={i18n("Signing you in...")} />
         ) : (
           <>
             <LogIn className="h-4 w-4" />
-            Sign in
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            {i18n("Sign in")}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 rtl:rotate-180" />
           </>
         )}
       </button>
@@ -125,20 +126,18 @@ export default function LoginFormView({
       <GoogleSignInButton callbackUrl={callbackUrl} />
 
       <p className="mt-2 text-center text-[11px] text-brand-text-muted">
-        By signing in you agree to our{" "}
+        {i18n("By signing in you agree to our")}{" "}
         <Link
-          href="/about"
+          href="/terms-and-conditions"
           className="font-semibold text-brand-red hover:underline"
         >
-          Terms
-        </Link>{" "}
-        and{" "}
+          {i18n("Terms")}</Link>{" "}
+        {i18n("and")}{" "}
         <Link
-          href="/about"
+          href="/privacy-policy"
           className="font-semibold text-brand-red hover:underline"
         >
-          Privacy Policy
-        </Link>
+          {i18n("Privacy Policy")}</Link>
         .
       </p>
     </form>

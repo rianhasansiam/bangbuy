@@ -1,7 +1,9 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/lib/i18n/navigation";
 import { ShoppingCart, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -37,6 +39,7 @@ export default function SavedForLater({
   onMoveToCart,
   onRemove,
 }: SavedForLaterProps) {
+  const i18n = useInterfaceTranslations("InterfaceCartComponentsSavedForLater");
   if (items.length === 0) return null;
 
   return (
@@ -44,12 +47,9 @@ export default function SavedForLater({
       <div className="flex items-end justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold text-gray-900 sm:text-xl">
-            Saved for later
-          </h2>
+            {i18n("Saved for later")}</h2>
           <p className="text-xs text-gray-500">
-            {items.length} item{items.length === 1 ? "" : "s"} parked for next
-            time
-          </p>
+            {i18n("{count, plural, one {# item parked for next time} other {# items parked for next time}}", { count: items.length })}</p>
         </div>
       </div>
 
@@ -82,16 +82,15 @@ export default function SavedForLater({
                 />
                 {!item.inStock && (
                   <div className="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1 text-center text-[10px] font-semibold uppercase tracking-wider text-white">
-                    Out of stock
-                  </div>
+                    {i18n("Out of stock")}</div>
                 )}
               </Link>
 
               <button
                 type="button"
                 onClick={() => onRemove(item.id)}
-                aria-label="Remove from saved items"
-                className="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-full bg-white/90 text-gray-600 shadow backdrop-blur-md transition-all duration-200 hover:scale-110 hover:bg-white hover:text-red-600"
+                aria-label={i18n("Remove from saved items")}
+                className="absolute end-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-full bg-white/90 text-gray-600 shadow backdrop-blur-md transition-all duration-200 hover:scale-110 hover:bg-white hover:text-red-600"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -135,7 +134,7 @@ export default function SavedForLater({
                   )}
                 >
                   <ShoppingCart className="h-3 w-3" />
-                  {item.inStock ? "Move to cart" : "Notify me"}
+                  {item.inStock ? i18n("Move to cart") : i18n("Notify me")}
                 </button>
               </div>
             </motion.article>

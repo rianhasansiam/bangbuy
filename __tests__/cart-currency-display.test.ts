@@ -1,5 +1,5 @@
 import { createElement, type ReactNode } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkup } from "./helpers/intl";
 import { describe, expect, it } from "vitest";
 
 import FreeShippingBar from "@/app/(shop)/cart/components/FreeShippingBar";

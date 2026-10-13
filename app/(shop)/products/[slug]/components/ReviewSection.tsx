@@ -1,4 +1,7 @@
 "use client";
+import { useLocale } from "next-intl";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
@@ -26,10 +29,10 @@ function avatarFor(review: Review): string {
   return `https://api.dicebear.com/7.x/initials/svg?seed=${seed}`;
 }
 
-function formatDate(value: string): string {
+function formatDate(value: string, locale: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString(locale, {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -56,6 +59,8 @@ type SortKey = "newest" | "rating";
  * so eligibility errors surface inline here.
  */
 export default function ReviewSection({ productId }: { productId: string }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("InterfaceProductsSlugComponentsReviewSection");
   const [reviews, setReviews] = useState<Review[]>([]);
   const [summary, setSummary] = useState<ReviewSummary>(EMPTY_SUMMARY);
   const [loading, setLoading] = useState(true);
@@ -111,8 +116,7 @@ export default function ReviewSection({ productId }: { productId: string }) {
         <h2 className="flex min-w-0 items-center gap-2 text-xl font-bold text-gray-900 sm:text-2xl">
           <span className="h-6 w-1.5 shrink-0 rounded-full bg-brand-red" />
           <span className="min-w-0 [overflow-wrap:anywhere]">
-            Customer Reviews
-          </span>
+            {i18n("Customer Reviews")}</span>
         </h2>
         <button
           onClick={() => setShowForm((open) => !open)}
@@ -123,7 +127,7 @@ export default function ReviewSection({ productId }: { productId: string }) {
           ) : (
             <PenLine className="w-4 h-4" />
           )}
-          {showForm ? "Close" : "Write a Review"}
+          {showForm ? i18n("Close") : i18n("Write a Review")}
         </button>
       </div>
 
@@ -141,7 +145,7 @@ export default function ReviewSection({ productId }: { productId: string }) {
       <div className="bg-white rounded-2xl border border-brand-border p-4 sm:p-6">
         <div className="grid md:grid-cols-2 gap-6 md:gap-8">
           {/* Average Rating */}
-          <div className="text-center md:text-left md:border-r md:border-brand-border md:pr-8">
+          <div className="text-center md:text-start md:border-e md:border-brand-border md:pe-8">
             <div className="text-4xl sm:text-5xl font-bold text-brand-black mb-2">
               {summary.averageRating.toFixed(1)}
             </div>
@@ -158,8 +162,7 @@ export default function ReviewSection({ productId }: { productId: string }) {
               ))}
             </div>
             <p className="text-sm text-gray-500">
-              Based on {summary.totalReviews.toLocaleString()} review
-              {summary.totalReviews === 1 ? "" : "s"}
+              {i18n("Based on {count, plural, one {# review} other {# reviews}}", { count: summary.totalReviews })}
             </p>
           </div>
 
@@ -186,7 +189,7 @@ export default function ReviewSection({ productId }: { productId: string }) {
                     style={{ width: `${item.percentage}%` }}
                   />
                 </div>
-                <span className="text-sm text-gray-500 w-12 text-right">
+                <span className="text-sm text-gray-500 w-12 text-end">
                   {item.count}
                 </span>
               </button>
@@ -201,35 +204,34 @@ export default function ReviewSection({ productId }: { productId: string }) {
           <Filter className="h-4 w-4 shrink-0 text-gray-400" />
           <span className="min-w-0 text-sm text-gray-500 [overflow-wrap:anywhere]">
             {filterRating
-              ? `Showing ${filterRating}-star reviews`
-              : `All ${visibleReviews.length} reviews`}
+              ? i18n("Showing {rating}-star reviews", { rating: filterRating })
+              : i18n("All {count, plural, one {# review} other {# reviews}}", { count: visibleReviews.length })}
           </span>
           {filterRating && (
             <button
               onClick={() => setFilterRating(null)}
               className="text-sm text-brand-red hover:underline"
             >
-              Clear filter
-            </button>
+              {i18n("Clear filter")}</button>
           )}
         </div>
         <div className="relative">
           <select
-            aria-label="Sort reviews"
+            aria-label={i18n("Sort reviews")}
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortKey)}
-            className="appearance-none pl-3 pr-8 py-2 bg-white border border-brand-border rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-red"
+            className="appearance-none ps-3 pe-8 py-2 bg-white border border-brand-border rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-red"
           >
-            <option value="newest">Newest First</option>
-            <option value="rating">Highest Rated</option>
+            <option value="newest">{i18n("Newest First")}</option>
+            <option value="rating">{i18n("Highest Rated")}</option>
           </select>
-          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          <ChevronDown className="absolute end-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
         </div>
       </div>
 
       {/* States */}
       {loading ? (
-        <SectionLoader title="Loading reviews" rows={5} />
+        <SectionLoader title={i18n("Loading reviews")} rows={5} />
       ) : loadError ? (
         <div className="rounded-xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">
           {loadError}
@@ -237,8 +239,8 @@ export default function ReviewSection({ productId }: { productId: string }) {
       ) : visibleReviews.length === 0 ? (
         <div className="rounded-xl border border-brand-border bg-white p-10 text-center text-sm text-gray-600">
           {reviews.length === 0
-            ? "No reviews yet. Be the first to review this product after it is delivered."
-            : "No reviews match the current filter."}
+            ? i18n("No reviews yet. Be the first to review this product after it is delivered.")
+            : i18n("No reviews match the current filter.")}
         </div>
       ) : (
         <div className="space-y-4">
@@ -269,8 +271,7 @@ export default function ReviewSection({ productId }: { productId: string }) {
                     {review.verified && (
                       <span className="inline-flex items-center gap-1 text-xs text-green-600">
                         <CheckCircle className="w-3 h-3" />
-                        Verified Purchase
-                      </span>
+                        {i18n("Verified Purchase")}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-1">
@@ -287,7 +288,7 @@ export default function ReviewSection({ productId }: { productId: string }) {
                       ))}
                     </div>
                     <span className="text-xs text-gray-400">
-                      {formatDate(review.createdAt)}
+                      {formatDate(review.createdAt, locale)}
                     </span>
                   </div>
                 </div>
@@ -322,6 +323,7 @@ function WriteReviewForm({
   productId: string;
   onSubmitted: () => void;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceProductsSlugComponentsReviewSection");
   const [rating, setRating] = useState(5);
   const [hover, setHover] = useState(0);
   const [title, setTitle] = useState("");
@@ -342,7 +344,7 @@ function WriteReviewForm({
         comment: comment.trim() || undefined,
       });
       setDone(true);
-      toast.success("Review submitted — thanks!");
+      toast.success(i18n("Review submitted — thanks!"));
       // Give the success note a beat before refreshing the list.
       setTimeout(onSubmitted, 800);
     } catch (submitError) {
@@ -351,7 +353,7 @@ function WriteReviewForm({
           ? submitError.message
           : "Failed to submit your review.";
       setError(msg);
-      toast.error(msg);
+      toast.error(i18n(msg));
     } finally {
       setSubmitting(false);
     }
@@ -362,8 +364,7 @@ function WriteReviewForm({
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-700">
         <span className="inline-flex items-center gap-2 font-medium">
           <CheckCircle className="w-4 h-4" />
-          Thanks! Your review has been posted.
-        </span>
+          {i18n("Thanks! Your review has been posted.")}</span>
       </div>
     );
   }
@@ -374,11 +375,9 @@ function WriteReviewForm({
       className="min-w-0 rounded-2xl border border-brand-border bg-white p-4 sm:p-5"
     >
       <h3 className="text-base font-bold text-gray-900">
-        Share your experience
-      </h3>
+        {i18n("Share your experience")}</h3>
       <p className="mt-0.5 text-xs text-gray-500">
-        You can review a product once it has been delivered to you.
-      </p>
+        {i18n("You can review a product once it has been delivered to you.")}</p>
 
       <div className="mt-4 flex items-center gap-1">
         {[1, 2, 3, 4, 5].map((star) => (
@@ -389,7 +388,7 @@ function WriteReviewForm({
             onMouseEnter={() => setHover(star)}
             onMouseLeave={() => setHover(0)}
             className="p-0.5"
-            aria-label={`${star} star${star === 1 ? "" : "s"}`}
+            aria-label={i18n("{count, plural, one {# star} other {# stars}}", { count: star })}
           >
             <Star
               className={`w-6 h-6 transition-colors ${
@@ -407,14 +406,14 @@ function WriteReviewForm({
           type="text"
           value={title}
           onChange={(event) => setTitle(event.target.value)}
-          placeholder="Title (optional)"
+          placeholder={i18n("Title (optional)")}
           maxLength={120}
           className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm text-gray-900 outline-none transition focus:border-brand-red"
         />
         <textarea
           value={comment}
           onChange={(event) => setComment(event.target.value)}
-          placeholder="Tell others what you liked or disliked (optional)"
+          placeholder={i18n("Tell others what you liked or disliked (optional)")}
           rows={3}
           maxLength={2000}
           className="w-full rounded-xl border border-brand-border px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-brand-red"
@@ -423,7 +422,7 @@ function WriteReviewForm({
 
       {error && (
         <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 [overflow-wrap:anywhere]">
-          {error}
+          {i18n(error)}
         </div>
       )}
 
@@ -435,9 +434,9 @@ function WriteReviewForm({
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-red text-brand-white text-sm font-medium rounded-xl hover:bg-brand-red-hover transition-all shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? (
-            <ButtonLoader label="Submitting..." />
+            <ButtonLoader label={i18n("Submitting...")} />
           ) : (
-            "Submit review"
+            i18n("Submit review")
           )}
         </button>
       </div>

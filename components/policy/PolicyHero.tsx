@@ -1,3 +1,4 @@
+
 import { ShieldCheck } from "lucide-react";
 
 type PolicyHeroProps = {
@@ -26,12 +27,13 @@ export default function PolicyHero({
   description,
   lastUpdated,
 }: PolicyHeroProps) {
+  const i18n = (source: string) => source;
   const words = title.split(" ");
 
   return (
     <header className="relative overflow-hidden rounded-3xl bg-white p-6 shadow-sm ring-1 ring-brand-border sm:p-10">
-      <div className="absolute -left-10 -top-10 -z-10 h-32 w-32 rounded-full bg-brand-red/15 blur-3xl" />
-      <div className="absolute -right-10 -bottom-10 -z-10 h-32 w-32 rounded-full bg-brand-red/10 blur-3xl" />
+      <div className="absolute -start-10 -top-10 -z-10 h-32 w-32 rounded-full bg-brand-red/15 blur-3xl" />
+      <div className="absolute -end-10 -bottom-10 -z-10 h-32 w-32 rounded-full bg-brand-red/10 blur-3xl" />
 
       <div className="inline-flex items-center gap-2 rounded-full bg-brand-red/10 px-3 py-1.5">
         <ShieldCheck className="h-3.5 w-3.5 text-brand-red" />
@@ -61,7 +63,7 @@ export default function PolicyHero({
 
       {lastUpdated && (
         <p className="mt-4 text-xs font-medium uppercase tracking-wide text-gray-500">
-          Last updated:{" "}
+          {i18n("Last updated:")}{" "}
           <time dateTime={lastUpdated} className="text-gray-700">
             {new Date(lastUpdated).toLocaleDateString("en-US", {
               year: "numeric",

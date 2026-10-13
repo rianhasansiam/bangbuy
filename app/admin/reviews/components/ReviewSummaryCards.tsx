@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { cn } from "@/lib/utils";
 
@@ -45,21 +49,23 @@ export default function ReviewSummaryCards({
   average: number;
   adminCount: number;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminReviewsComponentsReviewSummaryCards");
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       <SummaryCard
-        label="Total reviews"
-        value={total.toLocaleString()}
+        label={i18n("Total reviews")}
+        value={total.toLocaleString(locale)}
         accent="violet"
       />
       <SummaryCard
-        label="Average rating"
+        label={i18n("Average rating")}
         value={`${average.toFixed(1)} / 5`}
         accent="amber"
       />
       <SummaryCard
-        label="Admin-added"
-        value={adminCount.toLocaleString()}
+        label={i18n("Admin-added")}
+        value={adminCount.toLocaleString(locale)}
         accent="emerald"
       />
     </div>

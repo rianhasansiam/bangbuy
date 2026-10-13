@@ -1,8 +1,10 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/lib/i18n/navigation";
 import { useSession } from "@/lib/auth/use-app-session";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -60,6 +62,7 @@ type WishlistSort =
   | "rating";
 
 export default function WishlistPage() {
+  const i18n = useInterfaceTranslations("InterfaceWishlistPage");
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -217,7 +220,7 @@ export default function WishlistPage() {
     writeLocalWishlist(next);
 
     if (successMessage) {
-      toast.success(successMessage);
+      toast.success(i18n(successMessage));
     }
   };
 
@@ -233,7 +236,7 @@ export default function WishlistPage() {
           error instanceof Error
             ? error.message
             : "Failed to update wishlist on server.";
-        toast.error(message);
+        toast.error(i18n(message));
       },
     );
   };
@@ -265,7 +268,7 @@ export default function WishlistPage() {
           error instanceof Error
             ? error.message
             : "Failed to update wishlist on server.";
-        toast.error(message);
+        toast.error(i18n(message));
       },
     );
   };
@@ -293,7 +296,7 @@ export default function WishlistPage() {
         return;
       }
       toast.info(
-        "Some items need a size or color — open them to choose options.",
+        i18n("Some items need a size or color — open them to choose options."),
       );
       if (toMove.length === 0) return;
     }
@@ -310,7 +313,7 @@ export default function WishlistPage() {
         const message =
           err instanceof Error ? err.message : "Failed to move item to cart.";
         dispatch(setCartErrorAction(message));
-        toast.error(message);
+        toast.error(i18n(message));
         return;
       }
 
@@ -321,9 +324,9 @@ export default function WishlistPage() {
         async (batchIds) => {
           await commitWishlistRemoval(batchIds);
           toast.success(
-            toMove.length === 1
+            i18n(toMove.length === 1
               ? `${toMove[0].name} moved to cart`
-              : `${toMove.length} items moved to cart`,
+              : `${toMove.length} items moved to cart`),
           );
         },
         (error) => {
@@ -331,7 +334,7 @@ export default function WishlistPage() {
             error instanceof Error
               ? error.message
               : "Failed to update wishlist on server.";
-          toast.error(message);
+          toast.error(i18n(message));
         },
       );
       return;
@@ -365,9 +368,9 @@ export default function WishlistPage() {
       async (batchIds) => {
         await commitWishlistRemoval(batchIds);
         toast.success(
-          toMove.length === 1
+          i18n(toMove.length === 1
             ? `${toMove[0].name} moved to cart`
-            : `${toMove.length} items moved to cart`,
+            : `${toMove.length} items moved to cart`),
         );
       },
       (error) => {
@@ -375,7 +378,7 @@ export default function WishlistPage() {
           error instanceof Error
             ? error.message
             : "Failed to update wishlist on server.";
-        toast.error(message);
+        toast.error(i18n(message));
       },
     );
   };
@@ -397,7 +400,7 @@ export default function WishlistPage() {
 
     const url = `${window.location.origin}/products/${id}`;
     const shareData: ShareData = {
-      title: "Check this out",
+      title: i18n("Check this out"),
       url,
     };
 
@@ -412,7 +415,7 @@ export default function WishlistPage() {
 
     try {
       await navigator.clipboard.writeText(url);
-      toast.info("Link copied to clipboard");
+      toast.info(i18n("Link copied to clipboard"));
     } catch {
       console.info("Share link:", url);
     }
@@ -437,7 +440,7 @@ export default function WishlistPage() {
   const handleSavedRemove = (id: string) => {
     queueSavedRemoval(id, () => {
       removeSavedFromLocal(id);
-      toast.success("Removed from saved items");
+      toast.success(i18n("Removed from saved items"));
     });
   };
 
@@ -490,12 +493,12 @@ export default function WishlistPage() {
         }
 
         removeSavedFromLocal(id);
-        toast.success(`${target.name} moved to cart`);
+        toast.success(i18n(`${target.name} moved to cart`));
       },
       (error) => {
         const message =
           error instanceof Error ? error.message : "Failed to move item to cart.";
-        toast.error(message);
+        toast.error(i18n(message));
       },
     );
   };
@@ -511,18 +514,17 @@ export default function WishlistPage() {
         />
 
         <div className="mt-2 flex items-center justify-between px-1 text-xs text-gray-500">
-          <span>Storage mode: {mode === "server" ? "Server + Local" : "Local only"}</span>
+          <span>{i18n("Storage mode: {mode}", { mode: mode === "server" ? i18n("Server + Local") : i18n("Local only") })}</span>
           {isLoading && (
             <span className="inline-flex items-center gap-1.5">
               <LoadingSpinner decorative size="xs" />
-              Syncing wishlist...
-            </span>
+              {i18n("Syncing wishlist...")}</span>
           )}
         </div>
 
         {error && (
           <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            {error}
+            {i18n(error)}
           </div>
         )}
 

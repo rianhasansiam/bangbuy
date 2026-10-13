@@ -1,4 +1,7 @@
 "use client";
+import { useLocale } from "next-intl";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import {
   AlertTriangle,
@@ -46,11 +49,11 @@ const BRANCH_STATUSES = new Set<OrderStatus>([
 
 type StepState = "done" | "current" | "todo";
 
-function formatStamp(value: string | undefined): string | null {
+function formatStamp(value: string | undefined, locale: string): string | null {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleString(undefined, {
+  return date.toLocaleString(locale, {
     month: "short",
     day: "2-digit",
     hour: "2-digit",
@@ -67,6 +70,8 @@ export default function OrderTracker({
   history: OrderStatusHistoryEntry[];
   className?: string;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("InterfaceOrdersIdComponentsOrderTracker");
   // `history` can be absent on the first paint when the page renders
   // from a pre-tracking checkout snapshot; treat anything non-array as
   // empty so the rail still renders from `status` alone.
@@ -107,7 +112,7 @@ export default function OrderTracker({
   };
 
   const branchMeta = isBranch ? ORDER_STATUS_META[status] : null;
-  const branchStamp = formatStamp(stampByStatus.get(status));
+  const branchStamp = formatStamp(stampByStatus.get(status), locale);
 
   const steps = ORDER_TRACKING_STEPS.map((step, index) => ({
     status: step,
@@ -115,7 +120,7 @@ export default function OrderTracker({
     state: stepState(index),
     label: ORDER_STATUS_META[step].customerLabel,
     description: ORDER_STATUS_META[step].description,
-    stamp: formatStamp(stampByStatus.get(step)),
+    stamp: formatStamp(stampByStatus.get(step), locale),
     Icon: STEP_ICONS[step],
   }));
 
@@ -125,17 +130,16 @@ export default function OrderTracker({
         "rounded-3xl border border-brand-border bg-brand-white p-5 shadow-sm sm:p-6",
         className,
       )}
-      aria-label="Order tracking timeline"
+      aria-label={i18n("Order tracking timeline")}
     >
       <header className="mb-5 flex items-center gap-2">
         <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-light-bg text-brand-black">
           <Truck className="h-4 w-4" />
         </span>
         <div>
-          <h2 className="text-lg font-bold text-gray-900">Order tracking</h2>
+          <h2 className="text-lg font-bold text-gray-900">{i18n("Order tracking")}</h2>
           <p className="text-xs text-gray-500">
-            Follow your package through every stage.
-          </p>
+            {i18n("Follow your package through every stage.")}</p>
         </div>
       </header>
 
@@ -143,11 +147,11 @@ export default function OrderTracker({
         <div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600" />
           <div>
-            <p className="text-sm font-bold text-rose-700">Order cancelled</p>
+            <p className="text-sm font-bold text-rose-700">{i18n("Order cancelled")}</p>
             <p className="text-xs text-rose-600">
               {branchStamp
-                ? `Cancelled on ${branchStamp}.`
-                : "This order was cancelled and will not be delivered."}
+                ? i18n("Cancelled on {value0}.", { value0: branchStamp })
+                : i18n("This order was cancelled and will not be delivered.")}
             </p>
           </div>
         </div>
@@ -194,9 +198,9 @@ export default function OrderTracker({
             <Undo2 className="mt-0.5 h-5 w-5 shrink-0" />
           )}
           <div>
-            <p className="text-sm font-bold">{branchMeta.label}</p>
+            <p className="text-sm font-bold">{i18n(branchMeta.label)}</p>
             <p className="text-xs opacity-90">
-              {branchMeta.description}
+              {i18n(branchMeta.description)}
               {branchStamp ? ` · ${branchStamp}` : ""}
             </p>
           </div>
@@ -236,6 +240,7 @@ function StepDot({ state, Icon }: { state: StepState; Icon: LucideIcon }) {
 }
 
 function VerticalStep({ step, isLast }: { step: StepView; isLast: boolean }) {
+  const i18n = useInterfaceTranslations("InterfaceOrdersIdComponentsOrderTracker");
   return (
     <li className="flex gap-3">
       <div className="flex flex-col items-center">
@@ -257,18 +262,17 @@ function VerticalStep({ step, isLast }: { step: StepView; isLast: boolean }) {
               step.state === "todo" ? "text-gray-400" : "text-gray-900",
             )}
           >
-            {step.label}
+            {i18n(step.label)}
           </p>
           {step.state === "current" && (
             <span className="rounded-full bg-brand-red/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-red">
-              Current
-            </span>
+              {i18n("Current")}</span>
           )}
         </div>
         {step.stamp ? (
           <p className="mt-0.5 text-xs text-gray-500">{step.stamp}</p>
         ) : (
-          <p className="mt-0.5 text-xs text-gray-400">{step.description}</p>
+          <p className="mt-0.5 text-xs text-gray-400">{i18n(step.description)}</p>
         )}
       </div>
     </li>
@@ -288,6 +292,7 @@ function HorizontalStep({
   leftDone: boolean;
   rightDone: boolean;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceOrdersIdComponentsOrderTracker");
   return (
     <li className="flex flex-1 flex-col items-center text-center">
       <div className="flex w-full items-center">
@@ -312,12 +317,11 @@ function HorizontalStep({
             step.state === "todo" ? "text-gray-400" : "text-gray-900",
           )}
         >
-          {step.label}
+          {i18n(step.label)}
         </p>
         {step.state === "current" && (
           <span className="mt-1 inline-block rounded-full bg-brand-red/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-brand-red">
-            Current
-          </span>
+            {i18n("Current")}</span>
         )}
         {step.stamp && (
           <p className="mt-0.5 text-[10px] text-gray-500">{step.stamp}</p>

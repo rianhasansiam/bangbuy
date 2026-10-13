@@ -1,6 +1,10 @@
 "use client";
+import { useLocale } from "next-intl";
 
-import Link from "next/link";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
+
+import Link from "@/lib/i18n/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
@@ -96,6 +100,7 @@ const EMPTY_FILTERS: Filters = {
 };
 
 export default function ActivityLogClient() {
+  const i18n = useInterfaceTranslations("AdminAdminActivitiesActivityLogClient");
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
   const [data, setData] = useState<AdminActivityPage | null>(null);
@@ -175,11 +180,9 @@ export default function ActivityLogClient() {
         <div>
           <h1 className="flex items-center gap-2 text-lg font-extrabold text-gray-900 sm:text-xl">
             <Activity className="h-5 w-5 text-brand-red" />
-            Activity Log
-          </h1>
+            {i18n("Activity Log")}</h1>
           <p className="text-xs text-gray-500">
-            Audit History for admin, order, customer, message, and cost activity.
-          </p>
+            {i18n("Audit History for admin, order, customer, message, and cost activity.")}</p>
         </div>
         <button
           type="button"
@@ -193,7 +196,7 @@ export default function ActivityLogClient() {
           ) : (
             <RotateCcw className="h-3.5 w-3.5" />
           )}
-          {loading ? "Refreshing..." : "Refresh"}
+          {loading ? i18n("Refreshing...") : i18n("Refresh")}
         </button>
       </div>
 
@@ -204,7 +207,7 @@ export default function ActivityLogClient() {
             type="text"
             value={filters.search}
             onChange={(event) => updateFilter("search", event.target.value)}
-            placeholder="Search action, source, target, ID, or performer..."
+            placeholder={i18n("Search action, source, target, ID, or performer...")}
             className={cn(inputClass, "w-full lg:flex-1")}
           />
 
@@ -215,10 +218,10 @@ export default function ActivityLogClient() {
             }
             className={inputClass}
           >
-            <option value="">All Modules</option>
+            <option value="">{i18n("All Modules")}</option>
             {MODULE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {i18n(option.label)}
               </option>
             ))}
           </select>
@@ -230,10 +233,10 @@ export default function ActivityLogClient() {
             }
             className={inputClass}
           >
-            <option value="">All Sources</option>
+            <option value="">{i18n("All Sources")}</option>
             {SOURCE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label}
+                {i18n(option.label)}
               </option>
             ))}
           </select>
@@ -243,7 +246,7 @@ export default function ActivityLogClient() {
             onChange={(event) => updateFilter("actorId", event.target.value)}
             className={inputClass}
           >
-            <option value="">All Performers</option>
+            <option value="">{i18n("All Performers")}</option>
             {actors.map((actor) => (
               <option key={actor.id} value={actor.id}>
                 {actor.name || actor.email || "Unknown"}
@@ -254,8 +257,7 @@ export default function ActivityLogClient() {
 
         <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
           <label className="flex items-center gap-2 text-xs font-semibold text-gray-600">
-            From
-            <input
+            {i18n("From")}<input
               type="date"
               value={filters.from}
               max={filters.to || undefined}
@@ -264,8 +266,7 @@ export default function ActivityLogClient() {
             />
           </label>
           <label className="flex items-center gap-2 text-xs font-semibold text-gray-600">
-            To
-            <input
+            {i18n("To")}<input
               type="date"
               value={filters.to}
               min={filters.from || undefined}
@@ -280,8 +281,7 @@ export default function ActivityLogClient() {
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-brand-border px-3 text-sm font-semibold text-gray-700 transition hover:bg-brand-light-bg"
             >
               <RotateCcw className="h-4 w-4" />
-              Reset
-            </button>
+              {i18n("Reset")}</button>
           )}
         </div>
       </div>
@@ -290,16 +290,15 @@ export default function ActivityLogClient() {
         <div className="flex items-start gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <div className="flex-1">
-            <p className="font-semibold">Couldn&apos;t load activity log.</p>
-            <p className="text-xs">{error}</p>
+            <p className="font-semibold">{i18n("Couldn't load activity log.")}</p>
+            <p className="text-xs">{i18n(error)}</p>
           </div>
           <button
             type="button"
             onClick={() => void load()}
             className="rounded-lg border border-rose-200 bg-white px-2 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100"
           >
-            Try again
-          </button>
+            {i18n("Try again")}</button>
         </div>
       )}
 
@@ -309,10 +308,9 @@ export default function ActivityLogClient() {
       {total > 0 && (
         <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
           <p className="text-xs text-gray-500">
-            Showing <span className="font-semibold">{rangeStart}</span>-
-            <span className="font-semibold">{rangeEnd}</span> of{" "}
-            <span className="font-semibold">{total}</span> All Activities
-          </p>
+            {i18n("Showing")}{" "}<span className="font-semibold">{rangeStart}</span>-
+            <span className="font-semibold">{rangeEnd}</span> {i18n("of")}{" "}
+            <span className="font-semibold">{total}</span> {i18n("All Activities")}</p>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -321,10 +319,9 @@ export default function ActivityLogClient() {
               className="inline-flex h-9 items-center gap-1 rounded-xl border border-brand-border bg-white px-3 text-xs font-bold text-gray-700 transition hover:bg-brand-light-bg disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ChevronLeft className="h-4 w-4" />
-              Previous
-            </button>
+              {i18n("Previous")}</button>
             <span className="text-xs font-semibold text-gray-600">
-              Page {page} of {totalPages}
+              {i18n("Page")}{" "}{page} {i18n("of")}{" "}{totalPages}
             </span>
             <button
               type="button"
@@ -332,8 +329,7 @@ export default function ActivityLogClient() {
               disabled={!hasNextPage || loading}
               className="inline-flex h-9 items-center gap-1 rounded-xl border border-brand-border bg-white px-3 text-xs font-bold text-gray-700 transition hover:bg-brand-light-bg disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Next
-              <ChevronRight className="h-4 w-4" />
+              {i18n("Next")}<ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -353,6 +349,8 @@ function ActivityTable({
   items: AdminActivityItem[];
   loading: boolean;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminActivitiesActivityLogClient");
   if (loading) {
     return (
       <div className="overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm">
@@ -376,11 +374,9 @@ function ActivityTable({
       <div className="grid place-items-center rounded-2xl border border-brand-border bg-white px-4 py-16 text-center shadow-sm">
         <Inbox className="h-8 w-8 text-brand-text-muted" />
         <p className="mt-2 text-sm font-semibold text-gray-700">
-          No activities found
-        </p>
+          {i18n("No activities found")}</p>
         <p className="mt-1 text-xs text-gray-500">
-          Admin actions across the panel will appear here.
-        </p>
+          {i18n("Admin actions across the panel will appear here.")}</p>
       </div>
     );
   }
@@ -388,14 +384,14 @@ function ActivityTable({
   return (
     <div className="overflow-hidden rounded-2xl border border-brand-border bg-white shadow-sm">
       {/* Desktop / tablet table */}
-      <table className="hidden w-full text-left text-sm sm:table">
+      <table className="hidden w-full text-start text-sm sm:table">
         <thead className="border-b border-brand-border bg-brand-light-bg/60 text-xs uppercase tracking-wide text-gray-500">
           <tr>
-            <th className="px-4 py-3 font-semibold">Activity Details</th>
-            <th className="px-4 py-3 font-semibold">Source</th>
-            <th className="px-4 py-3 font-semibold">Module</th>
-            <th className="px-4 py-3 font-semibold">Performed by</th>
-            <th className="px-4 py-3 text-right font-semibold">Date &amp; time</th>
+            <th className="px-4 py-3 font-semibold">{i18n("Activity Details")}</th>
+            <th className="px-4 py-3 font-semibold">{i18n("Source")}</th>
+            <th className="px-4 py-3 font-semibold">{i18n("Module")}</th>
+            <th className="px-4 py-3 font-semibold">{i18n("Performed by")}</th>
+            <th className="px-4 py-3 text-end font-semibold">{i18n("Date & time")}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-brand-border">
@@ -412,21 +408,19 @@ function ActivityTable({
                     <div className="min-w-0 space-y-1">
                       <div>
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-                          Action
-                        </p>
+                          {i18n("Action")}</p>
                         <p className="font-semibold text-gray-900">
                           {capitalizeFirst(item.action)}
                         </p>
                       </div>
                       <div>
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-                          Target
-                        </p>
+                          {i18n("Target")}</p>
                         <ActivityTarget item={item} />
                       </div>
                       {item.targetId && (
                         <p className="text-xs text-gray-500">
-                          Target ID{" "}
+                          {i18n("Target ID")}{" "}
                           <code className="rounded bg-brand-light-bg px-1.5 py-0.5 font-mono text-[11px] text-gray-700">
                             {item.targetId}
                           </code>
@@ -451,8 +445,8 @@ function ActivityTable({
                     {activityPerformer(item)}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right text-xs text-gray-500">
-                  {formatDateTime(item.createdAt)}
+                <td className="px-4 py-3 text-end text-xs text-gray-500">
+                  {formatDateTime(item.createdAt, locale)}
                 </td>
               </tr>
             );
@@ -472,15 +466,14 @@ function ActivityTable({
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-                  Activity Details
-                </p>
+                  {i18n("Activity Details")}</p>
                 <p className="text-sm font-semibold text-gray-900">
                   {capitalizeFirst(item.action)}
                 </p>
                 <ActivityTarget item={item} />
                 {item.targetId && (
                   <p className="mt-1 text-xs text-gray-500">
-                    Target ID{" "}
+                    {i18n("Target ID")}{" "}
                     <code className="rounded bg-brand-light-bg px-1.5 py-0.5 font-mono text-[11px] text-gray-700">
                       {item.targetId}
                     </code>
@@ -488,18 +481,18 @@ function ActivityTable({
                 )}
                 <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-gray-500">
                   <span className="inline-flex items-center rounded-full bg-white px-2 py-0.5 font-semibold text-gray-600 ring-1 ring-brand-border">
-                    Source: {sourceLabel(item.source)}
+                    {i18n("Source:")}{" "}{sourceLabel(item.source)}
                   </span>
                   <span className="inline-flex items-center rounded-full bg-brand-light-bg px-2 py-0.5 font-semibold text-gray-600">
-                    Module: {meta.label}
+                    {i18n("Module:")}{" "}{meta.label}
                   </span>
                   <span className="inline-flex items-center gap-1">
                     <User className="h-3 w-3" />
-                    <span>Performed by</span>
+                    <span>{i18n("Performed by")}</span>
                     {activityPerformer(item)}
                   </span>
                   <span aria-hidden>|</span>
-                  <span>{formatDateTime(item.createdAt)}</span>
+                  <span>{formatDateTime(item.createdAt, locale)}</span>
                 </div>
               </div>
             </li>
@@ -537,11 +530,11 @@ function capitalizeFirst(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-function formatDateTime(iso: string): string {
+function formatDateTime(iso: string, locale = "en"): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
   try {
-    return date.toLocaleString(undefined, {
+    return date.toLocaleString(locale, {
       year: "numeric",
       month: "short",
       day: "numeric",

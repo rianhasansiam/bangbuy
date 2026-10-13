@@ -1,5 +1,5 @@
 import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkup } from "./helpers/intl";
 import { describe, expect, it } from "vitest";
 
 import CheckoutHeader from "@/app/(shop)/checkout/components/CheckoutHeader";

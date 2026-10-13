@@ -1,3 +1,4 @@
+import LocaleSection from "@/components/i18n/LocaleSection";
 import type { Metadata } from "next";
 
 import { noIndexMetadata } from "@/lib/seo/metadata";
@@ -19,5 +20,5 @@ export default function CheckoutLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <>{children}</>;
+  return <LocaleSection pathname="/checkout">{children}</LocaleSection>;
 }

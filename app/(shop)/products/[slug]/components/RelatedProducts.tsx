@@ -1,10 +1,11 @@
 'use client'
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import React, { useState, useCallback } from 'react'
 import Image from 'next/image'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { ShoppingBag } from 'lucide-react'
+import Link from "@/lib/i18n/navigation"
+import { useRouter } from "@/lib/i18n/navigation";import { ShoppingBag } from 'lucide-react'
 import { useSession } from '@/lib/auth/use-app-session'
 import { useDispatch } from 'react-redux'
 
@@ -56,6 +57,7 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
   products,
   title = 'More Relevant Product',
 }) => {
+  const i18n = useInterfaceTranslations("InterfaceProductsSlugComponentsRelatedProducts");
   const dispatch = useDispatch<AppDispatch>()
   const router = useRouter()
   const { data: session, status } = useSession()
@@ -91,12 +93,12 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
         const snapshot = await fetchServerCartSnapshot()
         writeLocalCart(snapshot.items)
         dispatch(setCartData(snapshot))
-        toast.success('Added to cart')
+        toast.success(i18n("Added to cart"))
       } catch (error) {
         const message =
           error instanceof Error ? error.message : 'Failed to add item to cart.'
         dispatch(setCartErrorAction(message))
-        toast.error(message)
+        toast.error(i18n(message))
       } finally {
         setCartBusyId(null)
       }
@@ -126,8 +128,8 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
       trackLocalCartAddition(localBefore, nextLocal, createEventId())
     }
     setCartBusyId(null)
-    toast.success('Added to cart')
-  }, [cartBusyId, dispatch, router, session?.user?.role, status])
+    toast.success(i18n("Added to cart"))
+  }, [cartBusyId, dispatch, i18n, router, session?.user?.role, status])
 
   if (!products || products.length === 0) {
     return null
@@ -139,7 +141,7 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
   return (
     <div className="min-w-0 space-y-6">
       <h2 className="text-xl font-bold text-brand-black [overflow-wrap:anywhere]">
-        {title}
+        {i18n(title)}
       </h2>
 
       <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5">
@@ -152,7 +154,7 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
             <Link href={`/products/${product.slug}`} className="block min-w-0">
               <div
                 className="relative aspect-square bg-gray-50 p-2"
-                style={{ position: 'relative' }}
+                style={{ position: "relative" }}
               >
                 <Image
                   src={product.image}
@@ -164,7 +166,7 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
 
                 {/* Discount Badge */}
                 {product.discount > 0 && (
-                  <span className="absolute top-2 left-2 px-1.5 py-0.5 bg-brand-red text-brand-white text-[10px] font-semibold rounded">
+                  <span className="absolute top-2 start-2 px-1.5 py-0.5 bg-brand-red text-brand-white text-[10px] font-semibold rounded">
                     -{product.discount}%
                   </span>
                 )}
@@ -175,7 +177,7 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
             <div className="flex min-w-0 flex-1 flex-col p-3">
               <Link href={`/products/${product.slug}`} className="block min-w-0">
                 {/* Delivery Time */}
-                <p className="text-[10px] text-gray-400 mb-1">Delivery 2 Hours</p>
+                <p className="text-[10px] text-gray-400 mb-1">{i18n("Delivery 2 Hours")}</p>
 
                 {/* Price */}
                 <div className="mb-2 flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
@@ -207,11 +209,11 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
                 className="flex min-h-11 w-full min-w-0 items-center justify-center gap-1 rounded-lg bg-brand-red px-2 py-1.5 text-xs font-medium text-brand-white transition-colors hover:bg-brand-red-hover"
               >
                 {cartBusyId === product.id ? (
-                  <ButtonLoader label="Adding..." />
+                  <ButtonLoader label={i18n("Adding...")} />
                 ) : (
                   <>
                     <ShoppingBag className="h-3 w-3 shrink-0" />
-                    <span className="truncate">Add to bag</span>
+                    <span className="truncate">{i18n("Add to bag")}</span>
                   </>
                 )}
               </button>
@@ -230,9 +232,9 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
             className="inline-flex items-center gap-2 px-8 py-2.5 bg-white border-2 border-gray-200 text-gray-700 font-medium rounded-lg hover:border-brand-red hover:bg-brand-light-bg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
-              <ButtonLoader label="Loading..." />
+              <ButtonLoader label={i18n("Loading...")} />
             ) : (
-              'Load More'
+              i18n("Load More")
             )}
           </button>
         </div>

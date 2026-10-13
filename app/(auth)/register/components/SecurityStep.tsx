@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Lock } from "lucide-react";
 
@@ -34,6 +36,7 @@ export default function SecurityStep({
   onFieldChange,
   onTogglePassword,
 }: SecurityStepProps) {
+  const i18n = useInterfaceTranslations("InterfaceRegisterComponentsSecurityStep");
   const showPassword = visiblePasswordField === "password";
   const showConfirmPassword = visiblePasswordField === "confirmPassword";
 
@@ -41,7 +44,7 @@ export default function SecurityStep({
     <>
       <FloatField
         icon={<Lock className="h-4 w-4" />}
-        label="Password"
+        label={i18n("Password")}
         value={form.password}
         onChange={(value) => onFieldChange("password", value)}
         type={showPassword ? "text" : "password"}
@@ -64,7 +67,7 @@ export default function SecurityStep({
 
       <FloatField
         icon={<Lock className="h-4 w-4" />}
-        label="Confirm password"
+        label={i18n("Confirm password")}
         value={form.confirmPassword}
         onChange={(value) => onFieldChange("confirmPassword", value)}
         type={showConfirmPassword ? "text" : "password"}

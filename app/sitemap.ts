@@ -4,6 +4,12 @@ import { dependOnCatalogTags } from "@/lib/cache/catalog-dependency";
 import { catalogCacheTags } from "@/lib/cache/catalog-tags";
 import { prisma } from "@/lib/db/prisma";
 import { absoluteUrl } from "@/lib/seo/site";
+import { getPublishedLanguages } from "@/lib/i18n/server";
+import { DEFAULT_LOCALE } from "@/lib/i18n/registry";
+import { localizeHref } from "@/lib/i18n/paths";
+import { localizedAlternates } from "@/lib/seo/metadata";
+import { PREPARED_STATIC_PATHS } from "@/lib/seo/localized-metadata";
+import { getPublishedEntityLocales } from "@/lib/translations/service";
 
 /**
  * Dynamic sitemap for BangBuy.
@@ -34,6 +40,7 @@ const STATIC_ROUTES: {
 ];
 
 type ProductSitemapRow = {
+  id: string;
   slug: string;
   updatedAt: Date;
   categoryId: string;
@@ -48,6 +55,7 @@ type CategorySitemapRow = {
 };
 
 type BrandSitemapRow = {
+  id: string;
   slug: string;
   updatedAt: Date;
 };
@@ -90,12 +98,26 @@ function effectiveActiveCategoryIds(categories: CategorySitemapRow[]) {
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   await dependOnCatalogTags([catalogCacheTags.sitemap]);
-  const staticEntries: MetadataRoute.Sitemap = STATIC_ROUTES.map((route) => ({
-    url: absoluteUrl(route.path),
-    lastModified: STATIC_CONTENT_LAST_MODIFIED,
-    changeFrequency: route.changeFrequency,
-    priority: route.priority,
-  }));
+  const publishedLocales = (await getPublishedLanguages()).map((language) => language.code);
+  const entriesFor = (
+    path: string,
+    locales: readonly string[],
+    input: Omit<MetadataRoute.Sitemap[number], "url" | "alternates">,
+  ): MetadataRoute.Sitemap => {
+    const ready = locales.filter((locale) => publishedLocales.includes(locale));
+    return ready.map((locale) => ({
+      ...input,
+      url: absoluteUrl(localizeHref(path, locale)),
+      alternates: { languages: localizedAlternates(path, ready, publishedLocales) },
+    }));
+  };
+  const staticEntries: MetadataRoute.Sitemap = STATIC_ROUTES.flatMap((route) =>
+    entriesFor(route.path, PREPARED_STATIC_PATHS[route.path] ? publishedLocales : [DEFAULT_LOCALE], {
+      lastModified: STATIC_CONTENT_LAST_MODIFIED,
+      changeFrequency: route.changeFrequency,
+      priority: route.priority,
+    }),
+  );
 
   let categories: CategorySitemapRow[];
   try {
@@ -115,44 +137,47 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   const activeCategoryIds = effectiveActiveCategoryIds(categories);
+  const categoryLocales = await getPublishedEntityLocales("category", [...activeCategoryIds], ["name", "description", "seoTitle", "metaDescription"]);
   const categoryEntries: MetadataRoute.Sitemap = categories
     .filter((category) => activeCategoryIds.has(category.id))
-    .map((category) => ({
-      url: absoluteUrl(`/categories/${category.path}`),
-      lastModified: category.updatedAt,
-      changeFrequency: "weekly",
-      priority: category.parentId ? 0.65 : 0.7,
-    }));
+    .flatMap((category) => entriesFor(`/categories/${category.path}`, categoryLocales.get(category.id) ?? [], {
+        lastModified: category.updatedAt,
+        changeFrequency: "weekly",
+        priority: category.parentId ? 0.65 : 0.7,
+      }));
 
   try {
     const [products, brands]: [ProductSitemapRow[], BrandSitemapRow[]] =
       await Promise.all([
         prisma.product.findMany({
           where: { status: "ACTIVE" },
-          select: { slug: true, updatedAt: true, categoryId: true },
+          select: { id: true, slug: true, updatedAt: true, categoryId: true },
           orderBy: { updatedAt: "desc" },
         }),
         prisma.brand.findMany({
           where: { status: "ACTIVE" },
-          select: { slug: true, updatedAt: true },
+          select: { id: true, slug: true, updatedAt: true },
           orderBy: { updatedAt: "desc" },
         }),
       ]);
 
+    const [productLocales, brandLocales] = await Promise.all([
+      getPublishedEntityLocales("product", products.map((product) => product.id), ["name", "description", "descriptionBlocks", "seoTitle", "metaDescription"]),
+      getPublishedEntityLocales("brand", brands.map((brand) => brand.id), ["description", "seoTitle", "metaDescription"]),
+    ]);
     const productEntries: MetadataRoute.Sitemap = products
       .filter((product) => activeCategoryIds.has(product.categoryId))
-      .map((product) => ({
-        url: absoluteUrl(`/products/${product.slug}`),
-        lastModified: product.updatedAt,
+      .flatMap((product) => entriesFor(`/products/${product.slug}`, productLocales.get(product.id) ?? [], {
+          lastModified: product.updatedAt,
+          changeFrequency: "weekly",
+          priority: 0.8,
+        }));
+    const brandEntries: MetadataRoute.Sitemap = brands.flatMap((brand) =>
+      entriesFor(`/brands/${brand.slug}`, brandLocales.get(brand.id) ?? [], {
+        lastModified: brand.updatedAt,
         changeFrequency: "weekly",
-        priority: 0.8,
+        priority: 0.7,
       }));
-    const brandEntries: MetadataRoute.Sitemap = brands.map((brand) => ({
-      url: absoluteUrl(`/brands/${brand.slug}`),
-      lastModified: brand.updatedAt,
-      changeFrequency: "weekly",
-      priority: 0.7,
-    }));
 
     return [
       ...staticEntries,

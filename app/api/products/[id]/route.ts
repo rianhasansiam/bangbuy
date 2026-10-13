@@ -18,6 +18,7 @@ import {
   updateProduct,
 } from "@/lib/services/product.service";
 import { updateProductSchema } from "@/lib/validations/product.validation";
+import { apiLocale, localizeProductSnapshots } from "@/lib/translations/public";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -31,7 +32,8 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       ? await getProductById(id)
       : await getActiveProductById(id);
     if (!product) return jsonError(404, "Product not found.");
-    return ok(serializeProduct(product, { includeBuyingPrice }));
+    const serialized=serializeProduct(product, { includeBuyingPrice });
+    return ok(_request.nextUrl.searchParams.has("locale")?(await localizeProductSnapshots([serialized],await apiLocale(_request)))[0]:serialized);
   } catch (error) {
     console.error("[products/[id].GET] failed", error);
     return jsonError(500, "Failed to fetch product.");

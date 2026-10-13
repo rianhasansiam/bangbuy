@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import type React from "react";
 import { Plus, RotateCcw, Wallet } from "lucide-react";
@@ -30,18 +32,16 @@ export default function CapitalForm({
   onRefresh: () => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminCapitalCostsComponentsCapitalForm");
   return (
     <div className="rounded-2xl border border-brand-border bg-brand-white p-5 shadow-sm">
       <header className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
             <Wallet className="h-4 w-4 text-brand-red" />
-            Add business capital
-          </h2>
+            {i18n("Add business capital")}</h2>
           <p className="mt-1 text-xs text-gray-500">
-            Each entry is added to your running total capital. Contributions
-            are kept as a history and are never overwritten.
-          </p>
+            {i18n("Each entry is added to your running total capital. Contributions are kept as a history and are never overwritten.")}</p>
         </div>
 
         <button
@@ -56,13 +56,13 @@ export default function CapitalForm({
           ) : (
             <RotateCcw className="h-3.5 w-3.5" />
           )}
-          {isLoading ? "Refreshing..." : "Refresh"}
+          {isLoading ? i18n("Refreshing...") : i18n("Refresh")}
         </button>
       </header>
 
       {error && (
         <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {error}
+          {i18n(error)}
         </div>
       )}
       {note && (
@@ -72,13 +72,13 @@ export default function CapitalForm({
       )}
 
       {isLoading && !hasCapital ? (
-        <SectionLoader title="Loading capital" rows={3} />
+        <SectionLoader title={i18n("Loading capital")} rows={3} />
       ) : (
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid gap-3 md:grid-cols-2">
             <Field
               label={`Amount to add (${currency})`}
-              hint="Must be greater than zero."
+              hint={i18n("Must be greater than zero.")}
               required
             >
               <input
@@ -94,7 +94,7 @@ export default function CapitalForm({
               />
             </Field>
 
-            <Field label="Note" hint="Optional, e.g. funding source.">
+            <Field label={i18n("Note")} hint={i18n("Optional, e.g. funding source.")}>
               <input
                 type="text"
                 value={form.note}
@@ -102,7 +102,7 @@ export default function CapitalForm({
                   setForm((prev) => ({ ...prev, note: e.target.value }))
                 }
                 className="h-10 w-full rounded-xl border border-brand-border px-3 text-sm outline-none transition focus:border-brand-red"
-                placeholder="Initial investment"
+                placeholder={i18n("Initial investment")}
               />
             </Field>
           </div>
@@ -115,12 +115,11 @@ export default function CapitalForm({
               className="inline-flex h-10 items-center gap-2 rounded-xl bg-brand-red px-4 text-sm font-semibold text-white transition hover:bg-brand-red-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSaving ? (
-                <ButtonLoader label="Adding..." />
+                <ButtonLoader label={i18n("Adding...")} />
               ) : (
                 <>
                   <Plus className="h-4 w-4" />
-                  Add capital
-                </>
+                  {i18n("Add capital")}</>
               )}
             </button>
           </div>

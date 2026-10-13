@@ -1,6 +1,10 @@
 "use client";
+import { useLocale } from "next-intl";
 
-import Link from "next/link";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
+
+import Link from "@/lib/i18n/navigation";
 import { ArrowRight, Package } from "lucide-react";
 
 import type { DashboardTopProduct } from "@/features/admin-dashboard/api";
@@ -12,6 +16,8 @@ type TopProductsProps = {
 };
 
 export default function TopProducts({ products, loading }: TopProductsProps) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminComponentsTopProducts");
   const maxRevenue =
     products.length === 0
       ? 1
@@ -22,17 +28,15 @@ export default function TopProducts({ products, loading }: TopProductsProps) {
       <header className="mb-4 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Package className="h-4 w-4 text-brand-red" />
-          <h2 className="text-sm font-bold text-gray-900">Top Products</h2>
+          <h2 className="text-sm font-bold text-gray-900">{i18n("Top Products")}</h2>
           <span className="text-[11px] font-medium text-gray-500">
-            · last 30 days
-          </span>
+            {i18n("· last 30 days")}</span>
         </div>
         <Link
           href="/admin/products"
           className="group inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold text-brand-red transition-colors duration-200 hover:bg-brand-light-bg"
         >
-          View all
-          <ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
+          {i18n("View all")}<ArrowRight className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
         </Link>
       </header>
 
@@ -58,11 +62,9 @@ export default function TopProducts({ products, loading }: TopProductsProps) {
         <div className="grid place-items-center rounded-xl bg-brand-light-bg px-4 py-10 text-center">
           <Package className="h-7 w-7 text-brand-text-muted" />
           <p className="mt-2 text-sm font-semibold text-gray-700">
-            No sales yet
-          </p>
+            {i18n("No sales yet")}</p>
           <p className="mt-1 text-xs text-gray-500">
-            Top products will appear here as soon as orders come in.
-          </p>
+            {i18n("Top products will appear here as soon as orders come in.")}</p>
         </div>
       ) : (
         <ul className="space-y-3.5">
@@ -86,13 +88,12 @@ export default function TopProducts({ products, loading }: TopProductsProps) {
                         {product.name}
                       </p>
                       <p className="text-[11px] text-gray-500">
-                        {product.category} · {product.unitsSold} sold
-                      </p>
+                        {product.category} · {product.unitsSold} {i18n("sold")}</p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-end">
                     <p className="text-sm font-bold text-gray-900">
-                      BDT {Math.round(product.revenue).toLocaleString()}
+                      BDT {Math.round(product.revenue).toLocaleString(locale)}
                     </p>
                     <p
                       className={cn(
@@ -105,7 +106,7 @@ export default function TopProducts({ products, loading }: TopProductsProps) {
                       )}
                     >
                       {outOfStock
-                        ? "Out of stock"
+                        ? i18n("Out of stock")
                         : `${product.stock} in stock`}
                     </p>
                   </div>

@@ -1,6 +1,9 @@
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 import { AdminTablePageSkeleton } from "@/components/ui/loading";
 
 export default function AdminBrandsLoading() {
-  return <AdminTablePageSkeleton title="Loading brands" columns={6} />;
+  const i18n = useInterfaceTranslations("AdminAdminBrandsLoading");
+  return <AdminTablePageSkeleton title={i18n("Loading brands")} columns={6} />;
 }
 

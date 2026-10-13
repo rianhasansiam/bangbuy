@@ -1,5 +1,5 @@
 import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkup } from "./helpers/intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import UsersTable from "@/app/admin/users/components/UsersTable";

@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Image as ImageIcon, Pencil, Trash2 } from "lucide-react";
 
@@ -15,6 +17,7 @@ export function RowFooter({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminBannersComponentsRowFooter");
   const isBusy = busyId === banner.id;
   return (
     <div className="flex items-center justify-end gap-2 pt-1">
@@ -24,8 +27,7 @@ export function RowFooter({
         disabled={isBusy}
         className="inline-flex items-center gap-1 rounded-lg border border-brand-border px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-brand-light-bg disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <Pencil className="h-3.5 w-3.5" /> Edit
-      </button>
+        <Pencil className="h-3.5 w-3.5" /> {i18n("Edit")}</button>
       <button
         type="button"
         onClick={onDelete}
@@ -38,8 +40,7 @@ export function RowFooter({
         ) : (
           <Trash2 className="h-3.5 w-3.5" />
         )}
-        Delete
-      </button>
+        {i18n("Delete")}</button>
     </div>
   );
 }

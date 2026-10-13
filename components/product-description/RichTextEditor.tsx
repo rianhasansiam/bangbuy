@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useCallback, useEffect, useMemo } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
@@ -62,6 +64,7 @@ function ToolbarButton({
   title,
   children,
 }: ToolbarButtonProps) {
+  const i18n = useInterfaceTranslations("InterfaceProductDescriptionRichTextEditor");
   return (
     <button
       type="button"
@@ -71,8 +74,8 @@ function ToolbarButton({
         onClick();
       }}
       disabled={disabled}
-      title={title}
-      aria-label={title}
+      title={i18n(title)}
+      aria-label={i18n(title)}
       aria-pressed={isActive}
       className={cn(
         "inline-flex h-7 w-7 items-center justify-center rounded-lg text-sm transition",
@@ -119,6 +122,7 @@ export default function RichTextEditor({
   disabled,
   className,
 }: RichTextEditorProps) {
+  const i18n = useInterfaceTranslations("InterfaceProductDescriptionRichTextEditor");
   const extensions = useMemo(
     () => buildTiptapExtensions(placeholder),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -188,7 +192,7 @@ export default function RichTextEditor({
           onClick={() => editor.chain().focus().setParagraph().run()}
           isActive={editor.isActive("paragraph")}
           disabled={disabled}
-          title="Paragraph"
+          title={i18n("Paragraph")}
         >
           <Type className="h-3.5 w-3.5" />
         </ToolbarButton>
@@ -196,7 +200,7 @@ export default function RichTextEditor({
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
           isActive={editor.isActive("heading", { level: 1 })}
           disabled={disabled}
-          title="Heading 1"
+          title={i18n("Heading 1")}
         >
           <Heading1 className="h-3.5 w-3.5" />
         </ToolbarButton>
@@ -204,7 +208,7 @@ export default function RichTextEditor({
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
           isActive={editor.isActive("heading", { level: 2 })}
           disabled={disabled}
-          title="Heading 2"
+          title={i18n("Heading 2")}
         >
           <Heading2 className="h-3.5 w-3.5" />
         </ToolbarButton>
@@ -212,7 +216,7 @@ export default function RichTextEditor({
           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
           isActive={editor.isActive("heading", { level: 3 })}
           disabled={disabled}
-          title="Heading 3"
+          title={i18n("Heading 3")}
         >
           <Heading3 className="h-3.5 w-3.5" />
         </ToolbarButton>
@@ -224,7 +228,7 @@ export default function RichTextEditor({
           onClick={() => editor.chain().focus().toggleBold().run()}
           isActive={editor.isActive("bold")}
           disabled={disabled || !editor.can().chain().focus().toggleBold().run()}
-          title="Bold (Ctrl+B)"
+          title={i18n("Bold (Ctrl+B)")}
         >
           <Bold className="h-3.5 w-3.5" />
         </ToolbarButton>
@@ -232,7 +236,7 @@ export default function RichTextEditor({
           onClick={() => editor.chain().focus().toggleItalic().run()}
           isActive={editor.isActive("italic")}
           disabled={disabled || !editor.can().chain().focus().toggleItalic().run()}
-          title="Italic (Ctrl+I)"
+          title={i18n("Italic (Ctrl+I)")}
         >
           <Italic className="h-3.5 w-3.5" />
         </ToolbarButton>
@@ -240,7 +244,7 @@ export default function RichTextEditor({
           onClick={addLink}
           isActive={editor.isActive("link")}
           disabled={disabled}
-          title="Insert / Edit Link"
+          title={i18n("Insert / Edit Link")}
         >
           <LinkIcon className="h-3.5 w-3.5" />
         </ToolbarButton>
@@ -252,7 +256,7 @@ export default function RichTextEditor({
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           isActive={editor.isActive("bulletList")}
           disabled={disabled}
-          title="Bullet List"
+          title={i18n("Bullet List")}
         >
           <List className="h-3.5 w-3.5" />
         </ToolbarButton>
@@ -260,7 +264,7 @@ export default function RichTextEditor({
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           isActive={editor.isActive("orderedList")}
           disabled={disabled}
-          title="Numbered List"
+          title={i18n("Numbered List")}
         >
           <ListOrdered className="h-3.5 w-3.5" />
         </ToolbarButton>
@@ -272,7 +276,7 @@ export default function RichTextEditor({
           onClick={() => editor.chain().focus().setTextAlign("left").run()}
           isActive={editor.isActive({ textAlign: "left" })}
           disabled={disabled}
-          title="Align Left"
+          title={i18n("Align Left")}
         >
           <AlignLeft className="h-3.5 w-3.5" />
         </ToolbarButton>
@@ -280,7 +284,7 @@ export default function RichTextEditor({
           onClick={() => editor.chain().focus().setTextAlign("center").run()}
           isActive={editor.isActive({ textAlign: "center" })}
           disabled={disabled}
-          title="Align Center"
+          title={i18n("Align Center")}
         >
           <AlignCenter className="h-3.5 w-3.5" />
         </ToolbarButton>
@@ -288,7 +292,7 @@ export default function RichTextEditor({
           onClick={() => editor.chain().focus().setTextAlign("right").run()}
           isActive={editor.isActive({ textAlign: "right" })}
           disabled={disabled}
-          title="Align Right"
+          title={i18n("Align Right")}
         >
           <AlignRight className="h-3.5 w-3.5" />
         </ToolbarButton>
@@ -296,7 +300,7 @@ export default function RichTextEditor({
           onClick={() => editor.chain().focus().setTextAlign("justify").run()}
           isActive={editor.isActive({ textAlign: "justify" })}
           disabled={disabled}
-          title="Justify"
+          title={i18n("Justify")}
         >
           <AlignJustify className="h-3.5 w-3.5" />
         </ToolbarButton>

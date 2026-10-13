@@ -402,6 +402,9 @@ export { formatBDT, formatCurrency };
 
 export async function generateOrderPdf(order: OrderDetail): Promise<jsPDF> {
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  // The embedded Helvetica document template is English. Advertising Bengali
+  // here would require a font with shaping support rather than substituting text.
+  doc.setLanguage("en");
 
   const logo = await loadBrandLogo();
 

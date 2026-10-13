@@ -1,3 +1,5 @@
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 import { Loader2 } from "lucide-react";
 import type React from "react";
 
@@ -25,18 +27,19 @@ export function LoadingSpinner({
   decorative = false,
   size = "md",
 }: LoadingSpinnerProps) {
+  const i18n = useInterfaceTranslations("InterfaceUiLoading");
   return (
     <span
       className={cn("inline-flex items-center justify-center", className)}
       role={decorative ? undefined : "status"}
       aria-live={decorative ? undefined : "polite"}
-      aria-label={decorative ? undefined : label}
+      aria-label={decorative ? undefined : i18n(label)}
     >
       <Loader2
         aria-hidden="true"
         className={cn("animate-spin", SPINNER_SIZE[size])}
       />
-      {!decorative && <span className="sr-only">{label}</span>}
+      {!decorative && <span className="sr-only">{i18n(label)}</span>}
     </span>
   );
 }
@@ -48,10 +51,11 @@ export function ButtonLoader({
   label?: React.ReactNode;
   className?: string;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceUiLoading");
   return (
     <span className={cn("inline-flex items-center justify-center gap-2", className)}>
       <LoadingSpinner decorative size="sm" />
-      {label && <span>{label}</span>}
+      {label && <span>{typeof label === "string" ? i18n(label) : label}</span>}
     </span>
   );
 }
@@ -135,6 +139,7 @@ export function TableSkeleton({
   className?: string;
   ariaLabel?: string;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceUiLoading");
   return (
     <div
       className={cn(
@@ -142,7 +147,7 @@ export function TableSkeleton({
         className,
       )}
       aria-busy="true"
-      aria-label={ariaLabel}
+      aria-label={i18n(ariaLabel)}
       role="status"
     >
       <div className="overflow-x-auto">
@@ -174,7 +179,7 @@ export function TableSkeleton({
           </tbody>
         </table>
       </div>
-      <span className="sr-only">{ariaLabel}</span>
+      <span className="sr-only">{i18n(ariaLabel)}</span>
     </div>
   );
 }
@@ -188,6 +193,7 @@ export function SectionLoader({
   rows?: number;
   className?: string;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceUiLoading");
   return (
     <section
       className={cn(
@@ -195,12 +201,12 @@ export function SectionLoader({
         className,
       )}
       aria-busy="true"
-      aria-label={title}
+      aria-label={i18n(title)}
       role="status"
     >
       <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-brand-red">
         <LoadingSpinner decorative size="sm" />
-        <span>{title}</span>
+        <span>{i18n(title)}</span>
       </div>
       <div className="space-y-3">
         {Array.from({ length: rows }).map((_, index) => (
@@ -223,6 +229,7 @@ export function PageLoader({
   message?: string;
   className?: string;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceUiLoading");
   return (
     <div
       className={cn(
@@ -238,9 +245,9 @@ export function PageLoader({
             P<span className="text-brand-red">H</span>
           </span>
         </div>
-        <LoadingSpinner size="lg" className="text-brand-red" label={title} />
-        <p className="mt-5 text-lg font-extrabold text-brand-black">{title}</p>
-        <p className="mt-1 text-sm text-brand-text-muted">{message}</p>
+        <LoadingSpinner size="lg" className="text-brand-red" label={i18n(title)} />
+        <p className="mt-5 text-lg font-extrabold text-brand-black">{i18n(title)}</p>
+        <p className="mt-1 text-sm text-brand-text-muted">{i18n(message)}</p>
       </div>
     </div>
   );
@@ -253,9 +260,10 @@ export function FullPageLoader({
   title?: string;
   message?: string;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceUiLoading");
   return (
     <main className="min-h-screen bg-brand-light-bg">
-      <PageLoader title={title} message={message} className="min-h-screen" />
+      <PageLoader title={i18n(title)} message={i18n(message)} className="min-h-screen" />
     </main>
   );
 }
@@ -338,6 +346,7 @@ export function CategoryPageSkeleton() {
 }
 
 export function ProductDetailsPageSkeleton() {
+  const i18n = useInterfaceTranslations("InterfaceUiLoading");
   return (
     <main className="min-h-screen bg-brand-light-bg" aria-busy="true">
       <div className="mx-auto max-w-7xl px-3 py-6 sm:px-4 lg:px-6">
@@ -384,8 +393,8 @@ export function ProductDetailsPageSkeleton() {
           </aside>
         </div>
         <div className="mt-10 grid gap-4 lg:grid-cols-3">
-          <SectionLoader title="Loading product details" rows={4} className="lg:col-span-2" />
-          <SectionLoader title="Loading offers" rows={4} />
+          <SectionLoader title={i18n("Loading product details")} rows={4} className="lg:col-span-2" />
+          <SectionLoader title={i18n("Loading offers")} rows={4} />
         </div>
       </div>
     </main>
@@ -393,6 +402,7 @@ export function ProductDetailsPageSkeleton() {
 }
 
 export function CartPageSkeleton() {
+  const i18n = useInterfaceTranslations("InterfaceUiLoading");
   return (
     <main className="min-h-screen bg-brand-light-bg" aria-busy="true">
       <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -414,7 +424,7 @@ export function CartPageSkeleton() {
               </div>
             ))}
           </section>
-          <SectionLoader title="Loading order summary" rows={6} />
+          <SectionLoader title={i18n("Loading order summary")} rows={6} />
         </div>
       </div>
     </main>
@@ -422,17 +432,18 @@ export function CartPageSkeleton() {
 }
 
 export function CheckoutPageSkeleton() {
+  const i18n = useInterfaceTranslations("InterfaceUiLoading");
   return (
     <main className="min-h-screen bg-brand-light-bg" aria-busy="true">
       <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <Skeleton className="h-9 w-56" />
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_400px]">
           <section className="space-y-5">
-            <SectionLoader title="Loading customer details" rows={5} />
-            <SectionLoader title="Loading payment options" rows={3} />
-            <SectionLoader title="Loading checkout items" rows={4} />
+            <SectionLoader title={i18n("Loading customer details")} rows={5} />
+            <SectionLoader title={i18n("Loading payment options")} rows={3} />
+            <SectionLoader title={i18n("Loading checkout items")} rows={4} />
           </section>
-          <SectionLoader title="Calculating totals" rows={7} />
+          <SectionLoader title={i18n("Calculating totals")} rows={7} />
         </div>
       </div>
     </main>
@@ -440,6 +451,7 @@ export function CheckoutPageSkeleton() {
 }
 
 export function ProfilePageSkeleton() {
+  const i18n = useInterfaceTranslations("InterfaceUiLoading");
   return (
     <main className="min-h-screen bg-brand-light-bg" aria-busy="true">
       <div className="mx-auto w-full max-w-6xl px-3 py-4 sm:px-6 sm:py-8 lg:py-10">
@@ -458,7 +470,7 @@ export function ProfilePageSkeleton() {
               <Skeleton key={index} className="h-11 w-full rounded-xl" />
             ))}
           </div>
-          <SectionLoader title="Loading your profile" rows={7} />
+          <SectionLoader title={i18n("Loading your profile")} rows={7} />
         </div>
       </div>
     </main>
@@ -484,16 +496,17 @@ export function WishlistPageSkeleton() {
 }
 
 export function OrderDetailsPageSkeleton() {
+  const i18n = useInterfaceTranslations("InterfaceUiLoading");
   return (
     <main className="min-h-screen bg-brand-light-bg" aria-busy="true">
       <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
         <Skeleton className="h-8 w-64" />
         <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
           <section className="space-y-4">
-            <SectionLoader title="Loading order progress" rows={4} />
-            <TableSkeleton rows={4} columns={4} ariaLabel="Loading order items" />
+            <SectionLoader title={i18n("Loading order progress")} rows={4} />
+            <TableSkeleton rows={4} columns={4} ariaLabel={i18n("Loading order items")} />
           </section>
-          <SectionLoader title="Loading receipt" rows={7} />
+          <SectionLoader title={i18n("Loading receipt")} rows={7} />
         </div>
       </div>
     </main>
@@ -532,6 +545,7 @@ export function AuthPageSkeleton() {
 }
 
 export function AdminDashboardSkeleton() {
+  const i18n = useInterfaceTranslations("InterfaceUiLoading");
   return (
     <section className="space-y-5" aria-busy="true">
       <div className="flex items-center justify-between gap-3">
@@ -547,12 +561,12 @@ export function AdminDashboardSkeleton() {
         ))}
       </div>
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-        <SectionLoader title="Loading sales chart" rows={8} className="xl:col-span-2" />
-        <SectionLoader title="Loading top products" rows={8} />
+        <SectionLoader title={i18n("Loading sales chart")} rows={8} className="xl:col-span-2" />
+        <SectionLoader title={i18n("Loading top products")} rows={8} />
       </div>
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
         <TableSkeleton rows={5} columns={4} className="xl:col-span-2" />
-        <SectionLoader title="Loading activity" rows={6} />
+        <SectionLoader title={i18n("Loading activity")} rows={6} />
       </div>
     </section>
   );
@@ -565,6 +579,7 @@ export function AdminTablePageSkeleton({
   title?: string;
   columns?: number;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceUiLoading");
   return (
     <section className="space-y-4" aria-busy="true">
       <div className="rounded-2xl border border-brand-border bg-brand-white p-4 shadow-sm">
@@ -579,7 +594,7 @@ export function AdminTablePageSkeleton({
           </div>
         </div>
       </div>
-      <TableSkeleton rows={7} columns={columns} ariaLabel={title} />
+      <TableSkeleton rows={7} columns={columns} ariaLabel={i18n(title)} />
     </section>
   );
 }
@@ -610,10 +625,11 @@ export function BrandLoadingText({
 }: {
   text?: string;
 }) {
+  const i18n = useInterfaceTranslations("InterfaceUiLoading");
   return (
     <span className="inline-flex items-center gap-2 text-sm font-semibold text-brand-red">
       <LoadingSpinner decorative size="sm" />
-      {text}
+      {i18n(text)}
     </span>
   );
 }

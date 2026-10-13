@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Plus, Copy, Trash2, GripVertical } from "lucide-react";
 import * as LucideIcons from "lucide-react";
@@ -50,6 +52,7 @@ export default function FeatureGridBlockForm({
   onChange,
   disabled,
 }: Props) {
+  const i18n = useInterfaceTranslations("InterfaceProductDescriptionBlocksFeatureGridBlockForm");
   const patch = (fields: Partial<FeatureGridBlock>) =>
     onChange({ ...block, ...fields });
 
@@ -108,13 +111,12 @@ export default function FeatureGridBlockForm({
       {/* Section heading */}
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Section heading (optional)
-        </label>
+          {i18n("Section heading (optional)")}</label>
         <input
           type="text"
           value={block.heading ?? ""}
           onChange={(e) => patch({ heading: e.target.value || undefined })}
-          placeholder="e.g. Why choose us?"
+          placeholder={i18n("e.g. Why choose us?")}
           maxLength={200}
           disabled={disabled}
           className={cn(inputClass)}
@@ -124,8 +126,7 @@ export default function FeatureGridBlockForm({
       {/* Columns */}
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Columns
-        </label>
+          {i18n("Columns")}</label>
         <div className="flex gap-2">
           {([2, 3, 4] as const).map((col) => (
             <button
@@ -149,7 +150,7 @@ export default function FeatureGridBlockForm({
       {/* Feature items */}
       <div>
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Feature items ({block.items.length}/20)
+          {i18n("Feature items (")}{block.items.length}/20)
         </p>
         <div className="space-y-2">
           {block.items.map((item, index) => (
@@ -163,16 +164,16 @@ export default function FeatureGridBlockForm({
                 <button
                   type="button"
                   onClick={() => toggleExpand(item.id)}
-                  className="flex-1 text-left text-sm font-semibold text-gray-800 truncate"
+                  className="flex-1 text-start text-sm font-semibold text-gray-800 truncate"
                 >
-                  {item.title || <span className="text-gray-400 font-normal">Untitled feature</span>}
+                  {item.title || <span className="text-gray-400 font-normal">{i18n("Untitled feature")}</span>}
                 </button>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={() => moveItem(item.id, -1)}
                     disabled={disabled || index === 0}
-                    title="Move up"
+                    title={i18n("Move up")}
                     className="rounded p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30"
                   >
                     ▲
@@ -181,7 +182,7 @@ export default function FeatureGridBlockForm({
                     type="button"
                     onClick={() => moveItem(item.id, 1)}
                     disabled={disabled || index === block.items.length - 1}
-                    title="Move down"
+                    title={i18n("Move down")}
                     className="rounded p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30"
                   >
                     ▼
@@ -190,7 +191,7 @@ export default function FeatureGridBlockForm({
                     type="button"
                     onClick={() => duplicateItem(item.id)}
                     disabled={disabled || block.items.length >= 20}
-                    title="Duplicate"
+                    title={i18n("Duplicate")}
                     className="rounded p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30"
                   >
                     <Copy className="h-3.5 w-3.5" />
@@ -199,7 +200,7 @@ export default function FeatureGridBlockForm({
                     type="button"
                     onClick={() => deleteItem(item.id)}
                     disabled={disabled}
-                    title="Delete"
+                    title={i18n("Delete")}
                     className="rounded p-1 text-red-400 hover:text-red-600 disabled:opacity-30"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -212,15 +213,14 @@ export default function FeatureGridBlockForm({
                 <div className="space-y-3 border-t border-brand-border p-3">
                   <div>
                     <label className="mb-1 block text-xs font-semibold text-gray-500">
-                      Title *
-                    </label>
+                      {i18n("Title *")}</label>
                     <input
                       type="text"
                       value={item.title}
                       onChange={(e) =>
                         patchItem(item.id, { title: e.target.value })
                       }
-                      placeholder="Feature title"
+                      placeholder={i18n("Feature title")}
                       maxLength={150}
                       disabled={disabled}
                       className={cn(inputClass, "bg-white")}
@@ -228,8 +228,7 @@ export default function FeatureGridBlockForm({
                   </div>
                   <div>
                     <label className="mb-1 block text-xs font-semibold text-gray-500">
-                      Description (optional)
-                    </label>
+                      {i18n("Description (optional)")}</label>
                     <textarea
                       rows={2}
                       value={item.description ?? ""}
@@ -238,7 +237,7 @@ export default function FeatureGridBlockForm({
                           description: e.target.value || undefined,
                         })
                       }
-                      placeholder="Brief supporting text…"
+                      placeholder={i18n("Brief supporting text…")}
                       maxLength={500}
                       disabled={disabled}
                       className={cn(textareaClass, "bg-white")}
@@ -246,8 +245,7 @@ export default function FeatureGridBlockForm({
                   </div>
                   <div>
                     <label className="mb-1 block text-xs font-semibold text-gray-500">
-                      Icon (optional)
-                    </label>
+                      {i18n("Icon (optional)")}</label>
                     <select
                       value={item.icon ?? ""}
                       onChange={(e) =>
@@ -258,7 +256,7 @@ export default function FeatureGridBlockForm({
                       disabled={disabled}
                       className={cn(inputClass, "bg-white")}
                     >
-                      <option value="">No icon</option>
+                      <option value="">{i18n("No icon")}</option>
                       {APPROVED_FEATURE_ICONS.map((name) => (
                         <option key={name} value={name}>
                           {name}
@@ -284,8 +282,7 @@ export default function FeatureGridBlockForm({
           className="mt-2 inline-flex h-9 items-center gap-2 rounded-xl border border-dashed border-brand-border px-3 text-sm font-semibold text-gray-600 transition hover:border-brand-red hover:text-brand-red disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Plus className="h-4 w-4" />
-          Add feature item
-        </button>
+          {i18n("Add feature item")}</button>
       </div>
 
       <BlockCommonControls

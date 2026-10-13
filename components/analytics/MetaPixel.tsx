@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { usePathname } from "@/lib/i18n/navigation";
 import { useEffect } from "react";
 import { initializeMetaPixel, trackPageView } from "@/lib/analytics/meta-pixel";
 

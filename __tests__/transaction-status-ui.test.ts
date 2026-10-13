@@ -1,5 +1,9 @@
+import { createTranslator as createIntlTranslator } from "next-intl";
+import coreMessages from "@/messages/core-en.json";
+import interfaceMessages from "@/messages/interface-en.json";
+import adminMessages from "@/messages/admin-en.json";
 import { createElement, type ReactNode } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkup } from "./helpers/intl";
 import { describe, expect, it, vi } from "vitest";
 
 import TransactionsTab from "@/app/(shop)/profile/components/TransactionsTab";
@@ -85,3 +89,11 @@ describe("transaction status rendering", () => {
     );
   });
 });
+
+vi.mock("next-intl", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next-intl")>()),
+  useLocale: () => "en",
+  useTranslations: () => createIntlTranslator({ locale: "en", messages: { ...coreMessages, ...interfaceMessages, ...adminMessages } }),
+}));
+vi.mock("@/components/i18n/useLocaleDraft", () => ({ useLocaleDraft: () => undefined, useLocaleSwitchGuard: () => undefined }));
+vi.mock("@/lib/i18n/navigation", async () => ({ ...(await import("next/navigation")), default: (await import("next/link")).default }));

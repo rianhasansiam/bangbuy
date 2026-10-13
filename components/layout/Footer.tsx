@@ -1,4 +1,6 @@
-import Link from "next/link";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+import Link from "@/lib/i18n/navigation";
 
 import { siteConfig } from "@/lib/seo/site";
 
@@ -37,6 +39,7 @@ const socialLinks = [
 ] as const;
 
 const Footer = () => {
+  const i18n = useInterfaceTranslations("InterfaceLayoutFooter");
   return (
     <footer className="bg-brand-black text-brand-white ">
       <div className="container mx-auto px-4 py-8 sm:py-10">
@@ -45,27 +48,23 @@ const Footer = () => {
           <div className="col-span-2 sm:col-span-2 md:col-span-1 space-y-3 sm:space-y-4 ">
             <Link
               href="/"
-              aria-label={`${siteConfig.name} - Good Quality. Good Service. - home`}
-              className="items-center  group inline-flex flex-col rounded-xl py-1 pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 focus-visible:ring-offset-brand-black"
+              aria-label={i18n("{value0} - Good Quality. Good Service. - home", { value0: siteConfig.name })}
+              className="items-center  group inline-flex flex-col rounded-xl py-1 pe-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-red focus-visible:ring-offset-2 focus-visible:ring-offset-brand-black"
             >
               <span className="mb-2 whitespace-nowrap text-3xl font-black leading-none tracking-[-0.06em] text-brand-white sm:text-4xl">
-                Bang<span className="text-brand-red">Buy</span>
+                {"Bang"}<span className="text-brand-red">{"Buy"}</span>
               </span>
               <span className="mt-1.5 whitespace-nowrap text-[0.52rem] font-bold uppercase leading-none tracking-[0.22em] text-brand-white/55 transition-colors duration-300 group-hover:text-brand-white/80">
-                - Good Quality. Good Service. -
-              </span>
+                {i18n("- Good Quality. Good Service. -")}</span>
             </Link>
             <p className="text-brand-white text-xs sm:text-sm leading-relaxed">
-              Discover premium verified stores within 50km. Real-time deals,
-              clean UI, and a superior local shopping experience.
-            </p>
+              {i18n("Discover premium verified stores within 50km. Real-time deals, clean UI, and a superior local shopping experience.")}</p>
           </div>
 
           {/* Quick Links */}
           <div>
             <h2 className="text-base sm:text-lg font-black text-brand-white mb-3 sm:mb-4">
-              Quick Links
-            </h2>
+              {i18n("Quick Links")}</h2>
             <ul className="space-y-1.5 sm:space-y-2">
               {quickLinks.map((link, i) => (
                 <li key={i}>
@@ -73,7 +72,7 @@ const Footer = () => {
                     href={link.href}
                     className="text-brand-white hover:text-brand-red focus-visible:text-brand-red transition text-xs sm:text-sm"
                   >
-                    {link.name}
+                    {i18n(link.name)}
                   </Link>
                 </li>
               ))}
@@ -83,8 +82,7 @@ const Footer = () => {
           {/* Support Center */}
           <div>
             <h2 className="text-base sm:text-lg font-black text-brand-white mb-3 sm:mb-4">
-              Support Center
-            </h2>
+              {i18n("Support Center")}</h2>
             <ul className="space-y-1.5 sm:space-y-2">
               {supportLinks.map((link, i) => (
                 <li key={i}>
@@ -92,7 +90,7 @@ const Footer = () => {
                     href={link.href}
                     className="text-brand-white hover:text-brand-red focus-visible:text-brand-red transition text-xs sm:text-sm"
                   >
-                    {link.name}
+                    {i18n(link.name)}
                   </Link>
                 </li>
               ))}
@@ -103,12 +101,9 @@ const Footer = () => {
           <div className="col-span-2 sm:col-span-2 md:col-span-1">
             {/* Keep In Touch */}
             <h2 className="text-sm sm:text-base font-black text-brand-white mb-2 sm:mb-3">
-              Keep In Touch
-            </h2>
+              {i18n("Keep In Touch")}</h2>
             <p className="mb-3 max-w-xs text-xs leading-relaxed text-brand-white sm:mb-4 sm:text-sm">
-              Follow {siteConfig.name} for fresh deals and local shopping
-              updates.
-            </p>
+              {i18n("Follow {brand} for fresh deals and local shopping updates.", { brand: siteConfig.name })}</p>
             <div className="flex flex-wrap gap-2.5 sm:gap-3">
               {socialLinks.map((social) => (
                 <Link
@@ -116,7 +111,7 @@ const Footer = () => {
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`Follow ${siteConfig.name} on ${social.name}`}
+                  aria-label={i18n("Follow {value0} on {value1}", { value0: siteConfig.name, value1: social.name })}
                   className={`inline-flex h-11 w-11 items-center justify-center rounded-xl text-white shadow-lg ring-1 ring-white/15 transition-all duration-300 hover:-translate-y-1 hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-white focus-visible:ring-offset-2 focus-visible:ring-offset-brand-black ${social.className}`}
                 >
                   {social.icon}

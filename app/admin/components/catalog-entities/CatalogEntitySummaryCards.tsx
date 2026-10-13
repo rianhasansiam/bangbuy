@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { Eye, Package, Tags } from "lucide-react";
 
@@ -13,6 +17,8 @@ export default function CatalogEntitySummaryCards({
   active: number;
   productsMapped: number;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminComponentsCatalogEntitiesCatalogEntitySummaryCards");
   const cards = [
     {
       label: `Total ${pluralLabel}`,
@@ -21,13 +27,13 @@ export default function CatalogEntitySummaryCards({
       style: "bg-brand-light-bg text-brand-black",
     },
     {
-      label: "Active",
+      label: i18n("Active"),
       value: active,
       icon: Eye,
       style: "bg-emerald-50 text-emerald-700",
     },
     {
-      label: "Products mapped",
+      label: i18n("Products mapped"),
       value: productsMapped,
       icon: Package,
       style: "bg-amber-50 text-amber-700",
@@ -45,12 +51,12 @@ export default function CatalogEntitySummaryCards({
           >
             <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
               <Icon className="h-4 w-4" />
-              {card.label}
+              {i18n(card.label)}
             </p>
             <p
               className={`mt-2 inline-flex rounded-xl px-3 py-1.5 text-sm font-bold ${card.style}`}
             >
-              {card.value.toLocaleString()}
+              {card.value.toLocaleString(locale)}
             </p>
           </div>
         );

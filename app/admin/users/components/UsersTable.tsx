@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 /* eslint-disable @next/next/no-img-element */
 
@@ -34,6 +38,8 @@ export default function UsersTable({
   currentUserId: string | null;
   onToggleRole: (user: AdminCustomerRow) => void;
 }) {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminUsersComponentsUsersTable");
   if (isLoading && totalCount === 0) {
     return <TableSkeleton rows={6} columns={7} ariaLabel="Loading customers" />;
   }
@@ -42,8 +48,7 @@ export default function UsersTable({
     return (
       <div className="rounded-2xl border border-brand-border bg-brand-white p-10 text-center text-sm text-gray-600 shadow-sm">
         <Users className="mx-auto mb-2 h-8 w-8 text-brand-text-muted" />
-        No customers match the current filters.
-      </div>
+        {i18n("No customers match the current filters.")}</div>
     );
   }
 
@@ -51,15 +56,15 @@ export default function UsersTable({
     <div className="overflow-hidden rounded-2xl border border-brand-border bg-brand-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
-          <thead className="bg-brand-light-bg text-left text-xs uppercase tracking-wider text-brand-text-muted">
+          <thead className="bg-brand-light-bg text-start text-xs uppercase tracking-wider text-brand-text-muted">
             <tr>
-              <th className="px-4 py-3">Customer</th>
-              <th className="px-4 py-3">Contact</th>
-              <th className="px-4 py-3">Type / Role</th>
-              <th className="px-4 py-3">Orders</th>
-              <th className="px-4 py-3">Spend</th>
-              <th className="px-4 py-3">Added</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-4 py-3">{i18n("Customer")}</th>
+              <th className="px-4 py-3">{i18n("Contact")}</th>
+              <th className="px-4 py-3">{i18n("Type / Role")}</th>
+              <th className="px-4 py-3">{i18n("Orders")}</th>
+              <th className="px-4 py-3">{i18n("Spend")}</th>
+              <th className="px-4 py-3">{i18n("Added")}</th>
+              <th className="px-4 py-3 text-end">{i18n("Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -120,12 +125,11 @@ export default function UsersTable({
                           : ROLE_BADGE[user.role],
                       )}
                     >
-                      {user.customerType === "GUEST" ? "Guest" : user.role}
+                      {user.customerType === "GUEST" ? i18n("Guest") : user.role}
                     </span>
                     {isSelf && (
                       <p className="mt-1 text-[11px] uppercase tracking-wide text-brand-text-muted">
-                        You
-                      </p>
+                        {i18n("You")}</p>
                     )}
                   </td>
                   <td className="px-4 py-3 text-gray-700">
@@ -134,24 +138,23 @@ export default function UsersTable({
                     </p>
                     {user.liveOrdersCount > 0 && (
                       <p className="text-xs text-gray-500">
-                        {user.liveOrdersCount} active
-                      </p>
+                        {user.liveOrdersCount} {i18n("active")}</p>
                     )}
                   </td>
                   <td className="px-4 py-3">
                     <p className="font-semibold text-gray-900">
-                      {formatCurrency(user.totalSpend)}
+                      {formatCurrency(user.totalSpend, locale)}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Last: {formatDate(user.lastOrderAt)}
+                      {i18n("Last:")}{" "}{formatDate(user.lastOrderAt, locale)}
                     </p>
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500">
-                    {formatDate(user.createdAt)}
+                    {formatDate(user.createdAt, locale)}
                   </td>
                   <td className="px-4 py-3">
                     {user.customerType === "GUEST" ? (
-                      <p className="text-right text-xs text-gray-500">Guest checkout</p>
+                      <p className="text-end text-xs text-gray-500">{i18n("Guest checkout")}</p>
                     ) : (
                       <div className="flex items-center justify-end">
                         <button
@@ -171,7 +174,7 @@ export default function UsersTable({
                           ) : (
                             <ShieldCheck className="h-3.5 w-3.5" />
                           )}
-                          Make {nextRole}
+                          {i18n("Make")}{" "}{nextRole}
                         </button>
                       </div>
                     )}

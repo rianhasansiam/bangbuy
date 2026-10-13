@@ -19,10 +19,24 @@ A Bangladesh-focused, mobile-first e-commerce storefront and administration plat
 | Image Uploads | VPS filesystem, Nginx, Sharp; restricted SSH for local development |
 | PDF Generation | jsPDF + jsPDF AutoTable |
 | Package Manager | npm |
+| Internationalization | next-intl; reviewed English/Bengali catalogs and persisted locale preferences |
+| Automatic Translation | Native Python-venv LibreTranslate, server-only controlled generation/jobs |
 
 ---
 
 ## Installation Guide
+
+For multilingual development, use a dedicated local database and follow
+[the local translation setup](docs/translation-local-setup.md). The existing
+production database tunnel described below is outside this local-only phase.
+See [translation architecture and verification](docs/translation-architecture.md)
+and the separate [future native VPS runbook](docs/translation-vps-setup.md).
+LibreTranslate uses a dedicated Python 3.11 virtual environment and persistent
+local model storage; no container tools are required. The verified native endpoint
+is `http://127.0.0.1:5001`; export `LIBRETRANSLATE_URL` before app commands.
+Run `scripts/translation/install-local.sh --python python3.11`,
+`scripts/translation/start-local.sh`, and `scripts/translation/verify-local.sh`;
+see the guide for the exact interpreter, local database and stop/update commands.
 
 ### Prerequisites
 
@@ -315,7 +329,7 @@ bangbuy/
 ├── proxy.ts                    # Catalog URL canonicalization proxy
 ├── next.config.ts              # Next.js configuration
 ├── tsconfig.json               # TypeScript configuration
-├── vitest.config.mts           # Vitest test configurationBang@65401@#
+├── vitest.config.mts           # Vitest test configuration
 ├── .env.example                # Environment variable template
 └── package.json                # Project dependencies and scripts
 ```

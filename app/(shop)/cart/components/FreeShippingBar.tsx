@@ -1,3 +1,5 @@
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
 import { Truck, PartyPopper } from "lucide-react";
 
 import { CurrencyAmount } from "@/components/currency/CurrencyAmount";
@@ -11,6 +13,7 @@ export default function FreeShippingBar({
   subtotalBDT,
   thresholdBDT,
 }: FreeShippingBarProps) {
+  const i18n = useInterfaceTranslations("InterfaceCartComponentsFreeShippingBar");
   const remainingBDT = Math.max(0, thresholdBDT - subtotalBDT);
   const progress = Math.min(100, (subtotalBDT / thresholdBDT) * 100);
   const reached = remainingBDT === 0;
@@ -40,16 +43,14 @@ export default function FreeShippingBar({
         <div className="min-w-0 flex-1">
           {reached ? (
             <p className="text-sm font-semibold text-emerald-800">
-              You&apos;ve unlocked free shipping
-            </p>
+              {i18n("You've unlocked free shipping")}</p>
           ) : (
             <p className="text-sm font-semibold text-gray-800">
-              Add{" "}
+              {i18n("Add")}{" "}
               <span className="text-brand-red">
                 <CurrencyAmount amountBDT={remainingBDT} />
               </span>{" "}
-              more for free shipping
-            </p>
+              {i18n("more for free shipping")}</p>
           )}
           <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100">
             <div

@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useEffect, useState } from "react";
 import { RefreshCw, X } from "lucide-react";
@@ -33,6 +35,7 @@ export default function AdminOrderDetailsDrawer({
   order: AdminOrderRow;
   onClose: () => void;
 }) {
+  const i18n = useInterfaceTranslations("AdminAdminOrdersComponentsAdminOrderDetailsDrawer");
   const [loadState, setState] = useState<LoadState>({ status: "loading" });
   const state: LoadState =
     loadState.status === "loading" || loadState.revision === order.updatedAt
@@ -74,10 +77,10 @@ export default function AdminOrderDetailsDrawer({
           if (returnFocusTo instanceof HTMLElement) returnFocusTo.focus();
         }}
       >
-        <SheetHeader className="relative border-b border-brand-border bg-brand-light-bg px-5 py-4 pr-14">
-          <SheetTitle>Order details</SheetTitle>
+        <SheetHeader className="relative border-b border-brand-border bg-brand-light-bg px-5 py-4 pe-14">
+          <SheetTitle>{i18n("Order details")}</SheetTitle>
           <SheetDescription className="break-all">{order.orderNumber}</SheetDescription>
-          <SheetClose aria-label="Close order details" className="absolute right-4 top-4 rounded-lg p-1.5 text-gray-500 transition hover:bg-white focus-visible:outline-2 focus-visible:outline-brand-red">
+          <SheetClose aria-label={i18n("Close order details")} className="absolute right-4 top-4 rounded-lg p-1.5 text-gray-500 transition hover:bg-white focus-visible:outline-2 focus-visible:outline-brand-red">
             <X aria-hidden="true" className="h-5 w-5" />
           </SheetClose>
         </SheetHeader>
@@ -85,8 +88,8 @@ export default function AdminOrderDetailsDrawer({
         <div className="min-h-0 flex-1 overflow-y-auto bg-gray-50 px-5 py-5" aria-busy={state.status === "loading"}>
           {state.status === "loading" && (
             <div className="flex min-h-48 items-center justify-center gap-2 text-sm text-gray-500">
-              <LoadingSpinner label="Loading order details" />
-              <span>Loading order details...</span>
+              <LoadingSpinner label={i18n("Loading order details")} />
+              <span>{i18n("Loading order details...")}</span>
             </div>
           )}
           {state.status === "error" && (
@@ -101,15 +104,14 @@ export default function AdminOrderDetailsDrawer({
                 className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 font-semibold transition hover:bg-red-100"
               >
                 <RefreshCw aria-hidden="true" className="h-4 w-4" />
-                Try again
-              </button>
+                {i18n("Try again")}</button>
             </div>
           )}
           {state.status === "ready" && <AdminOrderDetails order={state.order} />}
         </div>
 
         <SheetFooter>
-          <SheetClose className="rounded-xl border border-brand-border px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-brand-light-bg">Close</SheetClose>
+          <SheetClose className="rounded-xl border border-brand-border px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-brand-light-bg">{i18n("Close")}</SheetClose>
         </SheetFooter>
       </SheetContent>
     </Sheet>

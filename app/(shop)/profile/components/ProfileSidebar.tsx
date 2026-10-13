@@ -1,4 +1,6 @@
 "use client";
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { cn } from "@/lib/utils";
 import type { ProfileStats } from "@/features/profile/api";
@@ -24,12 +26,13 @@ export default function ProfileSidebar({
   onTabChange,
   stats,
 }: ProfileSidebarProps) {
+  const i18n = useInterfaceTranslations("InterfaceProfileComponentsProfileSidebar");
   return (
     <aside className="min-w-0 lg:sticky lg:top-[88px] lg:self-start">
       {/* Mobile: horizontal scroller */}
       <nav
         className="-mx-3 flex snap-x gap-2 overflow-x-auto px-3 pb-1 scrollbar-none [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:px-6 lg:hidden"
-        aria-label="Profile sections"
+        aria-label={i18n("Profile sections")}
       >
         {PROFILE_TABS.map((tab) => {
           const Icon = tab.icon;
@@ -48,7 +51,7 @@ export default function ProfileSidebar({
               aria-pressed={active}
             >
               <Icon className="h-4 w-4" />
-              {tab.label}
+              {i18n(tab.label)}
               <Badge tabId={tab.id} stats={stats} />
             </button>
           );
@@ -67,7 +70,7 @@ export default function ProfileSidebar({
                 onClick={() => onTabChange(tab.id)}
                 aria-pressed={active}
                 className={cn(
-                  "group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition-all duration-200",
+                  "group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-start transition-all duration-200",
                   active
                     ? "bg-brand-red text-brand-white shadow-md"
                     : "text-foreground hover:bg-brand-light-bg hover:text-brand-red",
@@ -86,7 +89,7 @@ export default function ProfileSidebar({
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center justify-between gap-2">
                     <span className="truncate text-sm font-bold">
-                      {tab.label}
+                      {i18n(tab.label)}
                     </span>
                     <Badge tabId={tab.id} stats={stats} active={active} />
                   </span>
@@ -96,7 +99,7 @@ export default function ProfileSidebar({
                       active ? "text-white/85" : "text-gray-500",
                     )}
                   >
-                    {tab.description}
+                    {i18n(tab.description)}
                   </span>
                 </span>
               </button>

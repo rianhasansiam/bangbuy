@@ -1,4 +1,5 @@
 import { readApiError } from "@/features/http/api-envelope";
+import { addActiveApiLocale } from "@/lib/i18n/api-locale";
 
 export type ProductSortOption =
   | "popular"
@@ -43,6 +44,10 @@ export type Product = {
   inStock: boolean;
   variantCount: number;
   createdAt: string;
+  translationAvailable?: boolean;
+  sourceLocale?: string;
+  contentLocale?: string;
+  fieldLocales?: Record<string,string>;
 };
 
 export type ApiProduct = {
@@ -291,6 +296,10 @@ export function mapApiProduct(item: unknown): Product {
     inStock: stock > 0 && status === "ACTIVE",
     variantCount,
     createdAt: readString(row.createdAt) ?? new Date(0).toISOString(),
+    translationAvailable: typeof row.translationAvailable === "boolean" ? row.translationAvailable : undefined,
+    sourceLocale: readString(row.sourceLocale) ?? undefined,
+    contentLocale: readString(row.contentLocale) ?? undefined,
+    fieldLocales: asRecord(row.fieldLocales) as Record<string,string> | undefined,
   };
 }
 
@@ -343,7 +352,7 @@ export async function fetchProductsFromApi(
   addQueryValue(params, "stock", query.stock);
   addQueryValue(params, "minRating", query.minRating);
 
-  const response = await fetch(`/api/products?${params.toString()}`, {
+  const response = await fetch(`/api/products?${addActiveApiLocale(params).toString()}`, {
     signal: options?.signal,
   });
   const envelope = await readResponse<unknown>(response, "Failed to fetch products.");
@@ -369,7 +378,7 @@ export async function fetchProductsFromApi(
 export async function fetchCatalogFacets(
   signal?: AbortSignal,
 ): Promise<CatalogFacets> {
-  const response = await fetch("/api/catalog/facets", { signal });
+  const response = await fetch(`/api/catalog/facets?${addActiveApiLocale(new URLSearchParams())}`, { signal });
   const envelope = await readResponse<unknown>(
     response,
     "Failed to load catalog filters.",
@@ -454,7 +463,7 @@ export async function searchCatalogFromApi(
     productLimit: String(options?.productLimit ?? 6),
     categoryLimit: String(options?.categoryLimit ?? 5),
   });
-  const response = await fetch(`/api/catalog/search?${params.toString()}`, {
+  const response = await fetch(`/api/catalog/search?${addActiveApiLocale(params).toString()}`, {
     signal: options?.signal,
   });
   const envelope = await readResponse<unknown>(response, "Failed to search catalog.");

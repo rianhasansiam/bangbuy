@@ -168,11 +168,11 @@ export async function deleteAdminMessage(messageId: string): Promise<void> {
   }
 }
 
-export function formatDateTime(value: string | null): string {
+export function formatDateTime(value: string | null, locale = "en"): string {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString(undefined, {
+  return date.toLocaleString(locale, {
     year: "numeric",
     month: "short",
     day: "2-digit",

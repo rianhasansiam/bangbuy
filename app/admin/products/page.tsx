@@ -1,4 +1,8 @@
 "use client";
+import { useLocale } from "next-intl";
+
+import { useInterfaceTranslations } from "@/components/i18n/translate";
+
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Boxes, CircleDollarSign, PackageCheck, Warehouse } from "lucide-react";
@@ -114,6 +118,8 @@ function SummaryCard({
 }
 
 export default function AdminProductsPage() {
+  const locale = useLocale();
+  const i18n = useInterfaceTranslations("AdminAdminProductsPage");
   const dispatch = useDispatch<AppDispatch>();
   const products = useSelector((state: RootState) => state.adminProducts.items);
   const isLoading = useSelector((state: RootState) => state.adminProducts.isLoading);
@@ -279,18 +285,18 @@ export default function AdminProductsPage() {
       !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(form.slug.trim())
     ) {
       throw new Error(
-        "Canonical slug must use lowercase letters, numbers, and single hyphens.",
+        i18n("Canonical slug must use lowercase letters, numbers, and single hyphens."),
       );
     }
 
     const buyingPrice = parseNumericField(form.buyingPrice, "Buying price");
     const salePrice = parseNumericField(form.salePrice, "Sale price");
-    if (buyingPrice < 0 || salePrice < 0) throw new Error("Prices cannot be negative.");
+    if (buyingPrice < 0 || salePrice < 0) throw new Error(i18n("Prices cannot be negative."));
     const discountPrice = form.discountPrice.trim()
       ? parseNumericField(form.discountPrice, "Discount price")
       : null;
     if (discountPrice !== null && (discountPrice < 0 || discountPrice > salePrice)) {
-      throw new Error("Discount price must be between zero and the sale price.");
+      throw new Error(i18n("Discount price must be between zero and the sale price."));
     }
 
     const seenCombinations = new Set<string>();
@@ -351,7 +357,7 @@ export default function AdminProductsPage() {
       };
     });
     if (variants.length > 1 && seenCombinations.has("default")) {
-      throw new Error("Only a single optionless variant may use the default combination.");
+      throw new Error(i18n("Only a single optionless variant may use the default combination."));
     }
 
     return {
@@ -457,7 +463,7 @@ export default function AdminProductsPage() {
   const deleteProduct = async (product: AdminProduct) => {
     const confirmed = await confirmMajorAction({
       title: `Delete ${product.name}?`,
-      description: "This permanently removes the product and its variants. Historical order snapshots remain.",
+      description: i18n("This permanently removes the product and its variants. Historical order snapshots remain."),
       confirmLabel: "Delete product",
     });
     if (!confirmed) return;
@@ -478,16 +484,16 @@ export default function AdminProductsPage() {
   return (
     <div className="space-y-5">
       <header>
-        <p className="text-xs font-bold uppercase tracking-widest text-brand-red">Catalog</p>
-        <h1 className="mt-1 text-2xl font-black text-gray-950 sm:text-3xl">Products</h1>
-        <p className="mt-1 text-sm text-gray-600">Manage classification, technical data, pricing, media and purchasable option combinations.</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-brand-red">{i18n("Catalog")}</p>
+        <h1 className="mt-1 text-2xl font-black text-gray-950 sm:text-3xl">{i18n("Products")}</h1>
+        <p className="mt-1 text-sm text-gray-600">{i18n("Manage classification, technical data, pricing, media and purchasable option combinations.")}</p>
       </header>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard label="Products" value={products.length} detail="All catalog records" icon={Boxes} />
-        <SummaryCard label="Published" value={summary.active} detail="Visible when category ancestry is active" icon={PackageCheck} />
-        <SummaryCard label="Units in stock" value={summary.stock} detail="Across active variants" icon={Warehouse} />
-        <SummaryCard label="Stock cost" value={`BDT ${summary.value.toLocaleString()}`} detail="Buying price × current stock" icon={CircleDollarSign} />
+        <SummaryCard label={i18n("Products")} value={products.length} detail="All catalog records" icon={Boxes} />
+        <SummaryCard label={i18n("Published")} value={summary.active} detail="Visible when category ancestry is active" icon={PackageCheck} />
+        <SummaryCard label={i18n("Units in stock")} value={summary.stock} detail="Across active variants" icon={Warehouse} />
+        <SummaryCard label={i18n("Stock cost")} value={`BDT ${summary.value.toLocaleString(locale)}`} detail="Buying price × current stock" icon={CircleDollarSign} />
       </div>
 
       {(loadError || optionsError) && (
