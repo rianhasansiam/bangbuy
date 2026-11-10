@@ -1,5 +1,6 @@
 "use client";
 import { useInterfaceTranslations } from "@/components/i18n/translate";
+import { useSurface } from "@/components/layout/SurfaceContext";
 
 
 import { LoaderCircle, X } from "lucide-react";
@@ -77,6 +78,7 @@ export default function ProductsExplorer({
 }: ProductsExplorerProps) {
   const i18n = useInterfaceTranslations("InterfaceProductsComponentsProductsExplorer");
   const router = useRouter();
+  const surface = useSurface();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const serializedParams = searchParams.toString();
@@ -123,6 +125,16 @@ export default function ProductsExplorer({
     const nextPage = currentPageRef.current + 1;
     if (requestedPageRef.current !== null || nextPage > meta.totalPages) return;
 
+    if (surface === "public") {
+      // A loaded third-party runtime must never survive into newly displayed
+      // catalog content that has not passed the next document's policy gate.
+      requestedPageRef.current = nextPage;
+      const params = new URLSearchParams(serializedParams);
+      params.set("page", String(nextPage));
+      router.push(`${pathname}?${params}`);
+      return;
+    }
+
     requestedPageRef.current = nextPage;
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -159,7 +171,7 @@ export default function ProductsExplorer({
         if (!controller.signal.aborted) setIsLoadingMore(false);
       }
     }
-  }, [meta.totalPages, query]);
+  }, [meta.totalPages, pathname, query, router, serializedParams, surface]);
 
   useEffect(() => {
     const target = loadMoreRef.current;
@@ -238,7 +250,7 @@ export default function ProductsExplorer({
   ].filter((value) => value !== "" && value != null && value !== 0).length;
 
   return (
-    <div className="min-h-screen bg-brand-light-bg">
+    <div data-tracking-public-snapshot={JSON.stringify({ products: initialProducts.map(product => ({ id: product.id, productCode: product.productCode, slug: product.slug, name: product.name, description: product.description, modelNumber: product.modelNumber, series: product.series, specifications: product.specifications, price: product.price, discountPrice: product.discountPrice, image: product.image, images: product.images, rating: product.rating, reviewCount: product.reviewCount, badge: product.badge, categoryId: product.categoryId, category: product.category, categoryPath: product.categoryPath, categoryImage: product.categoryImage, categoryBreadcrumb: product.categoryBreadcrumb, brand: product.brand, brandSlug: product.brandSlug, manufacturer: product.manufacturer, manufacturerSlug: product.manufacturerSlug, stock: product.stock, inStock: product.inStock, variantCount: product.variantCount, createdAt: product.createdAt, translationAvailable: product.translationAvailable, sourceLocale: product.sourceLocale, contentLocale: product.contentLocale, fieldLocales: product.fieldLocales })), facets: initialFacets })} className="min-h-screen bg-brand-light-bg">
       <div className="mx-auto max-w-7xl px-3 py-4 sm:px-4 sm:py-6 lg:px-6">
         <div className="mb-4 min-w-0">
           <h1 className="text-2xl font-bold tracking-tight text-gray-950 [overflow-wrap:anywhere] sm:text-3xl">

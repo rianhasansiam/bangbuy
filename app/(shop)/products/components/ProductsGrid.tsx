@@ -1,4 +1,7 @@
 "use client";
+import { useLocale } from "next-intl";
+import { useSurface } from "@/components/layout/SurfaceContext";
+import { navigateShoppingHandoff } from "@/lib/security/shopping-handoff";
 import { useInterfaceTranslations } from "@/components/i18n/translate";
 
 
@@ -143,6 +146,8 @@ function ListItem({ product }: { product: Product }) {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { data: session, status } = useSession();
+  const surface = useSurface();
+  const handoffLocale = useLocale();
   const [isCartBusy, setIsCartBusy] = useState(false);
 
   const finalPrice = product.discountPrice ?? product.price;
@@ -159,6 +164,8 @@ function ListItem({ product }: { product: Product }) {
       router.push(`/products/${product.slug}`);
       return;
     }
+
+    if (surface === "public") { navigateShoppingHandoff({ action: "cart", productId: product.id, quantity: 1 }, handoffLocale); return; }
 
     const canUseServer = canUseServerCart(session?.user?.role, status);
 
@@ -205,7 +212,7 @@ function ListItem({ product }: { product: Product }) {
   };
 
   return (
-    <div className="group flex gap-3 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:border-brand-red hover:shadow-md sm:gap-4">
+    <div data-tracking-content-id={product.productCode || product.id} className="group flex gap-3 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:border-brand-red hover:shadow-md sm:gap-4">
       <Link
         href={`/products/${product.slug}`}
         className="relative aspect-square w-28 shrink-0 overflow-hidden bg-gray-50 sm:w-40 md:w-48"

@@ -2,9 +2,9 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "./helpers/intl";
 import { describe, expect, it } from "vitest";
 
-import CheckoutHeader from "@/app/(shop)/checkout/components/CheckoutHeader";
-import CustomerForm, { type CustomerFormState } from "@/app/(shop)/checkout/components/CustomerForm";
-import OrderSummaryCard from "@/app/(shop)/checkout/components/OrderSummaryCard";
+import CheckoutHeader from "@/app/(private-commerce)/(shop)/checkout/components/CheckoutHeader";
+import CustomerForm, { type CustomerFormState } from "@/app/(private-commerce)/(shop)/checkout/components/CustomerForm";
+import OrderSummaryCard from "@/app/(private-commerce)/(shop)/checkout/components/OrderSummaryCard";
 
 const form: CustomerFormState = {
   customerName: "Buyer", customerPhone: "01700000000", customerEmail: "buyer@example.test",

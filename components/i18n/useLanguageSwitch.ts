@@ -5,11 +5,13 @@ import { useLocale, useTranslations } from "next-intl";
 import { confirm } from "@/lib/feedback";
 import { discardPreparedDrafts, prepareLanguageDrafts, type DraftPreparation } from "@/lib/i18n/drafts";
 import { replaceLocaleHref } from "@/lib/i18n/paths";
+import { useSurface } from "@/components/layout/SurfaceContext";
 
 // Desktop, mobile and crawlable links share one explicit switch at a time.
 let switchPending = false;
 
 export function useLanguageSwitch() {
+  const surface = useSurface();
   const locale = useLocale();
   const t = useTranslations("Language");
   const [busy, setBusy] = useState(false);
@@ -34,7 +36,7 @@ export function useLanguageSwitch() {
       }
       setBusy(true);
       setError("");
-      const response = await fetch("/api/language", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ locale: code }) });
+      const response = await fetch(surface === "public" ? "/api/public/language" : "/api/language", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ locale: code }) });
       if (!response.ok) throw new Error("Preference rejected");
       if (code === locale) { release(); return; }
       // A fresh document renders the active catalog and HTML language together.

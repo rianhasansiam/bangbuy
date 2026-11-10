@@ -81,7 +81,7 @@ export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
   const activeDeal = slides[safeIndex];
 
   return (
-    <div className="space-y-5">
+    <div data-tracking-mutable={slides.length > 1 ? "rotating-carousel" : undefined} className="space-y-5">
       {/* Hero Banner */}
       <div
         className="relative mx-0 mt-4 overflow-hidden rounded-2xl transition-all duration-700 sm:mx-4 lg:mx-6"

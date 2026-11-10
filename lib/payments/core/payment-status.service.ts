@@ -7,6 +7,7 @@
  */
 
 import "server-only";
+import { recordVerifiedPurchase } from "@/lib/analytics/conversion-outbox";
 
 import { Prisma } from "@/app/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
@@ -236,6 +237,7 @@ export async function applySuccessfulPayment(
     const confirmable =
       payment.order.status === "PENDING" && !requiresReview;
 
+    const verifiedPaidAt = parseGatewayDate(authoritative.paidAt) ?? new Date();
     await tx.paymentTransaction.update({
       where: { id: payment.id },
       data: {
@@ -244,7 +246,7 @@ export async function applySuccessfulPayment(
         bankTransactionId: authoritative.bankTransactionId,
         cardType: authoritative.cardType,
         riskLevel: authoritative.riskLevel,
-        paidAt: parseGatewayDate(authoritative.paidAt) ?? new Date(),
+        paidAt: verifiedPaidAt,
         requiresReview,
         reviewReason,
         reviewResolvedAt: null,
@@ -265,6 +267,14 @@ export async function applySuccessfulPayment(
     if (confirmable) {
       await recordStatusHistory(tx, payment.orderId, "PAYMENT_CONFIRMED", {
         note: "Payment verified server-to-server by SSLCommerz.",
+      });
+    }
+
+    if (!requiresReview && payment.order.paymentStatus !== 'PAID' &&
+        ['PENDING', 'PAYMENT_CONFIRMED'].includes(payment.order.status)) {
+      await recordVerifiedPurchase(tx, {
+        orderId: payment.orderId, paymentMethod: 'SSLCOMMERZ',
+        amount: payment.amount, currency: payment.currency, paidAt: verifiedPaidAt,
       });
     }
 

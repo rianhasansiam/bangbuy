@@ -2,8 +2,8 @@ import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "./helpers/intl";
 import { describe, expect, it } from "vitest";
 
-import FreeShippingBar from "@/app/(shop)/cart/components/FreeShippingBar";
-import OrderSummary from "@/app/(shop)/cart/components/OrderSummary";
+import FreeShippingBar from "@/app/(private-commerce)/(shop)/cart/components/FreeShippingBar";
+import OrderSummary from "@/app/(private-commerce)/(shop)/cart/components/OrderSummary";
 import { CurrencyAmount } from "@/components/currency/CurrencyAmount";
 import CurrencyProvider from "@/components/currency/CurrencyProvider";
 import type { CartItem } from "@/features/cart/api";

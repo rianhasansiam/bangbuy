@@ -8,7 +8,6 @@ import {
   type CurrencyCode,
 } from "@/lib/currency/config";
 import type { PublicAirwallexPaymentQuote } from "@/lib/airwallex/services/airwallex-currency.service";
-import { registerPurchaseIntent } from "@/lib/analytics/meta-pixel";
 
 export type CheckoutAirwallexPaymentQuote = PublicAirwallexPaymentQuote & {
   quoteToken: string;
@@ -218,7 +217,6 @@ export class CheckoutSubmissionError extends Error {
 export async function placeCheckoutOrder(
   body: PlaceOrderRequest,
 ): Promise<PlacedOrderResult> {
-  const submittedPaymentMethod = body.paymentMethod;
   const response = await fetch("/api/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -267,9 +265,6 @@ export async function placeCheckoutOrder(
     response,
     "Failed to place the order.",
   );
-  if (submittedPaymentMethod === "SSLCOMMERZ" || submittedPaymentMethod === "AIRWALLEX") {
-    registerPurchaseIntent(result.order.id);
-  }
   return result;
 }
 

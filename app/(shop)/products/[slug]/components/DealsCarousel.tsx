@@ -2,7 +2,7 @@
 import { useInterfaceTranslations } from "@/components/i18n/translate";
 
 
-import React, { useRef } from 'react'
+import React, { useRef, useEffect } from 'react'
 import Image from 'next/image'
 import Link from "@/lib/i18n/navigation"
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -29,6 +29,7 @@ const DealsCarousel: React.FC<DealsCarouselProps> = ({
 }) => {
   const i18n = useInterfaceTranslations("InterfaceProductsSlugComponentsDealsCarousel");
   const scrollRef = useRef<HTMLDivElement>(null)
+  useEffect(() => { window.dispatchEvent(new Event("bangbuy:public-content-ready")); }, []);
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -45,7 +46,7 @@ const DealsCarousel: React.FC<DealsCarouselProps> = ({
   }
 
   return (
-    <div className="min-w-0 space-y-4">
+    <div data-tracking-public-snapshot={JSON.stringify(deals.map(deal => ({ id: deal.id, image: deal.image, title: deal.title, subtitle: deal.subtitle, bgClass: deal.bgClass, link: deal.link })))} className="min-w-0 space-y-4">
       <div className="flex min-w-0 items-center justify-between gap-3">
         <h2 className="min-w-0 text-xl font-bold text-gray-900 [overflow-wrap:anywhere]">
           {i18n(title)}

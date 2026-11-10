@@ -1,5 +1,7 @@
 "use client";
 import { useLocale } from "next-intl";
+import { useSurface } from "@/components/layout/SurfaceContext";
+import { useRouter } from "@/lib/i18n/navigation";
 import { useInterfaceTranslations } from "@/components/i18n/translate";
 
 
@@ -58,7 +60,9 @@ type SortKey = "newest" | "rating";
  * server enforces that only customers with a DELIVERED order can post,
  * so eligibility errors surface inline here.
  */
-export default function ReviewSection({ productId }: { productId: string }) {
+export default function ReviewSection({ productId, initialShowForm = false }: { productId: string; initialShowForm?: boolean }) {
+  const surface = useSurface();
+  const router = useRouter();
   const locale = useLocale();
   const i18n = useInterfaceTranslations("InterfaceProductsSlugComponentsReviewSection");
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -68,7 +72,7 @@ export default function ReviewSection({ productId }: { productId: string }) {
 
   const [filterRating, setFilterRating] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<SortKey>("newest");
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(initialShowForm);
 
   const loadReviews = useCallback(async () => {
     await Promise.resolve();
@@ -94,6 +98,10 @@ export default function ReviewSection({ productId }: { productId: string }) {
     return () => window.clearTimeout(timer);
   }, [loadReviews]);
 
+  useEffect(() => {
+    if (!loading && surface === "public") window.dispatchEvent(new Event("bangbuy:public-content-ready"));
+  }, [loading, surface]);
+
   const visibleReviews = useMemo(() => {
     const filtered = filterRating
       ? reviews.filter((review) => review.rating === filterRating)
@@ -111,7 +119,7 @@ export default function ReviewSection({ productId }: { productId: string }) {
   }, [filterRating, reviews, sortBy]);
 
   return (
-    <div className="min-w-0 space-y-8">
+    <div data-tracking-public-snapshot={JSON.stringify(reviews.map(review => ({ id: review.id, productId: review.productId, authorName: review.authorName, authorImage: review.authorImage, rating: review.rating, title: review.title, comment: review.comment, source: review.source, verified: review.verified, createdAt: review.createdAt, updatedAt: review.updatedAt })))} data-tracking-pending={loading ? "reviews" : undefined} className="min-w-0 space-y-8">
       <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="flex min-w-0 items-center gap-2 text-xl font-bold text-gray-900 sm:text-2xl">
           <span className="h-6 w-1.5 shrink-0 rounded-full bg-brand-red" />
@@ -119,7 +127,7 @@ export default function ReviewSection({ productId }: { productId: string }) {
             {i18n("Customer Reviews")}</span>
         </h2>
         <button
-          onClick={() => setShowForm((open) => !open)}
+          onClick={() => { if (surface === "public") router.push(`/reviews/new?productId=${encodeURIComponent(productId)}`); else setShowForm((open) => !open); }}
           className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-red px-4 py-2 text-sm font-medium text-brand-white shadow-lg transition-all hover:bg-brand-red-hover sm:w-auto"
         >
           {showForm ? (
@@ -131,7 +139,7 @@ export default function ReviewSection({ productId }: { productId: string }) {
         </button>
       </div>
 
-      {showForm && (
+      {surface !== "public" && showForm && (
         <WriteReviewForm
           productId={productId}
           onSubmitted={() => {

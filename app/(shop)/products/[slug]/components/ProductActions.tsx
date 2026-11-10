@@ -1,4 +1,7 @@
 "use client";
+import { useLocale } from "next-intl";
+import { useSurface } from "@/components/layout/SurfaceContext";
+import { navigateShoppingHandoff } from "@/lib/security/shopping-handoff";
 import { useLocaleDraft, useLocaleSwitchGuard } from "@/components/i18n/useLocaleDraft";
 import { useInterfaceTranslations } from "@/components/i18n/translate";
 
@@ -158,6 +161,8 @@ const ProductActions = ({
   discountPrice,
 }: ProductActionsProps) => {
   const i18n = useInterfaceTranslations("InterfaceProductsSlugComponentsProductActions");
+  const surface = useSurface();
+  const handoffLocale = useLocale();
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -176,7 +181,7 @@ const ProductActions = ({
   const [isBuyNowPending, startBuyNowTransition] = useTransition();
   useLocaleSwitchGuard(isCartBusy || isWishlistBusy || isBuyNowPending);
   const selectionDraft = { selectedVariantId: selectedVariantId ?? "", quantity };
-  useLocaleDraft("product-options:" + productId, selectionDraft, (update) => {
+  const publicSelectionReady = useLocaleDraft("product-options:" + productId, selectionDraft, (update) => {
     const next = typeof update === "function" ? update(selectionDraft) : update;
     const variant = activeVariants.find((entry) => entry.id === next.selectedVariantId);
     if (variant) {
@@ -231,6 +236,7 @@ const ProductActions = ({
 
   const handleAddToCart = async () => {
     if (!isPurchasable || isCartBusy || !selectedVariant) return;
+    if (surface === "public") { navigateShoppingHandoff({ action: "cart", productId, variantId: selectedVariant.id, quantity }, handoffLocale); return; }
 
     const canUseServer = canUseServerCart(session?.user?.role, status);
     dispatch(setCartErrorAction(null));
@@ -304,6 +310,7 @@ const ProductActions = ({
 
   const handleToggleWishlist = async () => {
     if (isWishlistBusy) return;
+    if (surface === "public") { navigateShoppingHandoff({ action: "wishlist", productId, quantity: 1 }, handoffLocale); return; }
 
     const canUseServer = canUseServerWishlist(session?.user?.role, status);
     const localBefore = readLocalWishlist();
@@ -383,7 +390,7 @@ const ProductActions = ({
   };
 
   return (
-    <div className="min-w-0 space-y-5 border-t border-gray-100 pt-4">
+    <div data-tracking-public-snapshot={JSON.stringify({ productId, productCode, productSlug, productName, image, brand, category, rating, reviewCount, salePrice, discountPrice, variants: variants.map(variant => ({ id: variant.id, variantKey: variant.variantKey, name: variant.name, modelNumber: variant.modelNumber, sku: variant.sku, color: variant.color, size: variant.size, attributes: variant.attributes, stock: variant.stock, image: variant.image, isActive: variant.isActive })) })} data-tracking-pending={publicSelectionReady === false ? "restoring-product-selection" : undefined} className="min-w-0 space-y-5 border-t border-gray-100 pt-4">
       <div className="flex min-w-0 flex-wrap items-baseline gap-3">
         <CurrencyAmount
           amountBDT={unitPrice}

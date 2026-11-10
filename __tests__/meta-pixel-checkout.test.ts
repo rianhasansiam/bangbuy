@@ -72,12 +72,12 @@ vi.mock("@/lib/feedback", () => ({ toast: { success: vi.fn(), error: vi.fn() } }
 vi.mock("@/components/ui/loading", () => ({ CheckoutPageSkeleton: () => null, FullPageLoader: () => null, OrderDetailsPageSkeleton: () => null, ButtonLoader: () => null }));
 vi.mock("@/components/currency/FormattedCurrencyAmount", () => ({ default: () => null }));
 vi.mock("@/components/ui/ColorBadge", () => ({ default: () => null }));
-vi.mock("@/app/(shop)/checkout/components/CheckoutHeader", () => ({ default: () => null }));
-vi.mock("@/app/(shop)/checkout/components/CheckoutItemsCard", () => ({ default: () => null }));
-vi.mock("@/app/(shop)/checkout/components/CustomerForm", () => ({ default: () => null }));
-vi.mock("@/app/(shop)/checkout/components/PaymentMethodPicker", () => ({ default: () => null }));
-vi.mock("@/app/(shop)/checkout/components/OrderSummaryCard", () => ({ default: () => null }));
-vi.mock("@/app/(shop)/orders/[id]/components/OrderTracker", () => ({ default: () => null }));
+vi.mock("@/app/(private-commerce)/(shop)/checkout/components/CheckoutHeader", () => ({ default: () => null }));
+vi.mock("@/app/(private-commerce)/(shop)/checkout/components/CheckoutItemsCard", () => ({ default: () => null }));
+vi.mock("@/app/(private-commerce)/(shop)/checkout/components/CustomerForm", () => ({ default: () => null }));
+vi.mock("@/app/(private-commerce)/(shop)/checkout/components/PaymentMethodPicker", () => ({ default: () => null }));
+vi.mock("@/app/(private-commerce)/(shop)/checkout/components/OrderSummaryCard", () => ({ default: () => null }));
+vi.mock("@/app/(private-commerce)/(shop)/orders/[id]/components/OrderTracker", () => ({ default: () => null }));
 vi.mock("@/features/orders/api", () => ({ fetchOrderDetail: harness.fetchOrder }));
 vi.mock("@/features/orders/pdf", () => ({ downloadOrderPdf: vi.fn() }));
 vi.mock("@/features/orders/storage", () => ({ clearOrderSnapshot: vi.fn() }));
@@ -150,13 +150,20 @@ function createBrowser() {
   return browser;
 }
 
-function events(browser: ReturnType<typeof createBrowser>): unknown[][] {
-  return (browser.fbq?.queue ?? []).filter((command) => ["track", "trackSingle"].includes(String(command[0])));
+const domainEvents: unknown[][] = [];
+let subscribed = false;
+function events(browser: ReturnType<typeof createBrowser>): unknown[][] { void browser; return domainEvents; }
+async function subscribeInteractions() {
+  if (subscribed) return;
+  subscribed = true;
+  const domain = await import("@/lib/analytics/meta-pixel");
+  domain.subscribeFirstPartyInteractions(event => domainEvents.push(["firstParty", event.name, event.parameters, { eventID: event.eventId }]));
 }
 
 async function renderCheckoutEffects() {
+  await subscribeInteractions();
   harness.effects = [];
-  const { default: CheckoutPage } = await import("@/app/(shop)/checkout/page");
+  const { default: CheckoutPage } = await import("@/app/(private-commerce)/(shop)/checkout/page");
   const outer = CheckoutPage() as ReactElement<{ children: ReactElement }>;
   const inner = outer.props.children.type as () => ReactElement;
   inner();
@@ -170,6 +177,7 @@ async function flushPreview() {
 
 beforeEach(() => {
   vi.resetModules();
+  domainEvents.length = 0; subscribed = false;
   vi.stubEnv("NEXT_PUBLIC_META_PIXEL_ID", "1234567890");
   harness.query = "";
   harness.authStatus = "authenticated";
@@ -183,7 +191,7 @@ beforeEach(() => {
   harness.router.replace.mockClear();
 });
 
-describe("receipt Purchase requires verified data and matching browser checkout intent", () => {
+describe("private receipts never emit browser Purchase", () => {
   function verifiedOrder(): OrderDetail {
     return {
       id: "order-1", orderNumber: "ORDER-1", userId: "owner-1", guestCustomerId: null,
@@ -202,7 +210,7 @@ describe("receipt Purchase requires verified data and matching browser checkout 
 
   async function renderReceiptEffects() {
     harness.effects = [];
-    const { default: OrderSummaryClient } = await import("@/app/(shop)/orders/[id]/components/OrderSummaryClient");
+    const { default: OrderSummaryClient } = await import("@/app/(private-commerce)/(shop)/orders/[id]/components/OrderSummaryClient");
     OrderSummaryClient({ orderId: "order-1" });
     harness.effects.forEach((effect) => effect());
     await flushPreview();
@@ -216,19 +224,15 @@ describe("receipt Purchase requires verified data and matching browser checkout 
     expect(events(browser)).toEqual([]);
   });
 
-  it("emits one verified owner Purchase with checkout intent despite repeated receipt effects", async () => {
+  it("keeps verified owner receipts untracked despite historical intent and repeated effects", async () => {
     const browser = createBrowser();
     harness.readyOrder = verifiedOrder();
     const pixel = await import("@/lib/analytics/meta-pixel");
     pixel.registerPurchaseIntent("order-1");
     await renderReceiptEffects();
     await renderReceiptEffects();
-    expect(events(browser)).toEqual([
-      ["trackSingle", "1234567890", "Purchase", expect.objectContaining({
-        content_ids: ["CATALOG-SHIRT"], contents: [{ id: "CATALOG-SHIRT", quantity: 3, item_price: 9 }],
-        currency: "USD", value: 28.5,
-      }), { eventID: "purchase:order-1" }],
-    ]);
+    expect(events(browser)).toEqual([]);
+    expect(browser.fbq.queue).toEqual([]);
   });
 
   it("does not convert an admin viewing another customer's order", async () => {
@@ -251,7 +255,7 @@ describe("receipt Purchase requires verified data and matching browser checkout 
     expect(harness.router.replace).not.toHaveBeenCalled();
   });
 
-  it("emits the verified guest Purchase from a cookie-scoped receipt with checkout intent", async () => {
+  it("keeps verified cookie-scoped guest receipts untracked", async () => {
     const browser = createBrowser();
     harness.authStatus = "unauthenticated";
     harness.sessionUserId = undefined;
@@ -260,10 +264,8 @@ describe("receipt Purchase requires verified data and matching browser checkout 
     pixel.registerPurchaseIntent("order-1");
     await renderReceiptEffects();
     await renderReceiptEffects();
-    expect(events(browser)).toEqual([
-      ["trackSingle", "1234567890", "Purchase", expect.objectContaining({ value: 28.5, currency: "USD" }),
-        { eventID: "purchase:order-1" }],
-    ]);
+    expect(events(browser)).toEqual([]);
+    expect(browser.fbq.queue).toEqual([]);
     expect(harness.router.replace).not.toHaveBeenCalled();
   });
 
@@ -282,7 +284,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe("checkout destination is the canonical InitiateCheckout point", () => {
+describe("checkout preview remains an internal first-party business interaction", () => {
   it("does not price checkout or emit analytics until a delivery area is explicitly chosen", async () => {
     const browser = createBrowser();
     harness.query = "buy=product-shirt:3:variant-red-large";
@@ -303,7 +305,7 @@ describe("checkout destination is the canonical InitiateCheckout point", () => {
       promoCode: null,
     });
     expect(events(browser)).toEqual([
-      ["track", "InitiateCheckout", expect.objectContaining({ value: 28.5, currency: "USD" }), { eventID: expect.any(String) }],
+      ["firstParty", "InitiateCheckout", expect.objectContaining({ value: 28.5, currency: "USD" }), { eventID: expect.any(String) }],
     ]);
   });
 
@@ -322,14 +324,13 @@ describe("checkout destination is the canonical InitiateCheckout point", () => {
     resolvePreview(preview);
     await flushPreview();
     expect(events(browser)).toEqual([
-      ["track", "InitiateCheckout", expect.objectContaining({
+      ["firstParty", "InitiateCheckout", expect.objectContaining({
         content_ids: ["CATALOG-SHIRT"],
-        variant_ids: ["variant-red-large"],
         contents: [{ id: "CATALOG-SHIRT", quantity: 3, item_price: 9 }],
         currency: "USD",
         num_items: 3,
         value: 28.5,
-      }), { eventID: expect.stringMatching(/^checkout:/) }],
+      }), { eventID: expect.stringMatching(/^[a-f0-9-]{36}$/) }],
     ]);
   });
 
@@ -339,7 +340,7 @@ describe("checkout destination is the canonical InitiateCheckout point", () => {
     await flushPreview();
     expect(harness.fetchPreview).toHaveBeenCalledWith({ items: undefined, deliveryZone: "INSIDE_DHAKA", promoCode: null });
     expect(events(browser)).toEqual([
-      ["track", "InitiateCheckout", expect.objectContaining({ value: 28.5, currency: "USD", num_items: 3 }), { eventID: expect.any(String) }],
+      ["firstParty", "InitiateCheckout", expect.objectContaining({ value: 28.5, currency: "USD", num_items: 3 }), { eventID: expect.any(String) }],
     ]);
   });
 

@@ -1,5 +1,14 @@
 # Meta Purchase tracking verification
 
+> **Historical verification record superseded on 2026-11-10.** Private receipt
+> and payment-return reads no longer send browser Purchase. The current
+> [architecture decision](adr-meta-tracking-isolation.md) derives optional
+> conversions from committed authoritative server transitions through a
+> [durable outbox and worker](marketing-conversion-worker.md), with separate
+> consent, eligibility and delivery approvals. See the [origin migration guide](meta-origin-isolation.md)
+> before rollout. Findings, commands and verification results below describe
+> their stated historical dates; none proves present live delivery or approval.
+
 Repository audit, repair, and release validation: **2026-10-08**. A read-only
 Events Manager session did not expose the configured BangBuy dataset. No fresh
 BangBuy events, its dashboard rules, production server configuration, or external

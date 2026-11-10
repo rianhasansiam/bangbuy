@@ -1,0 +1,19 @@
+{
+  "policyVersion": "2026-11-10",
+  "environment": "disabled",
+  "runtimeEnabled": false,
+  "pixelEnabled": false,
+  "capiEnabled": false,
+  "pixelId": null,
+  "storefrontOrigin": null,
+  "commerceOrigin": null,
+  "isolationReady": false,
+  "business": { "approved": false, "reference": "", "expiresAt": null },
+  "source": { "approved": false, "reference": "", "expiresAt": null, "pixelId": null },
+  "routes": [],
+  "contents": [],
+  "eventApprovals": [],
+  "approvedReferrers": [],
+  "matching": { "approved": false, "reference": "", "expiresAt": null, "fields": [] },
+  "codDefinition": "disabled"
+}

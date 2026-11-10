@@ -1,17 +1,41 @@
 "use client";
 
-import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useSurface } from "@/components/layout/SurfaceContext";
+import { readPublicProductSelection, savePublicProductSelection } from "@/lib/security/public-product-selection";
 import { DRAFT_EVENT, discardOtherIdentityDrafts, hasUnrecoverableDraftState, isRecoverableDraftField, isRecoverableDraftValue, languageDraftIdentity, languageDraftKey, readLanguageDraft, restoreLanguageDraftFields, writeLanguageDraft, type DraftPreparation } from "@/lib/i18n/drafts";
 import { stripLocalePrefix } from "@/lib/i18n/paths";
 import { useSession } from "@/lib/auth/use-app-session";
 
 /** Explicit field allowlist: never pass passwords, card details, payment tokens or files. */
 export function useLocaleDraft<T extends object>(name: string, value: T, setValue: Dispatch<SetStateAction<T>>, safeFields: readonly (keyof T)[]) {
+  const surface = useSurface();
+  const publicProductId = surface === "public" && name.startsWith("product-options:") ? name.slice("product-options:".length) : null;
+  const [publicSelectionReady, setPublicSelectionReady] = useState(false);
   const { data: session, status } = useSession();
   const identity = languageDraftIdentity(status, session?.user?.id);
   const initial = useRef(value);
   const state = useRef({ value, setValue, safeFields });
-  useEffect(() => { state.current = { value, setValue, safeFields }; });
+  useEffect(() => {
+    if (!publicProductId) return;
+    let active = true;
+    // Recovery is an external storage synchronization. Keep the document's
+    // tracking gate pending until the deferred restore commits.
+    queueMicrotask(() => {
+      if (!active) return;
+      const draft = readPublicProductSelection(publicProductId);
+      if (draft) state.current.setValue(current => ({ ...current, ...draft }));
+      setPublicSelectionReady(true);
+    });
+    return () => { active = false; };
+  }, [publicProductId]);
+  useEffect(() => {
+    state.current = { value, setValue, safeFields };
+    if (publicProductId && publicSelectionReady) {
+      savePublicProductSelection(publicProductId, value);
+      window.dispatchEvent(new Event("bangbuy:public-content-ready"));
+    }
+  });
   useEffect(() => {
     if (!identity) {
       const guard = (event: Event) => { (event as CustomEvent<DraftPreparation>).detail.blocked = true; };
@@ -35,6 +59,7 @@ export function useLocaleDraft<T extends object>(name: string, value: T, setValu
     window.addEventListener(DRAFT_EVENT, capture);
     return () => window.removeEventListener(DRAFT_EVENT, capture);
   }, [name, identity]);
+  return !publicProductId || publicSelectionReady;
 }
 
 /** Keep an in-flight checkout or form submission on the current page until it settles. */

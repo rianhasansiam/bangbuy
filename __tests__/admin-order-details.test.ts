@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "./helpers/intl";
 import { describe, expect, it } from "vitest";
 
-import AdminOrderDetails from "@/app/admin/orders/components/AdminOrderDetails";
+import AdminOrderDetails from "@/app/(private-commerce)/admin/orders/components/AdminOrderDetails";
 import type {
   AdminOrderDetail,
   AdminOrderItem,

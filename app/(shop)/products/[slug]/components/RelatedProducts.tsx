@@ -1,8 +1,12 @@
-'use client'
+"use client";
+import { useLocale } from "next-intl";
+import { useSurface } from "@/components/layout/SurfaceContext";
+import { navigateShoppingHandoff } from "@/lib/security/shopping-handoff";
+import { useSearchParams } from "next/navigation";
 import { useInterfaceTranslations } from "@/components/i18n/translate";
 
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import Image from 'next/image'
 import Link from "@/lib/i18n/navigation"
 import { useRouter } from "@/lib/i18n/navigation";import { ShoppingBag } from 'lucide-react'
@@ -61,18 +65,28 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
   const dispatch = useDispatch<AppDispatch>()
   const router = useRouter()
   const { data: session, status } = useSession()
-  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE)
+  const surface = useSurface();
+  const handoffLocale = useLocale();
+  const searchParams = useSearchParams();
+  const [visibleCount, setVisibleCount] = useState(searchParams?.get("related") === "all" ? products.length : ITEMS_PER_PAGE)
   const [isLoading, setIsLoading] = useState(false)
   const [cartBusyId, setCartBusyId] = useState<string | null>(null)
+  useEffect(() => { window.dispatchEvent(new Event("bangbuy:public-content-ready")); }, []);
 
   const handleLoadMore = useCallback(() => {
+    if (surface === "public") {
+      const destination = new URL(window.location.href);
+      destination.searchParams.set("related", "all");
+      window.location.assign(destination.href);
+      return;
+    }
     setIsLoading(true)
     // Simulate network delay for better UX
     setTimeout(() => {
       setVisibleCount((prev) => prev + ITEMS_PER_LOAD)
       setIsLoading(false)
     }, 500)
-  }, [])
+  }, [surface])
 
   const handleAddToBag = useCallback(async (
     product: RecentProductItem,
@@ -82,6 +96,8 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
       router.push(`/products/${product.slug}`)
       return
     }
+
+    if (surface === "public") { navigateShoppingHandoff({ action: "cart", productId: product.id, quantity: 1 }, handoffLocale); return }
 
     const canUseServer = canUseServerCart(session?.user?.role, status)
     dispatch(setCartErrorAction(null))
@@ -129,7 +145,7 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
     }
     setCartBusyId(null)
     toast.success(i18n("Added to cart"))
-  }, [cartBusyId, dispatch, i18n, router, session?.user?.role, status])
+  }, [cartBusyId, dispatch, handoffLocale, i18n, router, session?.user?.role, status, surface])
 
   if (!products || products.length === 0) {
     return null
@@ -139,7 +155,8 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
   const hasMore = visibleCount < products.length
 
   return (
-    <div className="min-w-0 space-y-6">
+    <div data-tracking-public-snapshot={JSON.stringify(products.map(product => ({ id: product.id, productCode: product.productCode, slug: product.slug, name: product.name, image: product.image, price: product.price, originalPrice: product.originalPrice, discount: product.discount, variantCount: product.variantCount, inStock: product.inStock })))} className="min-w-0 space-y-6">
+      <span hidden>{products.map(product => <span key={product.id} data-tracking-content-id={product.productCode || product.id} />)}</span>
       <h2 className="text-xl font-bold text-brand-black [overflow-wrap:anywhere]">
         {i18n(title)}
       </h2>
@@ -147,7 +164,7 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
       <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5">
         {visibleProducts.map((product) => (
           <article
-            key={product.id}
+            key={product.id} data-tracking-content-id={product.productCode || product.id}
             className="group flex min-w-0 flex-col overflow-hidden rounded-xl border border-gray-100 bg-white transition-all hover:border-brand-red hover:shadow-lg"
           >
             {/* Image Container */}

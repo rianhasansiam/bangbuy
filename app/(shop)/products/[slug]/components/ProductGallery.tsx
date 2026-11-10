@@ -165,7 +165,7 @@ const ProductGallery = ({
   }, [galleryItems, productId]);
 
   return (
-    <div className="space-y-3">
+    <div data-tracking-public-snapshot={JSON.stringify({ productId, productName, images: images.map(image => ({ url: image.url, alt: image.alt })), variantImages: variantImages.map(image => ({ variantId: image.variantId, url: image.url, label: image.label })) })} className="space-y-3">
       {/* Main Image */}
       <div
         className="relative aspect-4/5 overflow-hidden rounded-2xl border border-gray-100 bg-white"

@@ -6,7 +6,7 @@ import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { Decimal } from "@prisma/client/runtime/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { CustomerFormState } from "@/app/(shop)/checkout/components/CustomerForm";
+import type { CustomerFormState } from "@/app/(private-commerce)/(shop)/checkout/components/CustomerForm";
 import type { CartItem } from "@/features/cart/api";
 import type { CheckoutPreview } from "@/features/checkout/api";
 import type { OrderDetail } from "@/features/orders/api";
@@ -15,9 +15,9 @@ import type { PixelFunction } from "@/lib/analytics/meta-pixel";
 import type { AirwallexPublicPaymentStatus } from "@/lib/airwallex/components/AirwallexPaymentStatus";
 
 // Use the existing Vitest node scheduler harness. Checkout/receipt handlers,
-// fetch adapters, saved-payment builder and Pixel adapter are real; presentation,
-// gateway navigation, API transport and SDK delivery are mocked. These checks
-// establish application flow, never a browser network request or Meta receipt.
+// fetch adapters and saved-payment builder are real; presentation, gateway
+// navigation and API transport are mocked. Private checkout and receipt flows
+// must never bootstrap an SDK or dispatch a browser Purchase.
 const harness = vi.hoisted(() => ({
   surface: "checkout" as "checkout" | "receipt" | "payment",
   states: { checkout: [] as unknown[], receipt: [] as unknown[], payment: [] as unknown[] },
@@ -83,12 +83,12 @@ vi.mock("@/lib/feedback", () => ({ toast: { success: vi.fn(), error: vi.fn(), wa
 vi.mock("@/components/ui/loading", () => ({ CheckoutPageSkeleton: () => null, FullPageLoader: () => null, OrderDetailsPageSkeleton: () => null, ButtonLoader: () => null }));
 vi.mock("@/components/currency/FormattedCurrencyAmount", () => ({ default: () => null }));
 vi.mock("@/components/ui/ColorBadge", () => ({ default: () => null }));
-vi.mock("@/app/(shop)/checkout/components/CheckoutHeader", () => ({ default: () => null }));
-vi.mock("@/app/(shop)/checkout/components/CheckoutItemsCard", () => ({ default: () => null }));
-vi.mock("@/app/(shop)/checkout/components/CustomerForm", () => ({ default: () => null }));
-vi.mock("@/app/(shop)/checkout/components/PaymentMethodPicker", () => ({ default: () => null }));
-vi.mock("@/app/(shop)/checkout/components/OrderSummaryCard", () => ({ default: () => null }));
-vi.mock("@/app/(shop)/orders/[id]/components/OrderTracker", () => ({ default: () => null }));
+vi.mock("@/app/(private-commerce)/(shop)/checkout/components/CheckoutHeader", () => ({ default: () => null }));
+vi.mock("@/app/(private-commerce)/(shop)/checkout/components/CheckoutItemsCard", () => ({ default: () => null }));
+vi.mock("@/app/(private-commerce)/(shop)/checkout/components/CustomerForm", () => ({ default: () => null }));
+vi.mock("@/app/(private-commerce)/(shop)/checkout/components/PaymentMethodPicker", () => ({ default: () => null }));
+vi.mock("@/app/(private-commerce)/(shop)/checkout/components/OrderSummaryCard", () => ({ default: () => null }));
+vi.mock("@/app/(private-commerce)/(shop)/orders/[id]/components/OrderTracker", () => ({ default: () => null }));
 vi.mock("@/features/orders/pdf", () => ({ downloadOrderPdf: vi.fn() }));
 vi.mock("@/features/orders/storage", () => ({ clearOrderSnapshot: vi.fn() }));
 
@@ -182,12 +182,12 @@ function fakeBrowser(storage = new Map<string, string>()) {
   };
   vi.stubGlobal("window", browser);
   vi.stubGlobal("document", { createElement: () => ({ remove: vi.fn() }), head: { appendChild: (script: typeof scripts[number]) => { scripts.push(script); } } });
-  const loadSdk = () => {
-    browser.fbq!.callMethod = handoff;
-    scripts.at(-1)?.onload?.();
+  const assertNoSdk = () => {
+    expect(scripts).toEqual([]);
+    expect(browser.fbq).toBeUndefined();
   };
   const purchases = () => handoff.mock.calls.filter((command) => command[0] === "trackSingle" && command[2] === "Purchase");
-  return { browser, storage, scripts, handoff, loadSdk, purchases };
+  return { browser, storage, scripts, handoff, assertNoSdk, purchases };
 }
 
 function findProps(node: ReactNode, key: string): Record<string, unknown> {
@@ -211,11 +211,11 @@ async function render(surface: typeof harness.surface, runEffects = false, keepM
   harness.effects = [];
   let tree: ReactElement;
   if (surface === "checkout") {
-    const { default: CheckoutPage } = await import("@/app/(shop)/checkout/page");
+    const { default: CheckoutPage } = await import("@/app/(private-commerce)/(shop)/checkout/page");
     const outer = CheckoutPage() as ReactElement<{ children: ReactElement }>;
     tree = (outer.props.children.type as () => ReactElement)();
   } else if (surface === "receipt") {
-    const { default: OrderSummaryClient } = await import("@/app/(shop)/orders/[id]/components/OrderSummaryClient");
+    const { default: OrderSummaryClient } = await import("@/app/(private-commerce)/(shop)/orders/[id]/components/OrderSummaryClient");
     tree = OrderSummaryClient({ orderId });
   } else {
     const { AirwallexPaymentStatus } = await vi.importActual<typeof import("@/lib/airwallex/components/AirwallexPaymentStatus")>("@/lib/airwallex/components/AirwallexPaymentStatus");
@@ -302,7 +302,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe("committed online checkout through verified receipt and mocked SDK delivery", () => {
+describe("committed online checkout and verified receipts remain free of browser marketing", () => {
   it.each(cases)("preserves $customer $gateway saved $currency/$value through cart clearing, gateway return and refresh", async ({ customer, gateway, currency, value }) => {
     const initial = fakeBrowser();
     const order = savedOrder(customer, gateway);
@@ -313,7 +313,8 @@ describe("committed online checkout through verified receipt and mocked SDK deli
     expect(submitted).not.toHaveProperty("totalAmount");
     expect(initial.storage.get("enterfly:cart:v1")).toBe("[]");
     const pixel = await import("@/lib/analytics/meta-pixel");
-    expect(pixel.hasPurchaseIntent(orderId)).toBe(true);
+    expect(pixel.hasPurchaseIntent(orderId)).toBe(false);
+    initial.assertNoSdk();
     expect(initial.purchases()).toEqual([]);
     if (gateway === "SSLCOMMERZ") expect(initial.browser.location.assign).toHaveBeenCalledExactlyOnceWith("https://gateway.example.test/mock-session");
     else expect(harness.hostedCheckout).toHaveBeenCalledExactlyOnceWith(orderId);
@@ -325,22 +326,19 @@ describe("committed online checkout through verified receipt and mocked SDK deli
     await showReceipt();
     expect(returned.purchases()).toEqual([]);
     expect(receipt(order).metaPurchase).toMatchObject({ eventId: `purchase:${orderId}`, eventTime: 1791093600, currency, value });
-    returned.loadSdk();
-    expect(returned.purchases()).toEqual([["trackSingle", "1234567890", "Purchase", expect.objectContaining({
-      currency, value, content_ids: ["CATALOG-1"],
-      contents: [{ id: "CATALOG-1", quantity: 2, item_price: gateway === "AIRWALLEX" ? 7.38 : 900 }],
-    }), { eventID: `purchase:${orderId}` }]]);
+    returned.assertNoSdk();
+    expect(returned.purchases()).toEqual([]);
 
     const refreshed = fakeBrowser(initial.storage);
     harness.states.receipt = [];
     harness.refs.receipt = [];
     await showReceipt();
-    refreshed.loadSdk();
+    refreshed.assertNoSdk();
     expect(refreshed.purchases()).toEqual([]);
   });
 
   it.each(cases.flatMap((flow) => ["pending", "failed", "cancelled", "review-held"].map((outcome) => ({ ...flow, outcome }))))(
-    "suppresses $customer $gateway $outcome despite a committed intent and success URL", async ({ customer, gateway, outcome }) => {
+    "suppresses $customer $gateway $outcome despite successful checkout and a forged success URL", async ({ customer, gateway, outcome }) => {
       const current = fakeBrowser();
       const order = savedOrder(customer, gateway);
       if (outcome === "review-held") order.payments[0].requiresReview = true;
@@ -354,7 +352,7 @@ describe("committed online checkout through verified receipt and mocked SDK deli
       harness.query = "just-placed=1&payment=success";
       expect(receipt(order).metaPurchase).toBeNull();
       await showReceipt();
-      current.loadSdk();
+      current.assertNoSdk();
       expect(current.purchases()).toEqual([]);
     },
   );
@@ -381,7 +379,7 @@ describe("committed online checkout through verified receipt and mocked SDK deli
     await submitCheckout(customer, gateway);
     await showReceipt();
     pixel.setMetaPixelConsent(false);
-    current.loadSdk();
+    current.assertNoSdk();
     pixel.setMetaPixelConsent(true);
     await showReceipt();
     expect(pixel.hasPurchaseIntent(orderId)).toBe(false);
@@ -400,37 +398,37 @@ describe("committed online checkout through verified receipt and mocked SDK deli
     await showReceipt();
     pixel.setMetaPixelConsent(true);
     pixel.initializeMetaPixel();
-    current.loadSdk();
+    current.assertNoSdk();
     await showReceipt();
     expect(current.purchases()).toEqual([]);
   });
 
-  it.each(cases)("retries delayed $customer $gateway SDK failures with the original saved payload and identity", async ({ customer, gateway, currency, value }) => {
+  it.each(cases)("does not queue or retry $customer $gateway browser conversions when transport is unavailable", async ({ customer, gateway, currency, value }) => {
     const current = fakeBrowser();
     const order = savedOrder(customer, gateway);
     mockApi(order);
     await submitCheckout(customer, gateway);
     await showReceipt();
     current.handoff.mockImplementationOnce(() => { throw new Error("Temporary mocked SDK failure"); });
-    current.loadSdk();
-    const firstAttempt = current.purchases()[0];
-    expect(firstAttempt).toEqual(["trackSingle", "1234567890", "Purchase", expect.objectContaining({ currency, value }), { eventID: `purchase:${orderId}` }]);
+    current.assertNoSdk();
+    expect(receipt(order).metaPurchase).toMatchObject({ currency, value });
+    expect(current.purchases()).toEqual([]);
     expect(current.storage.has(`enterfly:meta-purchase:1234567890:purchase:${orderId}`)).toBe(false);
 
-    // A new receipt response or a changed/cleared cart cannot rewrite the
-    // canonical data captured by the first pending attempt for this event ID.
+    // Changed receipt data and cleared carts cannot revive a browser conversion
+    // or a queued pre-consent action. Server outbox retries have separate tests.
     order.totalAmount = new Decimal("1000");
     order.payments[0].baseAmount = gateway === "AIRWALLEX" ? new Decimal("1000") : null;
     order.payments[0].amount = new Decimal(gateway === "AIRWALLEX" ? "8.20" : "1000");
     order.items = [];
     await showReceipt();
-    expect(current.purchases()).toEqual([firstAttempt, firstAttempt]);
-    expect(current.storage.get(`enterfly:meta-purchase:1234567890:purchase:${orderId}`)).toBe("sdk_handoff");
+    expect(current.purchases()).toEqual([]);
+    expect(current.storage.has(`enterfly:meta-purchase:1234567890:purchase:${orderId}`)).toBe(false);
     await showReceipt();
-    expect(current.purchases()).toHaveLength(2);
+    expect(current.purchases()).toHaveLength(0);
   });
 
-  it.each(cases)("requires a retained checkout intent for $customer $gateway receipt delivery", async ({ customer, gateway }) => {
+  it.each(cases)("does not create $customer $gateway browser attribution from a receipt or missing legacy marker", async ({ customer, gateway }) => {
     const current = fakeBrowser();
     const order = savedOrder(customer, gateway);
     mockApi(order);
@@ -439,26 +437,26 @@ describe("committed online checkout through verified receipt and mocked SDK deli
     const returned = fakeBrowser(current.storage);
     harness.query = "just-placed=1&payment=success";
     await showReceipt();
-    // Initializing the SDK cannot create attribution for a missing/cleared marker.
+    // The legacy initializer is inert on private screens.
     const pixel = await import("@/lib/analytics/meta-pixel");
     pixel.initializeMetaPixel();
-    returned.loadSdk();
+    returned.assertNoSdk();
     expect(pixel.hasPurchaseIntent(orderId)).toBe(false);
     expect(returned.purchases()).toEqual([]);
   });
 
-  it.each(["guest", "registered"] as const)("uses the owner/cookie-authorized order snapshot after %s Airwallex status succeeds", async (customer) => {
+  it.each(["guest", "registered"] as const)("confirms %s Airwallex status without an analytics-only order read", async (customer) => {
     const current = fakeBrowser();
     const fetchMock = mockApi(savedOrder(customer, "AIRWALLEX"));
     await submitCheckout(customer, "AIRWALLEX");
     await render("payment", true);
     expect(fetchMock).toHaveBeenCalledWith(`/api/payments/airwallex/status/${orderId}`, expect.objectContaining({ method: "GET", cache: "no-store" }));
-    expect(fetchMock).toHaveBeenCalledWith(`/api/orders/${orderId}`, { method: "GET", cache: "no-store" });
+    expect(fetchMock.mock.calls.filter(([url]) => url === `/api/orders/${orderId}`)).toEqual([]);
     expect(harness.states.payment[0]).toMatchObject({ status: "ready", snapshot: { paymentStatus: "SUCCEEDED" } });
     expect(harness.settled).toHaveBeenCalledOnce();
-    current.loadSdk();
+    current.assertNoSdk();
     await showReceipt();
-    expect(current.purchases()).toEqual([["trackSingle", "1234567890", "Purchase", expect.objectContaining({ currency: "USD", value: 16.48 }), { eventID: `purchase:${orderId}` }]]);
+    expect(current.purchases()).toEqual([]);
   });
 
   it.each((["guest", "registered"] as const).flatMap((customer) => ["PENDING", "PROCESSING", "FAILED", "CANCELLED", "PENDING_REVIEW", "REQUIRES_REVIEW"].map((status) => ({ customer, status: status as AirwallexPublicPaymentStatus }))))(
@@ -467,7 +465,7 @@ describe("committed online checkout through verified receipt and mocked SDK deli
       const fetchMock = mockApi(savedOrder(customer, "AIRWALLEX"), status);
       await submitCheckout(customer, "AIRWALLEX");
       await render("payment", true);
-      current.loadSdk();
+      current.assertNoSdk();
       expect(fetchMock.mock.calls.filter(([url]) => url === `/api/orders/${orderId}`)).toEqual([]);
       expect(current.purchases()).toEqual([]);
     },
@@ -480,8 +478,8 @@ describe("committed online checkout through verified receipt and mocked SDK deli
     const fetchMock = mockApi(order);
     await submitCheckout(customer, "AIRWALLEX");
     await render("payment", true);
-    current.loadSdk();
-    expect(fetchMock.mock.calls.filter(([url]) => url === `/api/orders/${orderId}`)).toHaveLength(1);
+    current.assertNoSdk();
+    expect(fetchMock.mock.calls.filter(([url]) => url === `/api/orders/${orderId}`)).toHaveLength(0);
     expect(current.purchases()).toEqual([]);
     order.paymentStatus = "PAID";
     order.payments[0].requiresReview = true;
@@ -491,7 +489,7 @@ describe("committed online checkout through verified receipt and mocked SDK deli
     expect(current.purchases()).toEqual([]);
   });
 
-  it.each(["guest", "registered"] as const)("waits for server-confirmed %s SSLCommerz receipt polling before sending once", async (customer) => {
+  it.each(["guest", "registered"] as const)("waits for server-confirmed %s SSLCommerz receipt polling without browser delivery", async (customer) => {
     const current = fakeBrowser();
     const settledOrder = savedOrder(customer, "SSLCOMMERZ");
     const order = {
@@ -503,7 +501,7 @@ describe("committed online checkout through verified receipt and mocked SDK deli
     harness.query = "just-placed=1&payment=processing";
     await render("receipt", true, true);
     await render("receipt", true, true);
-    current.loadSdk();
+    current.assertNoSdk();
     expect(harness.states.receipt[0]).toMatchObject({ status: "ready", order: { paymentStatus: "PENDING", metaPurchase: null } });
     expect(current.purchases()).toEqual([]);
 
@@ -516,7 +514,9 @@ describe("committed online checkout through verified receipt and mocked SDK deli
     await new Promise<void>((resolve) => setImmediate(resolve));
     await render("receipt", true);
     await render("receipt", true);
-    expect(current.purchases()).toEqual([["trackSingle", "1234567890", "Purchase", expect.objectContaining({ currency: "BDT", value: 2010 }), { eventID: `purchase:${orderId}` }]]);
+    expect(harness.states.receipt[0]).toMatchObject({ status: "ready", order: { paymentStatus: "PAID" } });
+    current.assertNoSdk();
+    expect(current.purchases()).toEqual([]);
   });
 });
 

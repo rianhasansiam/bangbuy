@@ -1,0 +1,17 @@
+{
+  "storefrontOrigin": null,
+  "commerceOrigin": "https://bangbuy.net",
+  "legacyCommerceOrigins": ["https://bangbuy.net", "https://www.bangbuy.net"],
+  "applicationUpstream": "http://127.0.0.1:3000",
+  "commerceCertificate": "/CONFIRM/current-commerce-fullchain.pem",
+  "commerceCertificateKey": "/CONFIRM/current-commerce-privatekey.pem",
+  "storefrontCertificate": "/CONFIRM/fresh-storefront-fullchain.pem",
+  "storefrontCertificateKey": "/CONFIRM/fresh-storefront-privatekey.pem",
+  "uploadsDirectory": "/var/www/uploads/bangbuy",
+  "evidence": {
+    "publicDnsTlsHttpDate": "2026-11-10",
+    "sshCurrent": "unavailable",
+    "upstreamAndUploadPath": "historical only; re-confirm before deployment",
+    "legacyAliasCompatibility": "BLOCKED until a separately reviewed and tested per-host plan exists"
+  }
+}

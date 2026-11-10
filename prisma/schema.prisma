@@ -487,6 +487,8 @@ model Order {
   payments        PaymentTransaction[]
   promoCodeUsages PromoCodeUsage[]
   statusHistory   OrderStatusHistory[]
+  marketingConsent MarketingOrderConsent?
+  marketingEvents  MarketingConversionOutbox[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -497,6 +499,72 @@ model Order {
   @@index([status, createdAt])
   @@index([paymentStatus, createdAt])
   @@index([paymentMethod, paymentStatus, createdAt])
+}
+
+// Marketing consent is independent of account/contact identity. Only the
+// host-only cookie bearer digest is stored; optional matching fields require
+// explicit field approval and consent before capture.
+model MarketingConsent {
+  id            String   @id @default(uuid())
+  secretHash    String   @unique
+  state         String
+  policyVersion String
+  occurredAt    DateTime
+  expiresAt     DateTime
+  origin        String
+  sourceUrl     String?
+  matching      Json?    @db.JsonB
+  context       Json?    @db.JsonB
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  orders MarketingOrderConsent[]
+  events MarketingConversionOutbox[]
+
+  @@index([state, expiresAt])
+}
+
+// Ancillary relation keeps consent credentials out of ordinary Order scalars
+// and API serialization. Recorded only after a valid host-scoped consent read.
+model MarketingOrderConsent {
+  orderId       String @id
+  consentId     String
+  policyVersion String
+  capturedAt    DateTime @default(now())
+  order         Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  consent       MarketingConsent @relation(fields: [consentId], references: [id], onDelete: Restrict)
+}
+
+// A durable logical business conversion, separate from network attempts.
+// id is the opaque external event_id; businessKey/orderId never leave server.
+model MarketingConversionOutbox {
+  id              String   @id @default(uuid())
+  businessKey     String   @unique
+  orderId         String
+  eventName       String
+  occurredAt      DateTime
+  payload         Json     @db.JsonB
+  consentId       String?
+  policyVersion   String
+  sourceUrl       String?
+  matching        Json?    @db.JsonB
+  context         Json?    @db.JsonB
+  state           String   @default("PENDING")
+  attempts        Int      @default(0)
+  nextAttemptAt   DateTime @default(now())
+  expiresAt       DateTime
+  lockedAt        DateTime?
+  lockToken       String?
+  lastFailureCode String?
+  deliveredAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  order           Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  consent         MarketingConsent? @relation(fields: [consentId], references: [id], onDelete: Restrict)
+
+  @@index([state, nextAttemptAt, createdAt], map: "MarketingOutbox_claimable_idx")
+  @@index([state, lockedAt], map: "MarketingOutbox_stale_claim_idx")
+  @@index([consentId, state])
 }
 
 // A checkout contact record, never an authenticated account. Each successful

@@ -7,10 +7,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { replaceLocaleHref } from "@/lib/i18n/paths";
 import type { LocaleDefinition } from "@/lib/i18n/registry";
 import { useLanguageSwitch } from "./useLanguageSwitch";
+import { useSurface } from "@/components/layout/SurfaceContext";
 
 export type SelectableLanguage = Pick<LocaleDefinition, "code" | "englishName" | "nativeName" | "direction">;
 
 export default function LanguageSelector({ languages, mobile = false }: { languages: SelectableLanguage[]; mobile?: boolean }) {
+  const surface = useSurface();
   const locale = useLocale();
   const t = useTranslations("Language");
   const [search, setSearch] = useState("");
@@ -28,7 +30,7 @@ export default function LanguageSelector({ languages, mobile = false }: { langua
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="z-80 w-72 max-w-[calc(100vw-2rem)]" aria-label={t("choose")}>
-        {languages.length > 8 && <div className="p-2"><input autoFocus type="search" value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => { if (!["ArrowDown", "ArrowUp", "Escape", "Tab"].includes(event.key)) event.stopPropagation(); }} aria-label={t("search")} placeholder={t("search")} className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm outline-brand-red" /></div>}
+        {surface !== "public" && languages.length > 8 && <div className="p-2"><input autoFocus type="search" value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => { if (!["ArrowDown", "ArrowUp", "Escape", "Tab"].includes(event.key)) event.stopPropagation(); }} aria-label={t("search")} placeholder={t("search")} className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm outline-brand-red" /></div>}
         <div className="max-h-72 overflow-y-auto">
           {matches.map((language) => <DropdownMenuItem key={language.code} asChild disabled={busy} onSelect={(event) => { event.preventDefault(); void switchLanguage(language.code); }}>
             <a href={replaceLocaleHref(typeof window === "undefined" ? "/" : window.location.pathname + window.location.search + window.location.hash, language.code)} hrefLang={language.code} aria-current={language.code === locale ? "true" : undefined} className="flex items-center gap-3">

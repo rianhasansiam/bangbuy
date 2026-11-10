@@ -1,19 +1,7 @@
-"use client";
-
-import { useEffect } from "react";
-import { useSearchParams } from "next/navigation";
-import { usePathname } from "@/lib/i18n/navigation";
 import type { CommerceItem } from "@/lib/analytics/ecommerce";
-import { getNavigationEventId, trackViewContent } from "@/lib/analytics/meta-pixel";
 
-/** One parent-product view per navigation; option/quantity changes are not views. */
+/** Current display descriptor; never a queued event or a prefetch trigger. */
 export default function ProductView({ item }: { item: CommerceItem }) {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const query = searchParams.toString();
-  const route = query ? `${pathname}?${query}` : pathname;
-  useEffect(() => {
-    trackViewContent(item, getNavigationEventId(`view:${item.productId}`, route));
-  }, [item, route]);
-  return null;
+  const product = { productId: item.productId, productCode: item.productCode ?? null, quantity: 1, unitPrice: item.unitPrice };
+  return <span hidden data-tracking-product={JSON.stringify(product)} />;
 }

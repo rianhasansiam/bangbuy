@@ -1,4 +1,7 @@
 "use client";
+import { useLocale } from "next-intl";
+import { useSurface } from "@/components/layout/SurfaceContext";
+import { navigateShoppingHandoff } from "@/lib/security/shopping-handoff";
 import { useInterfaceTranslations } from "@/components/i18n/translate";
 
 
@@ -95,6 +98,8 @@ export default function ProductCard({
   nameLocale,
 }: ProductCardProps) {
   const i18n = useInterfaceTranslations("InterfaceProductProductCard");
+  const surface = useSurface();
+  const handoffLocale = useLocale();
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -125,6 +130,7 @@ export default function ProductCard({
 
   const handleToggleWishlist = async () => {
     if (isBusy) return;
+    if (surface === "public") { navigateShoppingHandoff({ action: "wishlist", productId: id, quantity: 1 }, handoffLocale); return; }
 
     const canUseServer = canUseServerWishlist(session?.user?.role, status);
     const localBefore = readLocalWishlist();
@@ -211,6 +217,8 @@ export default function ProductCard({
       return;
     }
 
+    if (surface === "public") { navigateShoppingHandoff({ action: "cart", productId: id, quantity: 1 }, handoffLocale); return; }
+
     const canUseServer = canUseServerCart(session?.user?.role, status);
 
     dispatch(setCartErrorAction(null));
@@ -271,7 +279,7 @@ export default function ProductCard({
   };
 
   return (
-    <div className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-brand-border bg-brand-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-brand-border hover:shadow-lg">
+    <div data-tracking-content-id={productCode || id} className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-brand-border bg-brand-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-brand-border hover:shadow-lg">
       <div className="relative aspect-4/3 shrink-0 overflow-hidden bg-brand-light-bg">
         <Link
           href={productHref}

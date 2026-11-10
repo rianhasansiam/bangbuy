@@ -24,7 +24,7 @@ export function logPurchaseDiagnostic(context: PurchaseDiagnostic): void {
     const enabled = typeof window === "undefined"
       ? process.env.META_PURCHASE_DIAGNOSTICS === "true"
       : process.env.NEXT_PUBLIC_META_PURCHASE_DIAGNOSTICS === "true";
-    if (!enabled) return;
+    if (!enabled || process.env.NODE_ENV === "production") return;
     const entry = {
       event: "META_PURCHASE",
       source: context.source === "server" ? "server" : "browser",

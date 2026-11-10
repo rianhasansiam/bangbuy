@@ -78,15 +78,38 @@ cp .env.example .env
 
 ```
 
-To enable Meta Pixel, set `NEXT_PUBLIC_META_PIXEL_ID` in `.env` to the numeric
-Pixel ID from Meta Events Manager. Leaving it blank disables tracking; invalid
-IDs are also ignored. The integration sends `PageView` events on the initial
-load and when the pathname or query string changes, with a noscript fallback
-for browsers with JavaScript disabled.
+Meta delivery is disabled by default. A numeric `NEXT_PUBLIC_META_PIXEL_ID`
+does not approve a business, data source, page or event. The public storefront
+and private commerce use separate root documents and configured origins. Only
+an explicitly approved public document with valid marketing consent may load
+Pixel; private checkout, account, order and payment screens stay untracked.
+There is no Meta noscript fallback or automatic query-string tracking.
 
-Restart the development server after changing the ID. For production, set the
-variable in your hosting environment before building, then rebuild and redeploy
-when it changes. Verify events in Meta Events Manager's Test Events view.
+The tracking defaults in `.env.example` require separate Pixel and CAPI flags,
+an independently reviewable policy manifest, migration readiness and a runtime
+kill switch. Configure the existing database, authentication and payment
+settings alongside those defaults. See the [isolation decision](docs/adr-meta-tracking-isolation.md),
+[origin migration instructions](docs/meta-origin-isolation.md) and
+[optional conversion worker](docs/marketing-conversion-worker.md) before
+preparing a staging rollout. The [context review tool](docs/meta-context-review.md)
+can prepare an anonymous public fingerprint candidate without approving it.
+Browser issuance, provider acknowledgement and
+Events Manager receipt must be verified separately; repository tests do not
+establish live delivery.
+
+The [customer journey and checkout architecture document](docs/bangbuy-customer-journey-and-checkout-architecture.docx)
+explains the screens from home to receipt. Deployment preparation is collected in
+the [deployment runbook](docs/deployment-runbook.md),
+[rollback runbook](docs/deployment-rollback.md),
+[blocker matrix](docs/deployment-blockers.md),
+[redacted environment checklist](docs/deployment-environment.md),
+[customer-state migration](docs/customer-state-migration.md),
+[database and worker operations](docs/deployment-database-and-worker.md),
+[staging verification](docs/deployment-staging-verification.md) and
+[separate tracking activation checklist](docs/tracking-activation.md).
+Both existing apex and www origins need a tested customer-state compatibility
+plan before strict two-origin cutover. Repository preparation does not change
+production or establish external event delivery.
 
 ---
 
@@ -264,14 +287,15 @@ npx prisma studio
 ```
 bangbuy/
 ├── app/                        # Next.js App Router
-│   ├── (auth)/                 # Auth pages (login, register)
-│   ├── (shop)/                 # Public storefront pages
-│   ├── admin/                  # Admin panel pages
+│   ├── (shop)/                 # Anonymous storefront and its independent root
+│   ├── (private-commerce)/     # Independent private root
+│   │   ├── (auth)/             # Login and registration
+│   │   ├── (shop)/             # Cart, checkout, account, orders and sensitive forms
+│   │   └── admin/              # Administration
 │   ├── api/                    # API Route Handlers
 │   ├── generated/              # Auto-generated Prisma client
 │   ├── globals.css             # Global styles
-│   ├── layout.tsx              # Root layout
-│   ├── providers.tsx           # Global providers (Redux, Auth, etc.)
+│   ├── providers.tsx           # Private commerce providers only
 │   ├── robots.ts               # SEO robots config
 │   └── sitemap.ts              # Dynamic sitemap
 │
@@ -321,7 +345,7 @@ bangbuy/
 ├── hooks/                      # Custom React hooks
 │
 ├── prisma/
-│   ├── schema.prisma           # Database schema (28 models)
+│   ├── schema.prisma           # Commerce, localization and marketing outbox schema
 │   └── migrations/             # SQL migration history
 │
 ├── public/                     # Static assets (logos, images)

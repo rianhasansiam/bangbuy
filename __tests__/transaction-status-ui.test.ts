@@ -6,8 +6,8 @@ import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "./helpers/intl";
 import { describe, expect, it, vi } from "vitest";
 
-import TransactionsTab from "@/app/(shop)/profile/components/TransactionsTab";
-import TransactionsClient from "@/app/admin/transactions/TransactionsClient";
+import TransactionsTab from "@/app/(private-commerce)/(shop)/profile/components/TransactionsTab";
+import TransactionsClient from "@/app/(private-commerce)/admin/transactions/TransactionsClient";
 import type { AdminTransaction } from "@/features/transactions/api";
 
 // Seed the loaded API response in the existing node test environment, then

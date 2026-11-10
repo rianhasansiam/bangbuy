@@ -1,0 +1,69 @@
+# HISTORICAL GENERIC EXAMPLE. Superseded for deployment preparation by
+# scripts/deploy/render-nginx.mjs and deploy/nginx/bangbuy-origins.example.json.
+# See docs/deployment-runbook.md. Do not install this file or replace the current
+# combined apex/www vhost: legacy per-host compatibility remains a blocker.
+# The renderer requires a fresh selected public hostname and confirmed TLS paths.
+# No global/default server may be added on the shared VPS.
+# Replace placeholders before nginx -t; this file is not installed automatically.
+# Both upstreams reuse the same modular monolith. Configure TLS certificates.
+# Only bounded route classes. No raw path, query, order ID, cookie, referrer or IP.
+map $uri $bangbuy_route_class {
+    default document;
+    ~^/(?:[a-z]{2,3}(?:-[A-Za-z0-9]+)?/)?orders(?:/|$) private_order;
+    ~^/(?:[a-z]{2,3}(?:-[A-Za-z0-9]+)?/)?(?:checkout|cart|profile|wishlist|login|register|admin)(?:/|$) private_commerce;
+    ~^/api/payments/ payment_api;
+    ~^/api/ api;
+    ~^/_next/ static_asset;
+}
+log_format bangbuy_private '$request_method $bangbuy_route_class $status';
+
+upstream bangbuy_application { server 127.0.0.1:3000; }
+
+server {
+    listen 443 ssl;
+    server_name STOREFRONT_HOST;
+    # ssl_certificate and ssl_certificate_key are deployment-owned.
+    access_log /var/log/nginx/bangbuy-storefront.log bangbuy_private;
+    add_header Referrer-Policy no-referrer always;
+
+    location ~ ^/api/(products(?:/[^/]+)?|categories(?:/[^/]+)?|brands(?:/[^/]+)?|manufacturers(?:/[^/]+)?|reviews|catalog/(search|facets)|public/tracking-policy)$ {
+        limit_except GET { deny all; }
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_pass http://bangbuy_application;
+    }
+    location ~ ^/api/public/(consent|language)$ {
+        limit_except GET POST { deny all; }
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_pass http://bangbuy_application;
+    }
+    location /api/ { return 404; }
+    location / {
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_pass http://bangbuy_application;
+    }
+}
+
+server {
+    listen 443 ssl;
+    server_name COMMERCE_HOST;
+    # ssl_certificate and ssl_certificate_key are deployment-owned.
+    access_log /var/log/nginx/bangbuy-commerce.log bangbuy_private;
+    add_header Referrer-Policy no-referrer always;
+    # Never add Access-Control-Allow-Origin or Allow-Credentials for storefront.
+    location / {
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_pass http://bangbuy_application;
+    }
+}

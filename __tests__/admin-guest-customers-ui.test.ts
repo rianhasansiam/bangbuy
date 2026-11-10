@@ -2,9 +2,9 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "./helpers/intl";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import UsersTable from "@/app/admin/users/components/UsersTable";
-import UsersToolbar from "@/app/admin/users/components/UsersToolbar";
-import UserSummaryCards from "@/app/admin/users/components/UserSummaryCards";
+import UsersTable from "@/app/(private-commerce)/admin/users/components/UsersTable";
+import UsersToolbar from "@/app/(private-commerce)/admin/users/components/UsersToolbar";
+import UserSummaryCards from "@/app/(private-commerce)/admin/users/components/UserSummaryCards";
 import {
   fetchAllAdminCustomersSnapshot,
   fetchAllAdminUsersSnapshot,

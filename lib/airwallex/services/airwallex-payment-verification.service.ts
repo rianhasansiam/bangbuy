@@ -1,4 +1,5 @@
 import "server-only";
+import { recordVerifiedPurchase } from "@/lib/analytics/conversion-outbox";
 
 import {
   Prisma,
@@ -347,6 +348,7 @@ export async function applyAuthoritativeAirwallexPayment(input: {
           : "REQUIRES_REVIEW"
         : targetStatus;
     const requiresReview = Boolean(reviewReason) || effectiveStatus === "PENDING_REVIEW";
+    const verifiedPaidAt = payment.paidAt ?? new Date();
     const safeFailureCode = sanitizeAirwallexCode(
       input.authoritative.failureCode,
     );
@@ -365,7 +367,7 @@ export async function applyAuthoritativeAirwallexPayment(input: {
           requiresReview,
           reviewReason: reviewReason ?? (requiresReview ? "PENDING_REVIEW" : null),
           ...(effectiveStatus === "SUCCESS" && !reviewReason
-            ? { paidAt: payment.paidAt ?? new Date() }
+            ? { paidAt: verifiedPaidAt }
             : {}),
           ...(input.source === "RECONCILIATION"
             ? {
@@ -416,6 +418,10 @@ export async function applyAuthoritativeAirwallexPayment(input: {
             note: "Airwallex payment confirmed by verified provider data.",
           });
         }
+        await recordVerifiedPurchase(tx, {
+          orderId: payment.orderId, paymentMethod: 'AIRWALLEX',
+          amount: payment.amount, currency: payment.currency, paidAt: verifiedPaidAt,
+        });
       }
     } else if (
       !reviewReason &&

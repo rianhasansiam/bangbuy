@@ -1,5 +1,15 @@
 # Meta Pixel ecommerce tracking
 
+> **Historical tracking evidence superseded on 2026-11-10.** The global Pixel,
+> browser receipt Purchase and default-granted consent described below have
+> been replaced by the [tracking isolation architecture](adr-meta-tracking-isolation.md).
+> Use the [origin migration instructions](meta-origin-isolation.md) and
+> [optional server worker guide](marketing-conversion-worker.md) for the current
+> implementation. Delivery remains disabled without explicit eligibility,
+> source, event and field approvals, valid consent and the isolation prerequisites.
+> The dated investigations and account observations below are retained as
+> historical evidence and do not establish current deployment or Meta approval.
+
 > **Current Purchase repair — 2026-10-08:** See
 > [Meta Purchase verification](meta-purchase-verification.md) for the current
 > strict amount/timestamp contract, guest receipt support, optional catalog

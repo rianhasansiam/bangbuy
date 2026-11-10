@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "./helpers/intl";
 import { describe, expect, it } from "vitest";
 
-import PaymentMethodPicker from "@/app/(shop)/checkout/components/PaymentMethodPicker";
+import PaymentMethodPicker from "@/app/(private-commerce)/(shop)/checkout/components/PaymentMethodPicker";
 import type { CheckoutPaymentMethod } from "@/features/checkout/api";
 
 function renderPaymentMethods(

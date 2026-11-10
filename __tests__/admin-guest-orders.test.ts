@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "./helpers/intl";
 
-import OrdersTable from "@/app/admin/orders/components/OrdersTable";
+import OrdersTable from "@/app/(private-commerce)/admin/orders/components/OrdersTable";
 import {
   getAdminOrderCustomerType,
   parseOrdersPayload,

@@ -31,9 +31,9 @@ const guestAdditionHandlers = [
   ["app/(shop)/products/components/ProductsGrid.tsx", "handleAddToCart"],
   ["app/(shop)/products/[slug]/components/ProductActions.tsx", "handleAddToCart"],
   ["app/(shop)/products/[slug]/components/RelatedProducts.tsx", "handleAddToBag"],
-  ["app/(shop)/wishlist/page.tsx", "moveItemsToCart"],
-  ["app/(shop)/wishlist/page.tsx", "handleSavedMoveToCart"],
-  ["app/(shop)/cart/page.tsx", "handleSavedMoveToCart"],
+  ["app/(private-commerce)/(shop)/wishlist/page.tsx", "moveItemsToCart"],
+  ["app/(private-commerce)/(shop)/wishlist/page.tsx", "handleSavedMoveToCart"],
+  ["app/(private-commerce)/(shop)/cart/page.tsx", "handleSavedMoveToCart"],
 ] as const;
 
 // The delivery suite exercises emitted names, payloads, quantities and counts.
@@ -52,8 +52,8 @@ describe("every existing ecommerce entry point uses the canonical commit boundar
   });
 
   it.each([
-    "app/(shop)/cart/page.tsx",
-    "app/(shop)/wishlist/page.tsx",
+    "app/(private-commerce)/(shop)/cart/page.tsx",
+    "app/(private-commerce)/(shop)/wishlist/page.tsx",
   ])("captures the saved-item operation identity before the queued callback in %s", (path) => {
     const body = handler(path, "handleSavedMoveToCart");
     expect(body.indexOf("const cartEventId = createEventId()")).toBeLessThan(body.indexOf("queueSavedRemoval("));
@@ -76,13 +76,13 @@ describe("every existing ecommerce entry point uses the canonical commit boundar
   });
 
   it("starts normal cart and profile checkout through the same validated destination", () => {
-    const body = handler("app/(shop)/cart/page.tsx", "handleCheckout");
+    const body = handler("app/(private-commerce)/(shop)/cart/page.tsx", "handleCheckout");
     expect(body).toContain("buildCartSelectionCheckoutHref(");
     expect(body).not.toContain("trackInitiateCheckout(");
-    const profile = sourceFile("app/(shop)/profile/components/CartTab.tsx").text;
+    const profile = sourceFile("app/(private-commerce)/(shop)/profile/components/CartTab.tsx").text;
     expect(profile).toContain('href="/checkout"');
     expect(profile).not.toContain("trackInitiateCheckout(");
-    const checkout = sourceFile("app/(shop)/checkout/page.tsx").text;
+    const checkout = sourceFile("app/(private-commerce)/(shop)/checkout/page.tsx").text;
     expect(checkout.match(/trackInitiateCheckout\(/g)).toHaveLength(1);
     const identity = checkout.indexOf("const checkoutEventId = getNavigationEventId(");
     const request = checkout.indexOf("const next = await fetchCheckoutPreview(");

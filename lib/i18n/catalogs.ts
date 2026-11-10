@@ -44,7 +44,7 @@ export const loadMessages = cache(async (locale: string): Promise<AbstractIntlMe
 export function selectClientMessages(messages: AbstractIntlMessages, pathname: string): AbstractIntlMessages {
   const feature = pathname.split("/")[1];
   const selected = feature ? `Interface${feature[0].toUpperCase()}${feature.slice(1)}` : "InterfaceComponents";
-  const common = ["Navigation", "Language", "Loading", "States", "Validation", "InterfaceMessages", "InterfaceLayout", "InterfaceUi", "InterfaceProduct", "InterfacePolicy", "InterfaceAirwallex", "InterfaceComponents"];
+  const common = ["CommerceHandoff", "Navigation", "Language", "Loading", "States", "Validation", "InterfaceMessages", "InterfaceLayout", "InterfaceUi", "InterfaceProduct", "InterfacePolicy", "InterfaceAirwallex", "InterfaceComponents"];
   const isAdmin = pathname.startsWith("/admin");
   return Object.fromEntries(Object.entries(messages).filter(([namespace]) =>
     (isAdmin && (namespace.startsWith("Admin") || namespace === "translationManagement")) ||

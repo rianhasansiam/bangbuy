@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CartItem } from "@/features/cart/api";
 import type { CheckoutPreview, PlaceOrderRequest } from "@/features/checkout/api";
 import { CheckoutSubmissionError } from "@/features/checkout/api";
-import type { CustomerFormState } from "@/app/(shop)/checkout/components/CustomerForm";
+import type { CustomerFormState } from "@/app/(private-commerce)/(shop)/checkout/components/CustomerForm";
 
 // Run the checkout's real event handlers and effects with a deterministic
 // scheduler, matching the existing checkout analytics tests' node environment.
@@ -72,11 +72,11 @@ vi.mock("@/lib/analytics/meta-pixel", () => ({ getNavigationEventId: () => "chec
 vi.mock("@/lib/airwallex/components/AirwallexPayButton", () => ({ startAirwallexHostedCheckout: vi.fn() }));
 vi.mock("@/lib/feedback", () => ({ toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() } }));
 vi.mock("@/components/ui/loading", () => ({ CheckoutPageSkeleton: () => null, FullPageLoader: () => null }));
-vi.mock("@/app/(shop)/checkout/components/CheckoutHeader", () => ({ default: () => null }));
-vi.mock("@/app/(shop)/checkout/components/CheckoutItemsCard", () => ({ default: () => null }));
-vi.mock("@/app/(shop)/checkout/components/CustomerForm", () => ({ default: () => null }));
-vi.mock("@/app/(shop)/checkout/components/PaymentMethodPicker", () => ({ default: () => null }));
-vi.mock("@/app/(shop)/checkout/components/OrderSummaryCard", () => ({ default: () => null }));
+vi.mock("@/app/(private-commerce)/(shop)/checkout/components/CheckoutHeader", () => ({ default: () => null }));
+vi.mock("@/app/(private-commerce)/(shop)/checkout/components/CheckoutItemsCard", () => ({ default: () => null }));
+vi.mock("@/app/(private-commerce)/(shop)/checkout/components/CustomerForm", () => ({ default: () => null }));
+vi.mock("@/app/(private-commerce)/(shop)/checkout/components/PaymentMethodPicker", () => ({ default: () => null }));
+vi.mock("@/app/(private-commerce)/(shop)/checkout/components/OrderSummaryCard", () => ({ default: () => null }));
 
 const cartItem: CartItem = {
   id: "local:variant-1", productId: "product-1", variantId: "variant-1", name: "Product",
@@ -121,7 +121,7 @@ async function renderCheckout(runEffects = false) {
   harness.stateCursor = 0;
   harness.refCursor = 0;
   harness.effects = [];
-  const { default: CheckoutPage } = await import("@/app/(shop)/checkout/page");
+  const { default: CheckoutPage } = await import("@/app/(private-commerce)/(shop)/checkout/page");
   const outer = CheckoutPage() as ReactElement<{ children: ReactElement }>;
   const inner = outer.props.children.type as () => ReactElement;
   const tree = inner();

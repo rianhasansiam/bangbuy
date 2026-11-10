@@ -10,6 +10,8 @@ import { normalizeRole, type AppSessionUser } from "@/lib/auth/session";
  */
 export const authConfig = {
   session: { strategy: "jwt" },
+  // Host-only defaults remain intact; production authentication always requires TLS.
+  useSecureCookies: process.env.NODE_ENV === "production" ? true : undefined,
   pages: { signIn: "/login" },
   // Providers are added in auth.ts so the middleware bundle stays small.
   providers: [],

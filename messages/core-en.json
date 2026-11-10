@@ -26,8 +26,18 @@
     "menu": "Menu",
     "menuDescription": "Browse navigation links and account actions."
   },
-  "Loading": { "title": "Loading...", "description": "Preparing your page..." },
-  "States": { "notFoundTitle": "Page not found", "notFoundDescription": "We couldn't find the page you requested.", "home": "Return home", "errorTitle": "We couldn't load this page", "errorDescription": "Please try again in a moment.", "retry": "Try again" },
+  "Loading": {
+    "title": "Loading...",
+    "description": "Preparing your page..."
+  },
+  "States": {
+    "notFoundTitle": "Page not found",
+    "notFoundDescription": "We couldn't find the page you requested.",
+    "home": "Return home",
+    "errorTitle": "We couldn't load this page",
+    "errorDescription": "Please try again in a moment.",
+    "retry": "Try again"
+  },
   "Language": {
     "label": "Language",
     "choose": "Choose language",
@@ -43,5 +53,40 @@
     "stay": "Stay on this page",
     "originalContent": "This content is currently available in English. A translation will be available after review.",
     "unavailable": "This content is not yet available in your language. Available content is shown while the translation is being prepared."
+  },
+  "CommerceHandoff": {
+    "cartTitle": "Add this item to your cart",
+    "wishlistTitle": "Save this item to your wishlist",
+    "confirm": "Confirm your selection on the secure shopping page. Your existing cart and account stay here.",
+    "quantity": "Quantity {quantity}",
+    "unavailable": "This selection is no longer available. Return to the product and choose again.",
+    "failed": "Your selection could not be saved. Please try again.",
+    "saving": "Saving...",
+    "continue": "Confirm selection"
+  },
+  "InterfaceComponentsMarketingConsent": {
+    "title": "Optional marketing",
+    "description": "Marketing stays off until consent and all privacy approvals are valid. Your cart, checkout, account and payment pages do not load the marketing SDK. You can withdraw consent here at any time.",
+    "status": "Preference: {state}",
+    "unknown": "not chosen",
+    "granted": "allowed",
+    "denied": "denied",
+    "revoked": "withdrawn",
+    "allow": "Allow optional marketing",
+    "deny": "Keep marketing off",
+    "withdraw": "Withdraw marketing consent",
+    "error": "We could not save your preference. Marketing remains stopped after denial or withdrawal. Try again to update the server preference.",
+    "publicTitle": "Catalog analytics",
+    "privateTitle": "Checkout conversion reporting",
+    "publicDescription": "This choice applies only to approved catalog analytics on this site. Checkout reporting has a separate choice on the commerce site. Marketing stays off until consent and every eligibility approval are valid. Withdraw this site’s consent here at any time.",
+    "privateDescription": "This choice applies only to approved server reporting of checkout conversions on this commerce site. Checkout pages do not load Meta Pixel. Guest purchases are excluded. Catalog analytics has a separate choice on the catalog site. Withdraw this site’s consent here at any time.",
+    "publicAllow": "Allow catalog analytics",
+    "privateAllow": "Allow checkout reporting",
+    "publicDeny": "Keep catalog analytics off",
+    "privateDeny": "Keep checkout reporting off",
+    "publicWithdraw": "Withdraw catalog consent",
+    "privateWithdraw": "Withdraw checkout reporting consent",
+    "manageCheckout": "Manage the separate checkout reporting choice",
+    "manageCatalog": "Manage the separate catalog analytics choice"
   }
 }

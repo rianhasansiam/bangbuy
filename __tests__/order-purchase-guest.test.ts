@@ -26,25 +26,22 @@ function guestReceipt(): Receipt {
   };
 }
 
-describe("cookie-authorized guest receipt Purchase", () => {
+describe("cookie-authorized receipts never initialize browser marketing", () => {
   beforeEach(() => {
     purchaseDelivery.hasPurchaseIntent.mockReset().mockReturnValue(true);
     purchaseDelivery.trackPurchase.mockReset();
   });
 
-  it("uses the verified order payload after guest checkout without an account", () => {
+  it("does not externally deliver the verified guest order payload", () => {
     const receipt = guestReceipt();
     trackPendingOrderPurchase(receipt, undefined);
-    expect(purchaseDelivery.hasPurchaseIntent).toHaveBeenCalledWith(receipt.id);
-    expect(purchaseDelivery.trackPurchase).toHaveBeenCalledWith(
-      receipt.metaPurchase,
-      "purchase:guest-order-verified",
-    );
+    expect(purchaseDelivery.hasPurchaseIntent).not.toHaveBeenCalled();
+    expect(purchaseDelivery.trackPurchase).not.toHaveBeenCalled();
   });
 
-  it("allows the guest's scoped receipt when a session is also present", () => {
+  it("keeps the scoped guest receipt untracked when a session is also present", () => {
     trackPendingOrderPurchase(guestReceipt(), "signed-in-later");
-    expect(purchaseDelivery.trackPurchase).toHaveBeenCalledTimes(1);
+    expect(purchaseDelivery.trackPurchase).not.toHaveBeenCalled();
   });
 
   it("does not turn a guest receipt revisit into a purchase without checkout intent", () => {
@@ -73,13 +70,10 @@ describe("cookie-authorized guest receipt Purchase", () => {
     },
   );
 
-  it("preserves registered checkout with the same verified payload rules", () => {
+  it("does not externally deliver a registered owner's verified receipt", () => {
     const receipt = { ...guestReceipt(), userId: "order-owner" };
     trackPendingOrderPurchase(receipt, "order-owner");
-    expect(purchaseDelivery.trackPurchase).toHaveBeenCalledWith(
-      receipt.metaPurchase,
-      "purchase:guest-order-verified",
-    );
+    expect(purchaseDelivery.trackPurchase).not.toHaveBeenCalled();
   });
 
   it("keeps guest receipt rendering successful when analytics throws", () => {

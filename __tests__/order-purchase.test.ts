@@ -223,7 +223,7 @@ describe("server-authoritative online purchase snapshots", () => {
   });
 });
 
-describe("canonical owner purchase delivery", () => {
+describe("private receipt reads do not deliver browser conversions", () => {
   beforeEach(() => {
     purchaseDelivery.hasPurchaseIntent.mockReset().mockReturnValue(true);
     purchaseDelivery.trackPurchase.mockReset();
@@ -236,11 +236,12 @@ describe("canonical owner purchase delivery", () => {
     };
   }
 
-  it("delivers the verified snapshot with its stable order identity", () => {
+  it("leaves verified owner snapshots available without browser delivery", () => {
     const order = receipt();
     trackPendingOrderPurchase(order, "owner-1");
-    expect(purchaseDelivery.trackPurchase).toHaveBeenCalledTimes(1);
-    expect(purchaseDelivery.trackPurchase).toHaveBeenCalledWith(order.metaPurchase, "purchase:order-verified");
+    expect(order.metaPurchase).toMatchObject({ eventId: "purchase:order-verified" });
+    expect(purchaseDelivery.hasPurchaseIntent).not.toHaveBeenCalled();
+    expect(purchaseDelivery.trackPurchase).not.toHaveBeenCalled();
   });
 
   it("does not convert historical receipt views without a checkout intent", () => {

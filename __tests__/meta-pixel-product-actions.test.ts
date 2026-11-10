@@ -33,6 +33,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => harness.router }));
 vi.mock("@/lib/auth/use-app-session", () => ({
   useSession: () => ({ data: { user: { role: "USER" } }, status: harness.authStatus }),
 }));
+vi.mock("@/components/layout/SurfaceContext", () => ({ useSurface: () => "private" }));
 vi.mock("react-redux", () => ({
   useDispatch: () => harness.dispatch,
   useSelector: (selector: (state: { wishlist: { items: never[] } }) => unknown) => selector({ wishlist: { items: [] } }),
@@ -94,11 +95,18 @@ function createBrowser() {
   return browser;
 }
 
-function events(browser: ReturnType<typeof createBrowser>): unknown[][] {
-  return (browser.fbq?.queue ?? []).filter((command) => command[0] === "track");
+const domainEvents: unknown[][] = [];
+let subscribed = false;
+function events(browser: ReturnType<typeof createBrowser>): unknown[][] { void browser; return domainEvents; }
+async function subscribeInteractions() {
+  if (subscribed) return;
+  subscribed = true;
+  const domain = await import("@/lib/analytics/meta-pixel");
+  domain.subscribeFirstPartyInteractions(event => domainEvents.push(["firstParty", event.name, event.parameters, { eventID: event.eventId }]));
 }
 
 async function renderActions(productVariants = variants) {
+  await subscribeInteractions();
   const { default: ProductActions } = await import("@/app/(shop)/products/[slug]/components/ProductActions");
   harness.cursor = 0;
   return buttonsIn(ProductActions({
@@ -146,6 +154,7 @@ beforeEach(() => {
   vi.resetModules();
   vi.stubEnv("NEXT_PUBLIC_META_PIXEL_ID", "1234567890");
   harness.states = [];
+  domainEvents.length = 0; subscribed = false;
   harness.authStatus = "authenticated";
   harness.router.push.mockClear();
 });
@@ -177,7 +186,7 @@ describe("product action business guards and responsive entry points", () => {
     expect(events(browser)).toEqual([]);
   });
 
-  it.each([["desktop", 0], ["sticky mobile", 1]] as const)("tracks the successful default-variant addition from the %s button", async (_entry, buttonIndex) => {
+  it.each([["desktop", 0], ["sticky mobile", 1]] as const)("records the successful default-variant addition internally from the %s button", async (_entry, buttonIndex) => {
     const browser = createBrowser();
     const fetchMock = mockSuccessfulFetch();
     const buttons = await renderActions();
@@ -188,14 +197,14 @@ describe("product action business guards and responsive entry points", () => {
     const post = fetchMock.mock.calls.find((call) => call[1]?.method === "POST");
     expect(JSON.parse(String(post?.[1]?.body))).toEqual({ productId: "product-shirt", quantity: 1, variantId: "variant-blue-small" });
     expect(events(browser)).toEqual([
-      ["track", "AddToCart", expect.objectContaining({
-        content_ids: ["CATALOG-SHIRT"], variant_ids: ["variant-blue-small"],
+      ["firstParty", "AddToCart", expect.objectContaining({
+        content_ids: ["CATALOG-SHIRT"],
         contents: [{ id: "CATALOG-SHIRT", quantity: 1, item_price: 450 }], value: 450,
       }), { eventID: expect.any(String) }],
     ]);
   });
 
-  it("tracks the latest selected variant at submission and preserves it while the request is pending", async () => {
+  it("records the latest selected variant internally at submission and preserves it while the request is pending", async () => {
     const browser = createBrowser();
     let finishRequest!: (result: Response) => void;
     const fetchMock = vi.fn<typeof fetch>().mockImplementation((_url, options) => options?.method === "POST"
@@ -221,8 +230,7 @@ describe("product action business guards and responsive entry points", () => {
     await settleOperation();
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({ productId: "product-shirt", quantity: 3, variantId: "variant-red-large" });
     expect(events(browser)).toEqual([
-      ["track", "AddToCart", expect.objectContaining({
-        variant_ids: ["variant-red-large"], contents: [{ id: "CATALOG-SHIRT", quantity: 3, item_price: 450 }], value: 1350,
+      ["firstParty", "AddToCart", expect.objectContaining({ contents: [{ id: "CATALOG-SHIRT", quantity: 3, item_price: 450 }], value: 1350,
       }), { eventID: expect.any(String) }],
     ]);
   });
@@ -257,11 +265,11 @@ describe("product action business guards and responsive entry points", () => {
     byLabel(buttons, "Add to cart").onClick();
     await settleOperation();
     expect(events(browser)).toEqual([
-      ["track", "AddToCart", expect.objectContaining({ value: 450 }), { eventID: expect.any(String) }],
+      ["firstParty", "AddToCart", expect.objectContaining({ value: 450 }), { eventID: expect.any(String) }],
     ]);
   });
 
-  it("tracks a persisted guest addition with the selected variant and effective discount price", async () => {
+  it("records a persisted guest addition internally with the selected variant and effective discount price", async () => {
     const browser = createBrowser();
     harness.authStatus = "unauthenticated";
     const fetchMock = mockSuccessfulFetch();
@@ -275,8 +283,7 @@ describe("product action business guards and responsive entry points", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(JSON.parse(browser.localStorage.getItem("enterfly:cart:v1") ?? "[]")).toMatchObject([{ variantId: "variant-red-large", quantity: 2 }]);
     expect(events(browser)).toEqual([
-      ["track", "AddToCart", expect.objectContaining({
-        variant_ids: ["variant-red-large"], contents: [{ id: "CATALOG-SHIRT", quantity: 2, item_price: 450 }], value: 900,
+      ["firstParty", "AddToCart", expect.objectContaining({ contents: [{ id: "CATALOG-SHIRT", quantity: 2, item_price: 450 }], value: 900,
       }), { eventID: expect.any(String) }],
     ]);
   });
