@@ -23,6 +23,43 @@ until business/source/exact-route review and activation are recorded. Follow
 cutover steps retained below. A live event acknowledgement or Events Manager
 observation must be recorded separately from successful deployment.
 
+### Executed deployment
+
+GitHub `main` was pushed and pulled with `--ff-only` into the existing real
+`/var/www/bangbuy` directory. Application commit `1e32452` was followed by build
+exclusion fix `4ef4f9b`. The first VPS build compiled but TypeScript scanned a
+saved `.next/types` tree in `backup`; automatic restoration returned the prior
+build to HTTP 200. `backup` is now excluded from TypeScript and ESLint, verified
+with a deliberately invalid backup-only fixture. The second VPS build passed:
+build ID `n-4AgKJxU_8uWyeUFikFo`.
+
+PM2 `bangbuy` is online in the same directory, using Node 22.23.2 and
+`npm start -- --hostname 127.0.0.1`; the actual listener is
+`127.0.0.1:3000`. The existing Nginx configuration overwrites `X-Real-IP` with
+`$remote_addr`, has no real-IP overrides, and was not edited. Both existing
+domains resolve directly to the VPS. Other PM2 apps retained their original
+PIDs/status. PM2 state was saved, with credentials absent from its metadata.
+
+After the narrow [internal review](tracking-activation.md), only consented
+homepage PageView CAPI was enabled for `/en` and `/bn` on both existing hosts.
+Approval expires **11 December 2026**. Both new policy endpoints report enabled,
+unknown anonymous consent and no Set-Cookie before a choice. Both old tracking
+policy endpoints remain denied. Home/cart/checkout HTTP checks passed with
+Meta-blocking CSP and no Pixel bootstrap.
+
+The actual token and generated signing secret remain in private `.env`, mode
+0600. The current policy, prior build, prior environment, PM2 backup and bounded
+deployment report are under
+`/var/www/bangbuy/backup/capi-deployment-20261111T084538Z`, mode 0700 with private
+files. The policy URL returns 404. Actual browser bundles were scanned against
+the real token/signing-secret values and contain neither. No release directory,
+DNS change, database migration or marketing worker was introduced.
+
+No operator-created event was sent. At the deployment check, safe delivery
+reports were empty; actual consented-browser acknowledgement and Events Manager
+visibility remain unverified. This record establishes deployment and configured
+scope, not “Meta connected” or Purchase coverage.
+
 Updated 10 November 2026. The user authorized **building the current code in `/var/www/bangbuy` and restoring only the existing PM2 app `bangbuy`**. Recovery completed with tracking disabled and no DNS, Nginx or database migration changes. Both existing domains returned HTTP 200 afterward. This narrow recovery does not authorize the later two-origin cutover or tracking activation. Those remain subject to [the blocker matrix](deployment-blockers.md).
 
 ## Current recovery: one directory and one app

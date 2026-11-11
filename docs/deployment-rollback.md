@@ -9,6 +9,16 @@ policy independently. No database restore or worker action is needed for this
 public PageView channel. Process restart invalidates active grants and requires
 fresh visitor consent. See [the current contract](tracking-activation.md).
 
+The 11 November deployment backup is
+`/var/www/bangbuy/backup/capi-deployment-20261111T084538Z`. It retains the prior
+compiled build `o1Un88f11e6voepMO5vuC`, environment and PM2 dump; source was
+`3c8e4dc`. The failed first build automatically restored that compiled artifact
+and HTTP 200 before the corrected build was retried. The active build is
+`n-4AgKJxU_8uWyeUFikFo` from application/build-fix commits `1e32452` / `4ef4f9b`.
+Keep recovery snapshots excluded from source checks; do not remove the backup
+exclusion or point Next's normal build output at a saved tree. This recovery
+proof does not establish a database restore or provider-payment test.
+
 Updated 10 November 2026. The authorized in-place build/restoration completed in `/var/www/bangbuy`; only PM2 `bangbuy` was restarted. Prisma generation and the production build passed, PM2 reported online, both existing domains returned 200 and the effective tracking policy remained disabled. No DNS, Nginx or database migration change was performed. See the [deployment record](deployment-runbook.md) for build identity and evidence; the later origin cutover remains subject to [the blocker matrix](deployment-blockers.md).
 
 ## One-directory recovery

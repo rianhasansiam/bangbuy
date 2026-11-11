@@ -7,6 +7,26 @@ proposed fresh-catalog-host rollout for this task. The separate-origin stages
 below still describe the optional isolated architecture; they are not
 prerequisites for this new channel. No browser Pixel is enabled in this mode.
 
+### Narrow internal activation decision
+
+The operator review on 11 November is limited to `https://bangbuy.net/en`,
+`https://bangbuy.net/bn` and the corresponding two `www.bangbuy.net` URLs.
+Fresh GETs confirmed that these are ordinary public retail homepages, with the
+English title “Shop Industrial Automation, Electronics & More Online”. Only the
+clean homepage URL is projected; rotating content, products, reviews and DOM
+are not collected by this transport. All other paths and query/fragment
+contexts remain denied.
+
+The user selected this channel and identified dataset `977106358796375`,
+provided its server credential, and explicitly approved real visitor IP, user
+agent and approved public URL **after explicit visitor consent**. These are the
+source/processing-purpose and matching decisions for this narrow contract;
+they do not assert Meta account ownership verification, external business
+approval or a successful provider event. The deployment review references are
+`review:2026-11-11:public-home-pageview` and
+`user:2026-11-11:dataset-977106358796375`; approval expiry is 30 days. Do not copy
+these references to a broader event, route or private-data projection.
+
 The new channel reports only an explicitly consented `PageView` from an exact,
 approved, clean public URL. Meta receives the actual visitor's IP address,
 browser user agent, source URL, event time and opaque event ID. The user approved

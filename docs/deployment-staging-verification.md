@@ -30,6 +30,14 @@ Actual browser-consent behavior and intended-dataset visibility remain live
 verification, not conclusions from the local mocked acknowledgements. The
 existing-domain public channel needs no new DNS, schema migration or worker.
 
+The later VPS build passed after excluding private backups from source checks;
+see [the execution record](deployment-runbook.md). Both existing hosts passed
+home/cart/checkout availability, Meta-free CSP/bootstrap, enabled public-CAPI
+snapshot with unknown anonymous consent, legacy-policy disabled and private
+backup URL 404 checks. Real browser assets contain neither actual server
+credential. This is live availability/configuration evidence, not a live event
+acknowledgement. No operator-created event was submitted.
+
 Prepared 10 November 2026. **No real staging deployment, production mutation or external Meta delivery was performed.** This report distinguishes local HTTPS checks from the outstanding operator/provider work. The [customer-state runbook](customer-state-migration.md) identifies an unresolved dual-legacy-host blocker; the passing local fixtures do not resolve it.
 
 ## Evidence classification

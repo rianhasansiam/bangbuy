@@ -5,11 +5,15 @@ domains and approved real visitor IP, user agent and approved public URL after
 explicit visitor consent. The fresh-host/two-origin rollout below is no longer
 the selected approach. Its legacy-host migration blockers do not apply to the
 new PageView-only channel. See [the current contract](tracking-activation.md).
-The new channel still needs reviewed exact routes/source, trusted-proxy
-configuration, current consent and actual Meta delivery evidence. A token is
+The new channel now has a narrow internal review for the four home URLs and a
+verified loopback/Nginx boundary; it is enabled only after current visitor
+consent. Its actual Meta delivery evidence remains pending. A token is
 present on the VPS; read-only dataset GET returned `(#100) Missing Permission`,
 while an empty CAPI validation request returned the expected non-empty-data
 error. Neither request submitted an event or establishes a delivery rejection.
+The successful in-place deployment and precise active scope are recorded in
+the [current runbook](deployment-runbook.md). No external Meta approval or
+Events Manager observation is claimed.
 
 Reviewed 10 November 2026. Repository preparation is complete only when its checks pass; production readiness additionally requires the unresolved operator and account evidence below. No approval is granted by this document.
 
