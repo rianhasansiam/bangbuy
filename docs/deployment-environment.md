@@ -2,6 +2,32 @@
 
 Keep actual values in the existing protected environment store. Do not paste tokens, database URLs, guest cookies, order payloads or `.env` output into tickets, logs or this checklist. Record `present`, `absent`, `matches approved origin` and a configuration revision/hash instead. The VPS process-manager paths and owner need current verification; see [blockers](deployment-blockers.md).
 
+## Existing-domain public CAPI mode
+
+The 11 November selection is a separate public PageView channel on the existing
+domains. It does not require new DNS, origin separation, migrations or a worker.
+The origin/migration sections below apply to the older isolated mode.
+
+| Key | Requirement |
+| --- | --- |
+| `META_TRACKING_MODE` | `server-only`; independently disables legacy Pixel and order-worker delivery. |
+| `META_PUBLIC_CAPI_ENABLED`, `META_RUNTIME_ENABLED`, `META_CAPI_ENABLED` | All explicitly `true`, AND a reviewed enabled manifest, for delivery. Default false. |
+| `META_PIXEL_ENABLED` | Explicitly `false`; no Meta browser SDK. |
+| `META_PUBLIC_CAPI_POLICY_FILE` | Absolute deployment-owned regular JSON file outside public assets; use the denied public CAPI example as the starting point. |
+| `META_PUBLIC_CAPI_CONSENT_SECRET` | Private random signing secret, at least 32 bytes; never public, committed, logged or stored in PM2 metadata. |
+| `META_PUBLIC_CAPI_TRUST_PROXY` | `true` only after verifying loopback-only Next and overwritten `X-Real-IP $remote_addr`. No CDN/client-header inference. |
+| `META_ENVIRONMENT` | `production` only for authorized production delivery; staging/test requires a different dataset and test event code. |
+| `META_CAPI_ACCESS_TOKEN`, `META_GRAPH_API_VERSION` | Server-only destination credential and currently supported Graph version. Read-only dataset permission and CAPI write permission can differ. |
+| `NEXT_PUBLIC_META_PIXEL_ID` | Production dataset `977106358796375`, identified by the user; not a credential. |
+| `TRACKING_ISOLATION_READY` | Remains `false`; public server-only mode does not claim browser-origin isolation. |
+
+The manifest allowlists each actual origin independently. A consent cookie from
+`bangbuy.net` cannot authorize `www.bangbuy.net`. Exact approved public paths,
+matching scope (real public IP plus user agent), business/source references and
+unexpired review records remain required. Empty, malformed or disabled
+configuration fails closed. Existing auth, payment and database settings remain
+the source of commerce behavior.
+
 ## Shared application and origin settings
 
 | Key or setting | Stage 1 requirement | Verification |

@@ -1,5 +1,57 @@
 # Production release and tracking activation
 
+## Existing-domain public CAPI channel — 11 November 2026
+
+The user selected **server-only CAPI on the existing domains**, replacing the
+proposed fresh-catalog-host rollout for this task. The separate-origin stages
+below still describe the optional isolated architecture; they are not
+prerequisites for this new channel. No browser Pixel is enabled in this mode.
+
+The new channel reports only an explicitly consented `PageView` from an exact,
+approved, clean public URL. Meta receives the actual visitor's IP address,
+browser user agent, source URL, event time and opaque event ID. The user approved
+that matching scope on 11 November. No DOM, contact, cart, account or order
+projection belongs to this contract. Guest Purchase and COD Purchase remain
+excluded. Dataset visibility and API acknowledgement are separate evidence.
+
+Configuration uses `META_TRACKING_MODE=server-only`,
+`META_PUBLIC_CAPI_POLICY_FILE`, `META_PUBLIC_CAPI_CONSENT_SECRET` and
+`META_PUBLIC_CAPI_ENABLED`, alongside the existing runtime/CAPI/token/version
+settings. See the [environment checklist](deployment-environment.md).
+`config/meta-public-capi-policy.example.json` is denied by default. A reviewed
+deployment-owned copy must identify the actual dataset, approved exact HTTPS
+origins, ordinary public paths, business/source/matching references and expiry.
+No wildcard or blanket route approval is supported. An access token is not an
+approval record.
+
+Before setting `META_PUBLIC_CAPI_TRUST_PROXY=true`, bind the existing BangBuy
+Next process to `127.0.0.1` and confirm Nginx overwrites `X-Real-IP` with
+`$remote_addr`. The new adapter never trusts an inherited `X-Forwarded-For`
+chain, accepts an IP from browser JSON or substitutes the VPS address. Private,
+local, reserved and unsupported addresses are ineligible.
+
+Consent uses a separate signed, host-only, HttpOnly, Secure, SameSite=Strict
+cookie and a bounded active-grant registry in the existing single PM2 process.
+Revocation removes the active grant; a copied old cookie cannot restore it.
+Process restart or registry eviction requires a fresh explicit grant. This is
+not a shared multi-process consent service. No database migration or marketing
+worker is needed for this public channel.
+
+Delivery is a bounded direct request, with no automatic retry, historical replay
+or durable outbox. The client attempts one current PageView per document after
+checking current policy and consent. Provider acknowledgement produces 202;
+ineligible requests produce 204 and delivery failures produce a generic 503.
+Process-local deduplication is not an exactly-once guarantee or evidence of Meta
+reporting. Marketing failures do not affect checkout.
+
+Disable this channel immediately with `META_PUBLIC_CAPI_ENABLED=false` and the
+approved app restart, or atomically set its manifest's `runtimeEnabled:false`.
+The existing `tracking:disable` command also accepts this manifest when its
+absolute `META_PUBLIC_CAPI_POLICY_FILE` path is passed explicitly. Do not target
+the legacy `META_POLICY_FILE` by mistake. Keep `META_PIXEL_ENABLED=false` and
+`TRACKING_ISOLATION_READY=false`; server-only mode independently denies the old
+browser and order-worker policy even if stale legacy flags are enabled.
+
 This is an operator checklist, not authorization to change production. The [blocker matrix](deployment-blockers.md), [environment checklist](deployment-environment.md), [customer migration](customer-state-migration.md), [deployment runbook](deployment-runbook.md) and [database and worker operations](deployment-database-and-worker.md) govern different prerequisites.
 
 ## Stage 1 Infrastructure and commerce

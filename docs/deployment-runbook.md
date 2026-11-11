@@ -1,10 +1,45 @@
 # Deployment preparation and controlled release
 
-Prepared 10 November 2026. **No production DNS, migration, deployment, service change or tracking activation was performed.** The current release is blocked by live-host compatibility and operator prerequisites in [the blocker matrix](deployment-blockers.md). Repository assets and local HTTPS checks do not clear those blockers.
+## Existing-domain public CAPI release — 11 November 2026
+
+The user authorized local changes, GitHub `main` push and an in-place VPS
+`git pull` into `/var/www/bangbuy`, using the existing PM2 `bangbuy` app. The
+chosen transport is public PageView CAPI on the existing domains; no fresh
+catalog hostname is part of this release. Real visitor IP, user agent and
+approved public URL were explicitly approved after visitor consent.
+
+The code/build checks are recorded in [verification](deployment-staging-verification.md).
+Build in the single application directory with only `bangbuy` stopped; retain
+its prior build and protected environment under the private `backup` directory.
+Restart the same app with Next listening only on `127.0.0.1:3000` before trusting
+Nginx's overwritten `X-Real-IP`. Preserve unrelated PM2 applications. No
+database migration, dependency upgrade, DNS change, Nginx rewrite or worker is
+needed for this new public channel.
+
+Install a deployment-owned copy of the denied public CAPI manifest with the
+exact existing origins and a private signing secret. Keep delivery disabled
+until business/source/exact-route review and activation are recorded. Follow
+[the new activation contract](tracking-activation.md), not the two-origin
+cutover steps retained below. A live event acknowledgement or Events Manager
+observation must be recorded separately from successful deployment.
+
+Updated 10 November 2026. The user authorized **building the current code in `/var/www/bangbuy` and restoring only the existing PM2 app `bangbuy`**. Recovery completed with tracking disabled and no DNS, Nginx or database migration changes. Both existing domains returned HTTP 200 afterward. This narrow recovery does not authorize the later two-origin cutover or tracking activation. Those remain subject to [the blocker matrix](deployment-blockers.md).
+
+## Current recovery: one directory and one app
+
+Authorized SSH inspection confirmed the real application directory and PM2 `bangbuy`, ID 0, using `npm start` with Node 22.23.2. It was errored and HTTP returned 502 because `.next` linked into an incomplete old release. The generated Prisma client also linked into that directory. Both links were replaced with real in-place directories; Prisma generation and the production build passed, then only `bangbuy` was restarted. The source revision was `3c8e4dc2788692718f05995e765a7b47a83d8b21`, with build ID `69oEMvtzbwbtGGAob7GU0`.
+
+Post-restoration GET checks passed for English/Bengali home, products, cart, checkout, login and the tracking policy; apex and www home returned 200. Checked private HTML had no Meta bootstrap and retained `no-referrer`; the effective policy reported runtime, Pixel and CAPI disabled. Other PM2 apps retained their PIDs and status. These availability checks did not place a production order, charge a payment or prove provider callbacks or a two-origin migration.
+
+Use `/var/www/bangbuy` as the single application directory. `BANGBUY_RELEASE_ROOT` means **application root**; if the prepared launcher is used, set it to `/var/www/bangbuy` and set `BANGBUY_APP_PROCESS_NAME=bangbuy`. It does not require a releases directory, second checkout, new PM2 app or symlink swap. Keep the existing verified PM2 daemon and startup convention; changing to a prepared ecosystem is not required merely to restore the current app. Leave the optional marketing worker unstarted and CAPI disabled.
+
+Old snapshot/rollback files were preserved in `/var/www/bangbuy/backup/maintenance-20261110T095353Z/previous-deployment.tar.gz`, mode 0600 inside a private directory. Archive contents were compared successfully with the originals and its SHA256 recorded beside it. The original `/var/www/bangbuy-releases` path was removed. An already-open interactive shell's empty working-directory inode was retained inside the private backup rather than terminating the shell. Maintenance backups are excluded through this checkout's local Git exclude file. An archive is historical evidence, not automatic proof of rollback compatibility; use `cd /var/www/bangbuy` in an existing SSH terminal.
+
+Before overwriting dependencies or `.next`, keep only `bangbuy` stopped while its source/build files are changed; the observed app is already errored. Preserve the existing protected environment and persistent uploads. Store backups outside `public` and upload-serving paths, restrict their permissions, and verify they cannot be downloaded. Build in place, require a new `.next/BUILD_ID`, then restart **only `bangbuy`** through the verified existing manager. Check process health, loopback response, both existing domain paths and disabled tracking before reporting restoration complete. Do not run migrations, provision origins, change DNS/Nginx or start a second process as part of this authorization. See [in-place rollback](deployment-rollback.md).
 
 ## Observed hosting and remaining access
 
-Anonymous DNS/TLS/HTTP discovery found the following. It executed no browser JavaScript, sent no customer cookies and made no Meta delivery request.
+The initial anonymous DNS/TLS/HTTP discovery, before recovery, found the following. It executed no browser JavaScript, sent no customer cookies and made no Meta delivery request. Later recovery availability and tracking checks are recorded above; the older artifact observations below do not describe the restored build.
 
 | Observation | Evidence and limit |
 | --- | --- |
@@ -12,11 +47,11 @@ Anonymous DNS/TLS/HTTP discovery found the following. It executed no browser Jav
 | Both `https://bangbuy.net/en` and `https://www.bangbuy.net/en` return 200 | Both are legacy commerce origins. There is no observed canonical-host redirect between them. Apex `/en/cart` also returns 200. |
 | HTTP apex redirects to HTTPS; HTTPS `/` redirects to `/en` | Existing locale entry behavior, not proof of authenticated or payment journeys. |
 | Certificate covers apex and www; Let’s Encrypt YE1, valid 1 October–30 December 2026 | Current public TLS certificate observation. Actual certificate files/renewal configuration require host access. A fresh catalog host needs its own approved certificate coverage. |
-| Response identifies Nginx 1.24.0 (Ubuntu) and Next.js; sampled HTML is private/no-store | Current response headers. Nginx configuration, runtime paths, listener and Node version are not remotely verified. |
+| Response identifies Nginx 1.24.0 (Ubuntu) and Next.js; sampled HTML is private/no-store | Initial public response headers. Later authorized SSH inspection confirmed the application directory, PM2 app and Node version above; the operator must retain the current proxy/listener inventory separately. |
 | Anonymous samples returned no Set-Cookie; `/sw.js` and `/service-worker.js` returned 404 | Does not establish existing session/cart/order-cookie attributes or absence of other/currently registered workers. Use the state audit procedure below. |
 | Live HTML contains a `facebook.com/tr` reference and a first-party script contains legacy Pixel bootstrap strings | The live artifact differs from the new isolation build. These are static artifact observations, not proof of any actual Meta event or dataset receipt. |
 
-Read-only SSH to the documented VPS using BatchMode, no password prompt and strict known-host checking failed with `Permission denied (publickey,password)`. No remote command executed. Do not bypass host verification or try unrelated upload credentials. An authorized VPS operator must supply or run the read-only inventory.
+The initial BatchMode SSH attempt failed with `Permission denied (publickey,password)` and executed no remote command. The user subsequently supplied authorized access, enabling the current inspection above. Retain strict host verification and do not use unrelated upload credentials. The earlier access failure is historical, not a statement that the current authorized session is unavailable.
 
 Historical [October implementation notes](meta-pixel-tracking.md) identify `/var/www/bangbuy`, root-owned PM2 7.0.4 under `/root/.pm2`, process `bangbuy` (then ID 0), `/etc/nginx/sites-enabled/bangbuy` linked to its sites-available file, and loopback upstream `127.0.0.1:3000`. They also recorded a dirty checkout/build mismatch. These are **inventory leads only**. Do not assume current IDs, user, paths, listeners, Node binary, environment-loading mechanism or a clean rollback artifact.
 
@@ -57,7 +92,7 @@ node --test tests/deployment-host-assets.mjs tests/deployment-operations.mjs
 
 The renderer refuses the unresolved checked-in example and refuses `/etc/` output; it writes a new file only. No local Nginx binary was available, so **actual `nginx -t` has not been performed**. An operator must inspect the candidate within the confirmed existing Nginx include context and run syntax validation before any later authorized reload. `map`/`log_format` belong in the HTTP context. Never replace the complete shared Nginx configuration or remove the existing combined apex/www vhost while compatibility is blocked. Review existing upload alias limits, renewal, compression, rate limits and security settings and preserve necessary behavior when merging the final candidate.
 
-The application ecosystem requires these confirmed metadata values: `BANGBUY_RELEASE_ROOT`, `BANGBUY_NODE_BINARY`, `BANGBUY_APP_ENV_FILE`, `BANGBUY_APP_LOG_DIRECTORY`, `BANGBUY_APP_PROCESS_NAME`, `BANGBUY_APP_PORT` and the existing account's `PM2_HOME`. Paths must be absolute; the RPC socket must exist. Its socket guard prevents accidental initialization but does not authenticate a stale socket or prove the correct daemon. The private file contains the complete approved runtime configuration and explicit disabled flags from [the checklist](deployment-environment.md), with mode `0600` and the actual service owner. Do not source an arbitrary dotenv file as shell code.
+The application ecosystem requires these confirmed metadata values: `BANGBUY_RELEASE_ROOT=/var/www/bangbuy`, `BANGBUY_APP_PROCESS_NAME=bangbuy`, `BANGBUY_NODE_BINARY`, `BANGBUY_APP_ENV_FILE`, `BANGBUY_APP_LOG_DIRECTORY`, `BANGBUY_APP_PORT` and the existing account's `PM2_HOME`. The root variable names the one in-place application directory. Paths must be absolute; the RPC socket must exist. Its socket guard prevents accidental initialization but does not authenticate a stale socket or prove the correct daemon. The private file contains the complete approved runtime configuration and explicit disabled flags from [the checklist](deployment-environment.md), with mode `0600` and the actual service owner. Do not source an arbitrary dotenv file as shell code.
 
 Use a separate clean manager-invocation shell containing only reviewed nonsecret process metadata and the existing manager's required runtime settings. PM2 can retain inherited shell variables even when the ecosystem file contains only paths. Do not reuse a migration shell with exported database/provider credentials for PM2 start/save operations; application secrets belong in the protected file loaded inside the child process.
 
@@ -67,7 +102,7 @@ After the operator has confirmed metadata, inspect the ecosystem without invokin
 "$BANGBUY_NODE_BINARY" -e "require('./deploy/pm2/bangbuy-app.config.cjs')"
 ```
 
-Use the verified deployment account and existing Node/PM2 binaries for a later authorized release. Build-time public origins must match server origins; retain the artifact hash/build ID, dependency lock, private configuration revision and rollback artifact. Installation/build do not authorize production rollout. Do not use `pm2 restart all`, create another manager or introduce a new systemd/container stack. Confirm current PM2 version accepts the prepared ecosystem, and preserve existing log rotation/reboot behavior. No live PM2 start/reload/restore behavior was verified here.
+Use the verified deployment account and existing Node/PM2 binaries. For a later origin-configured release, build-time public origins must match server origins; retain the artifact hash/build ID, dependency lock, private configuration revision and a protected rollback archive restored into the same application directory if needed. The current authorization covered only the completed in-place recovery above. Do not use `pm2 restart all`, create another manager/app or introduce a new systemd/container stack. The existing npm-start process was retained; the prepared ecosystem and its future switch still require separate verification.
 
 Build with the required development dependencies present; do not prune before Prisma generation, type checks and the production build finish. `dotenv` and `tsx` are runtime dependencies for the protected-environment application launcher and TypeScript worker. Any later production pruning/packaging must retain those packages, the generated Prisma client/runtime, built Next assets and required launcher/worker source. The actual VPS packaging/PM2 installation remains unverified; check the prepared artifact under the confirmed Node version before changing the live process.
 
@@ -81,9 +116,9 @@ It performs no login, checkout mutation, cookie transfer or JavaScript execution
 
 ## Stage 1: authorized commerce release with tracking disabled
 
-This remains a future release procedure, **not an instruction to execute during preparation**. Clear infrastructure access, dual-host state compatibility, backup/restore, provider sandbox and explicit release-authorization blockers first. Record named owner, approved host/config/artifact revisions, maintenance window, abort criteria and [rollback](deployment-rollback.md).
+This two-origin release remains a future procedure, separate from the currently authorized in-place build/restoration. **Do not execute its migrations, DNS/proxy changes or worker startup under the recovery authorization.** Clear dual-host state compatibility, backup/restore, provider sandbox and specific release-authorization blockers first. Record named owner, approved host/config/artifact revisions, maintenance window, abort criteria and [rollback](deployment-rollback.md).
 
-1. Preserve a verified prior artifact, its environment revision and the exact BangBuy Nginx vhost/includes. Resolve dirty checkout/served-build discrepancies before designating the rollback release. Protect uploads, database and TLS configuration through their existing backup systems.
+1. Preserve a verified prior artifact as a protected archive, its environment revision and the exact BangBuy Nginx vhost/includes. Restore into the same `/var/www/bangbuy` directory if rollback is needed; do not introduce a second live checkout or symlink swap. Resolve dirty checkout/served-build discrepancies before designating the rollback artifact. Protect uploads, database and TLS configuration through their existing backup systems.
 2. Complete the reviewed additive migration procedure once using the approved direct connection and immutable SQL. Confirm migration status and required runtime permissions before new code or worker.
 3. Set `META_ENVIRONMENT=disabled`, `META_RUNTIME_ENABLED=false`, `META_PIXEL_ENABLED=false`, `META_CAPI_ENABLED=false`, `TRACKING_ISOLATION_READY=false`, `META_DEBUG=false` and disabled manifest gates in application and worker configuration. Confirm the actual current policy response is denied. Keep guest external delivery and COD Purchase excluded.
 4. Only after separate deployment authorization, provision the selected fresh origin/TLS and merge reviewed BangBuy-only proxy rules without breaking either legacy host. Validate Nginx syntax; update only the confirmed BangBuy PM2 process through its existing daemon. Keep the legacy compatibility plan and rollback reachable throughout. A strict single-commerce-origin cutover is prohibited while the alias blocker remains.

@@ -27,6 +27,9 @@ export function getTrackingRuntimePolicy(env: TrackingEnvironment = process.env)
   const selectedId = mode === "production" ? productionId : env.META_TEST_PIXEL_ID?.trim();
   const pixelId = selectedId && /^\d+$/.test(selectedId) ? selectedId : null;
   const base = { ...denied, storefrontOrigin, commerceOrigin };
+  // The single-origin CAPI channel has its own public PageView contract and
+  // consent. It must never enable legacy browser or order-conversion delivery.
+  if (env.META_TRACKING_MODE === "server-only") return base;
   if (!env.META_POLICY_FILE || !environment.success || mode === "disabled" || !pixelId || (mode === "production" && !production) || (mode !== "production" && (!productionId || selectedId === productionId))) return base;
   try {
     // Re-read on every dispatch/poll/worker cycle; file updates are runtime kills.

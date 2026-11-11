@@ -1,5 +1,35 @@
 # Deployment preparation: staging verification
 
+## Existing-domain public CAPI verification — 11 November 2026
+
+The user selected server-only CAPI and approved visitor-consented real IP,
+browser user agent and approved public URL. New checks below concern only the
+public PageView channel; the retained two-origin results describe the other
+architecture.
+
+| Check | Result and scope |
+| --- | --- |
+| Full Vitest suite, both disposable PostgreSQL opt-ins enabled | **1,494 passed, four optional skipped; 92 files passed, one skipped.** Includes 62 new backend and 32 new client checks plus the legacy-policy kill check. `/tmp/bangbuy-public-capi-full-tests.log`. |
+| Actual compiled Next consent/event routes | **Nine checks passed; two mocked acknowledgements.** Unknown/pre-consent suppression, shared cross-route grants, deduplication, host separation, private/query/hash rejection, independent host grants, copied-cookie revocation, private CSP and live manifest disable. Every Meta request intercepted; no external event. `/tmp/bangbuy-public-capi-http.log`. |
+| Production build | Passed using only the explicit disposable local database and synthetic marketing credentials. `/tmp/bangbuy-public-capi-build.log`. |
+| Browser asset scan | **84 assets passed**, including public CAPI consent-secret and server-token sentinels. `/tmp/bangbuy-public-capi-build-scan.log`. |
+| Deployment asset checks | **16 passed**, including inherited public-CAPI flags/secrets failing closed. `/tmp/bangbuy-public-capi-deployment-tests.log`. |
+| TypeScript, i18n and ESLint | Types passed; English/Bengali each validate 2,938 messages; zero lint errors, three pre-existing warnings. Diff check passed. |
+| Provider configuration checks | Token present on VPS and matches the user-supplied value. Dataset GET returned `(#100) Missing Permission`; an empty-data validation POST returned `(#100) param data must be non-empty`. **Zero event records submitted.** This does not verify event write permission, dataset receipt or deduplication. |
+
+Official Meta matching guidance excludes UA-only events through its baseline
+matching rules; the new projection uses the explicitly approved real IP plus
+UA, rather than inventing attribution cookies or copying private contacts.
+See [baseline matching requirements](https://developers.facebook.com/documentation/ads-commerce/conversions-api/best-practices#baseline-requirements-for-matching).
+[Graph API v27.0](https://developers.facebook.com/documentation/development/graph-api/changelog/version27.0)
+was released on 4 November 2026; version selection does not establish token or
+dataset permission.
+
+No connected user browser or authenticated Events Manager view was available.
+Actual browser-consent behavior and intended-dataset visibility remain live
+verification, not conclusions from the local mocked acknowledgements. The
+existing-domain public channel needs no new DNS, schema migration or worker.
+
 Prepared 10 November 2026. **No real staging deployment, production mutation or external Meta delivery was performed.** This report distinguishes local HTTPS checks from the outstanding operator/provider work. The [customer-state runbook](customer-state-migration.md) identifies an unresolved dual-legacy-host blocker; the passing local fixtures do not resolve it.
 
 ## Evidence classification

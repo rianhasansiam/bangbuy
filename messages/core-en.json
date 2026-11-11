@@ -88,5 +88,19 @@
     "privateWithdraw": "Withdraw checkout reporting consent",
     "manageCheckout": "Manage the separate checkout reporting choice",
     "manageCatalog": "Manage the separate catalog analytics choice"
+  },
+  "InterfaceComponentsPublicCapiConsent": {
+    "title": "Optional public-page analytics",
+    "description": "With your permission, BangBuy’s server sends Meta the current approved public page URL, your IP address and browser information (user agent) to measure visits. This choice covers public pages only. Cart, checkout, account and payment data are excluded. You can withdraw consent here at any time.",
+    "status": "Preference: {state}",
+    "unknown": "not chosen",
+    "granted": "allowed",
+    "denied": "denied",
+    "revoked": "withdrawn",
+    "allow": "Allow public-page analytics",
+    "deny": "Keep public-page analytics off",
+    "withdraw": "Withdraw analytics consent",
+    "unavailable": "Analytics is off for this page or is currently unavailable.",
+    "error": "We could not confirm your preference with the server. Denial or withdrawal still stops reporting in this browser. Try your choice again to update the server preference."
   }
 }

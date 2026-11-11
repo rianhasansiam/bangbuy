@@ -18,6 +18,7 @@
     "marketing:worker": "node --conditions=react-server --import tsx scripts/marketing-worker.ts",
     "tracking:disable": "node --import tsx scripts/disable-marketing.mts",
     "test:marketing:browser": "node --import tsx scripts/test-marketing-browser.mts",
+    "test:capi:http": "node scripts/test-public-capi-http.mjs",
     "tracking:check-build": "node --import tsx scripts/check-marketing-build.mts",
     "tracking:review-context": "node --import tsx scripts/review-tracking-context.mts",
     "test:commerce:isolation": "node --import tsx scripts/test-commerce-isolation.mts",

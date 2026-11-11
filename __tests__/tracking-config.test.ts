@@ -21,6 +21,14 @@ function config() {
 }
 describe("runtime tracking configuration", () => {
   it("has no delivery without explicit configuration and approvals", () => { expect(getTrackingRuntimePolicy({}).runtimeEnabled).toBe(false); });
+  it("server-only mode denies legacy browser and order-worker delivery despite enabled legacy configuration", () => {
+    const { env } = config();
+    const policy = getTrackingRuntimePolicy({ ...env, META_TRACKING_MODE: "server-only" });
+    expect(policy.runtimeEnabled).toBe(false);
+    expect(policy.pixelEnabled).toBe(false);
+    expect(policy.capiEnabled).toBe(false);
+    expect(policy.pixelId).toBeNull();
+  });
   it("re-reads the runtime kill switch without a build or process restart", () => {
     const { path, env } = config();
     expect(getTrackingRuntimePolicy(env).runtimeEnabled).toBe(true);

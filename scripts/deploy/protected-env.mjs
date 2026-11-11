@@ -32,6 +32,7 @@ export function loadApplicationEnvironment(file, { releaseRoot, inherited = proc
     // Explicit empty/default values also prevent Next from filling missing keys
     // from a stale release .env during `next start`.
     META_ENVIRONMENT: "disabled", META_POLICY_FILE: "", META_CAPI_ACCESS_TOKEN: "",
+    META_TRACKING_MODE: "isolated", META_PUBLIC_CAPI_POLICY_FILE: "", META_PUBLIC_CAPI_CONSENT_SECRET: "",
     META_GRAPH_API_VERSION: "", META_WORKER_SECRET: "", META_TEST_PIXEL_ID: "",
     META_TEST_EVENT_CODE: "", NEXT_PUBLIC_META_PIXEL_ID: "",
     META_COD_CONVERSION_DEFINITION: "disabled",
@@ -39,6 +40,8 @@ export function loadApplicationEnvironment(file, { releaseRoot, inherited = proc
     META_RUNTIME_ENABLED: supplied.META_RUNTIME_ENABLED === "true" ? "true" : "false",
     META_PIXEL_ENABLED: supplied.META_PIXEL_ENABLED === "true" ? "true" : "false",
     META_CAPI_ENABLED: supplied.META_CAPI_ENABLED === "true" ? "true" : "false",
+    META_PUBLIC_CAPI_ENABLED: supplied.META_PUBLIC_CAPI_ENABLED === "true" ? "true" : "false",
+    META_PUBLIC_CAPI_TRUST_PROXY: supplied.META_PUBLIC_CAPI_TRUST_PROXY === "true" ? "true" : "false",
     TRACKING_ISOLATION_READY: supplied.TRACKING_ISOLATION_READY === "true" ? "true" : "false",
     META_DEBUG: "false",
     NODE_ENV: "production",

@@ -39,8 +39,10 @@ test("missing private tracking settings cannot inherit enabled PM2 or dotenv gat
   const root = mkdtempSync(join(tmpdir(), "bangbuy-app-deny-"));
   try {
     const file = join(root, "app.env"); writeFileSync(file, "AUTH_SECRET=PRIVATE_SENTINEL\n", { mode: 0o600 });
-    const env = loadApplicationEnvironment(file, { inherited: { PATH: "/synthetic/bin", META_RUNTIME_ENABLED: "true", META_PIXEL_ENABLED: "true", META_CAPI_ENABLED: "true", TRACKING_ISOLATION_READY: "true", META_ENVIRONMENT: "production", META_POLICY_FILE: "/stale/policy.json", META_CAPI_ACCESS_TOKEN: "STALE_SECRET", NEXT_PUBLIC_META_PIXEL_ID: "12345", META_UNKNOWN: "unreviewed", DOTENV_CONFIG_PATH: "/stale/app.env" } });
-    for (const key of ["META_RUNTIME_ENABLED", "META_PIXEL_ENABLED", "META_CAPI_ENABLED", "TRACKING_ISOLATION_READY", "META_DEBUG"]) assert.equal(env[key], "false");
+    const env = loadApplicationEnvironment(file, { inherited: { PATH: "/synthetic/bin", META_RUNTIME_ENABLED: "true", META_PIXEL_ENABLED: "true", META_CAPI_ENABLED: "true", META_PUBLIC_CAPI_ENABLED: "true", META_TRACKING_MODE: "server-only", META_PUBLIC_CAPI_POLICY_FILE: "/stale/public-capi.json", META_PUBLIC_CAPI_CONSENT_SECRET: "STALE_CONSENT_SECRET", TRACKING_ISOLATION_READY: "true", META_ENVIRONMENT: "production", META_POLICY_FILE: "/stale/policy.json", META_CAPI_ACCESS_TOKEN: "STALE_SECRET", NEXT_PUBLIC_META_PIXEL_ID: "12345", META_UNKNOWN: "unreviewed", DOTENV_CONFIG_PATH: "/stale/app.env" } });
+    for (const key of ["META_RUNTIME_ENABLED", "META_PIXEL_ENABLED", "META_CAPI_ENABLED", "META_PUBLIC_CAPI_ENABLED", "TRACKING_ISOLATION_READY", "META_DEBUG"]) assert.equal(env[key], "false");
+    assert.equal(env.META_TRACKING_MODE, "isolated");
+    assert.equal(env.META_PUBLIC_CAPI_POLICY_FILE, ""); assert.equal(env.META_PUBLIC_CAPI_CONSENT_SECRET, "");
     assert.equal(env.META_ENVIRONMENT, "disabled"); assert.equal(env.META_POLICY_FILE, "");
     assert.equal(env.META_CAPI_ACCESS_TOKEN, ""); assert.equal(env.NEXT_PUBLIC_META_PIXEL_ID, "");
     assert.equal(env.META_UNKNOWN, undefined); assert.equal(env.DOTENV_CONFIG_PATH, undefined);
