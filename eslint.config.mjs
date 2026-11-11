@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Private in-place recovery snapshots are not application source.
+    "backup/**",
     // Native translation dependencies and persistent runtime assets are external.
     "tools/libretranslate/.venv/**",
     "tools/libretranslate/.venvs/**",
