@@ -229,24 +229,6 @@ export const ORDER_STATUS_META: Record<OrderStatus, OrderStatusMeta> = {
   },
 };
 
-/** Type guard: is `value` one of the known statuses? */
-export function isOrderStatus(value: unknown): value is OrderStatus {
-  return (
-    typeof value === "string" &&
-    (ORDER_STATUSES as readonly string[]).includes(value)
-  );
-}
-
-/** Is moving `from → to` an allowed transition? */
-export function canTransition(from: OrderStatus, to: OrderStatus): boolean {
-  return STATUS_TRANSITIONS[from]?.includes(to) ?? false;
-}
-
-/** A status with no outgoing transitions (REFUNDED / CANCELLED). */
-export function isTerminalStatus(status: OrderStatus): boolean {
-  return STATUS_TRANSITIONS[status].length === 0;
-}
-
 /** Index of a status on the linear tracker rail, or -1 for branch states. */
 export function trackingStepIndex(status: OrderStatus): number {
   return (ORDER_TRACKING_STEPS as readonly OrderStatus[]).indexOf(status);

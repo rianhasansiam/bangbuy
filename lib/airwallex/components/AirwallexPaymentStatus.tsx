@@ -16,6 +16,8 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { readApiData } from "@/features/http/api-envelope";
+import { fetchOrderDetail } from "@/features/orders/api";
+import { canTrackMetaPixel, trackPurchase } from "@/lib/meta-pixel";
 import { cn } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 2_500;
@@ -271,6 +273,34 @@ export function AirwallexPaymentStatus({
       if (timer !== undefined) window.clearTimeout(timer);
     };
   }, [autoPoll, onSettled, orderId, refreshToken]);
+
+  useEffect(() => {
+    if (
+      embedded ||
+      state.status !== "ready" ||
+      state.snapshot.orderId !== orderId ||
+      state.snapshot.paymentStatus !== "SUCCEEDED" ||
+      state.snapshot.requiresReview ||
+      !canTrackMetaPixel()
+    ) {
+      return;
+    }
+
+    let active = true;
+    void (async () => {
+      try {
+        // The redirect and status alone do not supply a confirmed order total.
+        const order = await fetchOrderDetail(state.snapshot.orderId);
+        if (active && order.id === state.snapshot.orderId) trackPurchase(order);
+      } catch {
+        // Optional tracking must never affect payment confirmation or shopping.
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [embedded, orderId, state]);
 
   if (!orderId) {
     return (

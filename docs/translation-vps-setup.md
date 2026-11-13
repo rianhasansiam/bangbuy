@@ -81,7 +81,6 @@ npx prisma migrate deploy
 npx prisma generate
 npm run lint
 npm run typecheck
-npm test
 npm run i18n:validate
 npm run build
 npm run i18n:translations -- probe --source en --target bn --text 'Hello world!'

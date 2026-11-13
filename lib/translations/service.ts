@@ -301,26 +301,6 @@ export async function setPublicTranslationStatus(id:string,published:boolean,rev
   },{isolationLevel:"Serializable"});
 }
 
-export async function resolvePublicContent<T extends Record<string,unknown>>(entityType:PublicEntity,entityId:string,fields:T,locale:string):Promise<{fields:T;available:boolean;sourceLocale:string;translatedFields:string[]}> {
-  const keys=Object.keys(fields).filter(key=>(PUBLIC_FIELDS[entityType] as readonly string[]).includes(key));
-  const sourceLocale=sourceLanguage(keys.map(key=>typeof fields[key]==="string"?fields[key]:JSON.stringify(fields[key])).join(" "));
-  if(!keys.length || keys.every(key=>fields[key]===null || fields[key]===undefined || fields[key]==="" || sourceLanguage(typeof fields[key]==="string"?fields[key] as string:JSON.stringify(fields[key]))===locale)) return {fields,available:true,sourceLocale,translatedFields:[]};
-  try {
-    const compatible=await compatiblePublishedFallback(locale);
-    const [rows,current]=await Promise.all([prisma.contentTranslation.findMany({where:{entityType,entityId,targetLocale:{in:[locale,...(compatible?[compatible]:[])]},status:"published"}}),sourceRecord(prisma,entityType,entityId)]);
-    const output={...fields}; const translatedFields:string[]=[];
-    for(const field of keys) {
-      const original=fields[field]; if(original===null || original===undefined || original==="") continue;
-      const value=field==="descriptionBlocks"?JSON.stringify(original):String(original);
-      if(sourceLanguage(value)===locale) {translatedFields.push(field);continue;}
-      const row=rows.find(row=>row.field===field && row.targetLocale===locale && row.sourceHash===contentHash(value) && current && row.contextHash===contextFor(current)) ?? rows.find(row=>row.field===field && row.targetLocale===compatible && row.sourceHash===contentHash(value) && current && row.contextHash===contextFor(current));
-      if(row) { (output as Record<string,unknown>)[field]=field==="descriptionBlocks"?JSON.parse(row.value):row.value;translatedFields.push(field); }
-    }
-    const required=keys.filter(field=>fields[field]!==null && fields[field]!==undefined && fields[field]!=="");
-    return {fields:output,available:required.every(field=>translatedFields.includes(field)),sourceLocale,translatedFields};
-  } catch { return {fields,available:false,sourceLocale,translatedFields:[]}; }
-}
-
 /** Batch query plus current-revision checks for sitemap/hreflang readiness. */
 export async function getPublishedEntityLocales(entityType:PublicEntity,entityIds:string[],requiredFields:string[]):Promise<Map<string,string[]>> {
   const result=new Map<string,string[]>();

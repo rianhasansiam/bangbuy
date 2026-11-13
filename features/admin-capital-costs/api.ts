@@ -140,15 +140,6 @@ export const EMPTY_OTHER_COST_FILTERS: OtherCostFilters = {
   maxAmount: "",
 };
 
-export function buildCapitalForm(
-  capital: CapitalRecord | null,
-): CapitalFormState {
-  return {
-    amount: capital ? String(capital.amount) : "",
-    note: capital?.note ?? "",
-  };
-}
-
 export function emptyOtherCostForm(): OtherCostFormState {
   return {
     reason: "",

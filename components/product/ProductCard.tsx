@@ -2,6 +2,7 @@
 import { useLocale } from "next-intl";
 import { useSurface } from "@/components/layout/SurfaceContext";
 import { navigateShoppingHandoff } from "@/lib/security/shopping-handoff";
+import { trackCartAddition } from "@/lib/meta-pixel";
 import { useInterfaceTranslations } from "@/components/i18n/translate";
 
 
@@ -54,7 +55,6 @@ import {
 import type { CartItem } from "@/features/cart/api";
 import type { WishlistItem } from "@/features/wishlist/api";
 import CurrencyAmount from "@/components/currency/CurrencyAmount";
-import { createEventId, trackLocalCartAddition } from "@/lib/analytics/meta-pixel";
 
 type ProductCardProps = {
   id: string;
@@ -94,7 +94,6 @@ export default function ProductCard({
   reviewCount = 0,
   badge,
   variantCount = 1,
-  inStock,
   nameLocale,
 }: ProductCardProps) {
   const i18n = useInterfaceTranslations("InterfaceProductProductCard");
@@ -259,10 +258,8 @@ export default function ProductCard({
 
     const nextLocal = upsertLocalCartItem(localBefore, optimisticItem);
     writeLocalCart(nextLocal);
+    trackCartAddition(localBefore, nextLocal);
     dispatch(setCartData({ items: nextLocal, summary: computeCartSummary(nextLocal) }));
-    if (inStock !== false && variantCount > 0) {
-      trackLocalCartAddition(localBefore, nextLocal, createEventId());
-    }
     toast.success(i18n("Added to cart"));
   };
 
@@ -279,7 +276,7 @@ export default function ProductCard({
   };
 
   return (
-    <div data-tracking-content-id={productCode || id} className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-brand-border bg-brand-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-brand-border hover:shadow-lg">
+    <div className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-brand-border bg-brand-white shadow-sm transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-brand-border hover:shadow-lg">
       <div className="relative aspect-4/3 shrink-0 overflow-hidden bg-brand-light-bg">
         <Link
           href={productHref}

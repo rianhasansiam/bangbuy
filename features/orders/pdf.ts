@@ -3,10 +3,7 @@ import autoTable from "jspdf-autotable";
 
 import type { OrderDetail, OrderItem } from "@/features/orders/api";
 import { paymentMethodLabel } from "@/features/orders/payment";
-import {
-  BASE_CURRENCY,
-  type CurrencyCode,
-} from "@/lib/currency/config";
+import type { CurrencyCode } from "@/lib/currency/config";
 import { formatMoney } from "@/lib/currency/format-money";
 import {
   badgeFor,
@@ -39,10 +36,6 @@ function formatCurrency(value: number, currency: CurrencyCode): string {
     locale: "en-US",
     currencyDisplay: "code",
   });
-}
-
-function formatBDT(value: number): string {
-  return formatCurrency(value, BASE_CURRENCY);
 }
 
 /**
@@ -398,7 +391,7 @@ function drawNoteCard(doc: Doc, y: number, note: string): number {
 /*  Public API                                                                */
 /* -------------------------------------------------------------------------- */
 
-export { formatBDT, formatCurrency };
+export { formatCurrency };
 
 export async function generateOrderPdf(order: OrderDetail): Promise<jsPDF> {
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });

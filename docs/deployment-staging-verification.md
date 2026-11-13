@@ -1,133 +1,36 @@
-# Deployment preparation: staging verification
+# Staging verification
 
-## Existing-domain public CAPI verification — 11 November 2026
+Run these checks against the final tracking-removal artifact. Historical validation results and prior deployment observations do not establish current health. Record actual commands, results, build ID and configuration revision without credentials or customer values.
 
-The user selected server-only CAPI and approved visitor-consented real IP,
-browser user agent and approved public URL. New checks below concern only the
-public PageView channel; the retained two-origin results describe the other
-architecture.
-
-| Check | Result and scope |
-| --- | --- |
-| Full Vitest suite, both disposable PostgreSQL opt-ins enabled | **1,494 passed, four optional skipped; 92 files passed, one skipped.** Includes 62 new backend and 32 new client checks plus the legacy-policy kill check. `/tmp/bangbuy-public-capi-full-tests.log`. |
-| Actual compiled Next consent/event routes | **Nine checks passed; two mocked acknowledgements.** Unknown/pre-consent suppression, shared cross-route grants, deduplication, host separation, private/query/hash rejection, independent host grants, copied-cookie revocation, private CSP and live manifest disable. Every Meta request intercepted; no external event. `/tmp/bangbuy-public-capi-http.log`. |
-| Production build | Passed using only the explicit disposable local database and synthetic marketing credentials. `/tmp/bangbuy-public-capi-build.log`. |
-| Browser asset scan | **84 assets passed**, including public CAPI consent-secret and server-token sentinels. `/tmp/bangbuy-public-capi-build-scan.log`. |
-| Deployment asset checks | **16 passed**, including inherited public-CAPI flags/secrets failing closed. `/tmp/bangbuy-public-capi-deployment-tests.log`. |
-| TypeScript, i18n and ESLint | Types passed; English/Bengali each validate 2,938 messages; zero lint errors, three pre-existing warnings. Diff check passed. |
-| Provider configuration checks | Token present on VPS and matches the user-supplied value. Dataset GET returned `(#100) Missing Permission`; an empty-data validation POST returned `(#100) param data must be non-empty`. **Zero event records submitted.** This does not verify event write permission, dataset receipt or deduplication. |
-
-Official Meta matching guidance excludes UA-only events through its baseline
-matching rules; the new projection uses the explicitly approved real IP plus
-UA, rather than inventing attribution cookies or copying private contacts.
-See [baseline matching requirements](https://developers.facebook.com/documentation/ads-commerce/conversions-api/best-practices#baseline-requirements-for-matching).
-[Graph API v27.0](https://developers.facebook.com/documentation/development/graph-api/changelog/version27.0)
-was released on 4 November 2026; version selection does not establish token or
-dataset permission.
-
-No connected user browser or authenticated Events Manager view was available.
-Actual browser-consent behavior and intended-dataset visibility remain live
-verification, not conclusions from the local mocked acknowledgements. The
-existing-domain public channel needs no new DNS, schema migration or worker.
-
-The later VPS build passed after excluding private backups from source checks;
-see [the execution record](deployment-runbook.md). Both existing hosts passed
-home/cart/checkout availability, Meta-free CSP/bootstrap, enabled public-CAPI
-snapshot with unknown anonymous consent, legacy-policy disabled and private
-backup URL 404 checks. Real browser assets contain neither actual server
-credential. This is live availability/configuration evidence, not a live event
-acknowledgement. No operator-created event was submitted.
-
-Prepared 10 November 2026. **No real staging deployment, production mutation or external Meta delivery was performed.** This report distinguishes local HTTPS checks from the outstanding operator/provider work. The [customer-state runbook](customer-state-migration.md) identifies an unresolved dual-legacy-host blocker; the passing local fixtures do not resolve it.
-
-## Evidence classification
-
-| Check | Current evidence | Scope and limitation |
-| --- | --- | --- |
-| Actual application, two HTTPS origins | Final rerun: **23 checks passed**, comprising 13 journey/isolation checks and 10 shared GET-only deployment health checks, against the final local production build. | `https://public.localhost:3188` and `https://commerce.localhost:3188`; temporary self-signed certificate, disposable PostgreSQL and Chrome, not real staging DNS/TLS. `--skip-build` means the smoke reused the final build. |
-| Public SDK/consent/privacy browser scenarios | Rerun: 8 scenarios passed on two temporary HTTPS localhost hosts. | Actual adapter and consent UI bundled into a synthetic fixture. Every Meta destination intercepted; no live Meta SDK/account acceptance claimed. |
-| Auditor privacy and compatibility | Rerun: 4 checks passed in an isolated synthetic Chrome profile. | Classified key/cookie/cache counts, no names or secret values exported, storage/cookies/cache/document unchanged, DevTools expression executes, unsafe configuration refuses without echoing supplied credentials. No customer browser audited. |
-| Full test suite with real PostgreSQL outbox and guest checkout suites | Rerun: **1,399 passed / 4 optional skipped**, 90 test files passed and one skipped. Log `/tmp/bangbuy-deployment-final-tests.log`. | Both explicit disposable database opt-ins enabled. Includes real killed-worker restart/recovery. Synthetic provider/local sinks; no external delivery. |
-| Production build/browser asset inspection | Rebuilt after runtime dependency classification changed; 84 browser assets clean. Logs `/tmp/bangbuy-deployment-final-build.log` and `/tmp/bangbuy-deployment-final-build-scan.log`. | Final local build ID `OuWhSuyZ8UNoTG8w7TDKs`; the 23-check HTTPS smoke was rerun against it. Compile/asset evidence cannot prove deployed routing, warm state migration or provider acceptance. |
-| Deployment asset tests | 16 standalone tests passed: 9 host/launcher/proxy contracts and 7 database/worker operations guards. | `node --test tests/deployment-operations.mjs tests/deployment-host-assets.mjs`; log `/tmp/bangbuy-deployment-assets-final.log`. Actual Nginx/PM2 daemon behavior remains external. |
-| Full worktree lint, typecheck and languages | ESLint passed with zero errors and three existing unused-variable warnings; TypeScript and English/Bengali validation passed. | Logs `/tmp/bangbuy-deployment-final-lint.log`, `/tmp/bangbuy-deployment-final-types.log`, `/tmp/bangbuy-deployment-final-i18n.log`; 2,926 required messages per locale. |
-| Runtime packaging | `dotenv` 17.4.2 and `tsx` 4.23.1 moved to runtime dependencies; offline lock refresh and `npm ls --omit=dev dotenv tsx --depth=0` passed without version changes. | The new launchers need these packages at runtime. A clean pruned production installation/actual host startup was not executed. Build dependencies are still required during release compilation. |
-| Live-host public discovery | Read-only discovery confirmed apex and `www` currently serve commerce independently. | No session, cookie value, customer order or VPS configuration was inspected. Remote deployment access unavailable. |
-| Real staging deployment and warm-state cutover | **Not executed; blocked.** | Requires operator-owned staging origins, actual hosting access and a reviewed dual-legacy-host compatibility plan. |
-| Provider payment sandbox journey | **Not executed externally.** | Local COD journey and payment tests are useful, but Airwallex hosted session/real callback reachability require sandbox configuration and permitted test data. |
-| Intended Meta dataset acceptance/deduplication | **Not executed; no delivery attempted.** | Account/dataset permission, restrictions, dedicated dataset isolation and approved eligibility/activation remain external prerequisites. |
-
-## Exact local HTTPS application rerun
+## Local validation
 
 ```sh
-COMMERCE_ISOLATION_TEST_DATABASE_URL=postgresql://marketing_test@127.0.0.1:56543/bangbuy_tracking_test \
-COMMERCE_ISOLATION_REPORT_PATH=/tmp/bangbuy-commerce-isolation-current.json \
-npm run test:commerce:isolation -- --skip-build
+npm run typecheck
+npm run lint
+npm run i18n:validate
+npm run build
 ```
 
-The database guard permits only the named disposable `bangbuy_tracking_test` database on loopback ports 15439 or 56543; it does not read the application's `.env` connection. The runner overrides application/auth/payment/marketing environment settings for synthetic use. Remove `--skip-build` to include a new isolated production build. Do not run two Next builds concurrently in the same checkout.
+Inspect the generated browser assets and rendered public/private documents for absence of application-owned tracking bootstrap. Verify that retired tracking and consent endpoints are absent. Keep payment provider hosts available in private CSP.
 
-Current log: `/tmp/bangbuy-commerce-isolation-current.log`; generated structured report: `/tmp/bangbuy-commerce-isolation-current.json`. It records the final build ID, reused-build mode, timestamp, each health result and an empty `metaRequests` array. Thirteen journey/isolation checks passed:
+## Commerce and host acceptance
 
-1. Local-only database guard and synthetic catalog setup.
-2. TLS reverse proxy serves both exact configured hosts.
-3. Public host denies account and order APIs.
-4. Public-to-private handoff replaces document/origin, preserves variant/quantity, and a GET does not mutate cart.
-5. Guest Buy now creates an unpaid COD order while preserving the cart.
-6. HttpOnly scoped guest receipt works in another tab and is denied to an unrelated browser context.
-7. Selected checkout purchases selected lines and retains unselected lines.
-8. Guest cart merges into an authenticated commerce account.
-9. Registered full-cart checkout clears the server cart.
-10. Historical product redirect works; public storage/private API isolation holds.
-11. Anonymous catalog language switching preserves the product path and changes HTML language.
-12. Private documents and forged payment flags produce neither Meta activity nor a paid state transition.
-13. No external marketing request occurs during the synthetic commerce journey.
+Use an explicitly isolated database and synthetic customer profiles for manual commerce checks. Never use the application database or production tunnel. Do not run concurrent builds in the same checkout.
 
-Ten shared `scripts/deploy/healthcheck.mjs` checks also passed before any synthetic account or guest cookie existed: both policy endpoints return bounded uncached JSON with `no-referrer`; both show runtime/Pixel/CAPI delivery disabled; both report the exact origin pair; public private-page entry redirects to commerce before rendering; public account API is absent; a public-Origin request to the private account API is rejected without CORS; and the private cart document has no Pixel bootstrap and retains its private CSP/referrer/cache headers. The request wrapper uses GET and disables redirect following. These are application availability/boundary checks, not database or provider health.
+Check catalog variants and quantity, cart handoff with no GET mutation, guest Buy now, selected/full cart checkout, guest receipt in another tab, denial from unrelated browser contexts, guest-cart login merge, product redirects and locale switching. Forged payment return flags must not mark an order paid. Preserve cart/session/receipt data rather than clearing it to make checks pass.
 
-The earlier 14-check run included an additional build check. The final smoke records **23** (13 journey/isolation + 10 health) without counting its reused build as a newly performed build. The fixture tests one configured commerce host; it does not cover preserving the discovered second legacy commerce host.
-
-## HTTPS marketing privacy rerun
+For an already configured two-origin staging pair:
 
 ```sh
-npm run test:marketing:browser
+node scripts/deploy/healthcheck.mjs --public-origin "$STOREFRONT_ORIGIN" --commerce-origin "$COMMERCE_ORIGIN"
 ```
 
-Current log: `/tmp/bangbuy-marketing-https-current.log`. The runner now creates a temporary certificate and two HTTPS hosts. It preserves all eight existing scenarios: pre-consent/denied/unapproved suppression; one initialization and expected events once after approved consent; query/fragment/content/metadata denial; hard private navigation/direct entry; withdrawal and same-origin tab synchronization; runtime disablement; revoked-consent history restoration; and nonfatal ad blockers/private-conversion suppression.
+The checker verifies both home documents with restricted headers, public private-page redirect, public account API denial, cross-origin private API denial without CORS, and no-store/restricted headers on the private cart. It uses GET requests and does not execute browser scripts. The current single-origin deployment should use its own ordinary page/journey checks rather than introducing an origin cutover for this release.
 
-The normal `no-store` history fixture was evicted by Chrome, which reported `MainResourceHasCacheControlNoStore`, `JsNetworkRequestReceivedCacheControlNoStoreResource` and `BrowsingInstanceNotSwapped`. A separately identified cache-permissive synthetic segment proved a **trusted persisted `pageshow`**, the same JavaScript document and cached SDK, followed by the controller's clean document replacement and no additional Meta request. This is actual BFCache evidence for the defensive branch; it does not claim production `no-store` pages were cached. Application headers were unchanged.
+## Migration and provider acceptance
 
-All external Meta destinations were intercepted. Positive synthetic dispatch is evidence of application event schema/deduplication behavior only. External verification remains separately **not attempted / no API response / no intended-dataset observation / no external deduplication proof**.
+Rehearse the pending tracking-table removal migration on an isolated database with synthetic tracking and commerce records. Confirm only the retired tables disappear, commerce data remains usable and migration history/checksums are preserved. Stop any deployed old conversion worker before applying the migration. Follow the [database procedure](deployment-database-and-worker.md).
 
-## Optional tests and production-readiness relevance
+On provider sandbox, verify hosted payment launch, cancel/failure/retry, delayed webhook, reconciliation and duplicate callback/poll convergence. HTTP 200 and return flags alone do not establish payment verification. Before any later origin split, prove each legacy apex/www warm profile preserves cart, session, guest receipt and payment returns. No customer browser storage should be cleared as part of acceptance.
 
-The **current enabled rerun passed 1,399 tests with 4 optional skips**. Both local database suites were enabled. Three emergency-disable CLI cases and one real killed-worker recovery case were added after the previously reported 1,395 passing / 4 skipped baseline.
-
-The initial default run before those four additions passed 1,373 tests with 26 skipped: its extra 22 skips were the then-12 real-PostgreSQL outbox cases and 10 guest-checkout database cases. That is an earlier baseline, not the current default count. A default green run without the database URLs does not replace the transactional tests.
-
-```sh
-MARKETING_TEST_DATABASE_URL=postgresql://marketing_test@127.0.0.1:56543/bangbuy_marketing_test \
-GUEST_CHECKOUT_TEST_DATABASE_URL=postgresql://marketing_test@127.0.0.1:56543/bangbuy_guest_checkout_test \
-npm test
-```
-
-The original four optional cases are:
-
-| Exact test | Gate and dependency | Readiness meaning |
-| --- | --- | --- |
-| `discovers directed pairs, deduplicates jobs, persists reviewed content and preserves manual overrides` | `__tests__/translation-local.integration.test.ts:49`; `RUN_LOCAL_TRANSLATION_INTEGRATION=1`, dedicated local `translation_local` database and real loopback LibreTranslate. | Translation integration evidence, not Meta delivery evidence. Required for confidence if deploying changes to that integration/configuration; otherwise record why unchanged. |
-| `persists all public product text and structured descriptions without changing identifiers, links or prices` | Same suite, line 73 and gate. | Relevant to translation persistence/content integrity; an approved route's actual rendered fingerprint must still be reviewed independently. |
-| `keeps stored content readable during a translation service outage` | Same suite, line 97 and gate; deliberately unavailable loopback service for the outage assertion. | Translation outage resilience evidence. Not required to demonstrate origin separation itself, but relevant when translation service rollout is in scope. |
-| `writes a reviewable fixture using the running final build's styles` | `__tests__/rtl-layout.test.ts:135`; `BUILD_RTL_FIXTURE=1`, final build running on port 3111. | Optional unpublished Arabic visual artifact export. Normal structural RTL cases still execute. It does not establish that Arabic is published or approve a production locale. |
-
-The translation suite explicitly rejects the production tunnel on port 15432 and remote providers. Do not remove these guards or point it at production to eliminate skips. None of the four optional cases alone prevents validating the Meta code boundary; production readiness still requires the infrastructure, migration, provider and eligibility evidence below. No new pass claim is made for these four unexecuted cases.
-
-## Remaining real staging acceptance
-
-The release owner must supply approved HTTPS staging hosts and the same reviewed reverse-proxy/application compatibility plan needed for the two live legacy origins. Use synthetic warm profiles for each legacy host, plus fresh catalog and commerce contexts. Keep delivery disabled until the appropriate test phase. Run the customer-state acceptance matrix, host/CSRF/CSP checks and health preflight, then record timestamp/release/build/config references without secrets.
-
-For payment sandbox, prove hosted launch, cancel/failure/retry, delayed webhook, status reconciliation and duplicate webhook/poll handling. Do not treat return flags or a website HTTP 200 as payment/conversion proof. Current local PostgreSQL/worker tests cover atomic deduplication, retries reusing event ID, revocation, runtime disablement, expiry and isolation of marketing write failures; external callback routing and provider behavior remain unverified.
-
-For any explicitly authorized external tracking test, use a dedicated non-production dataset and permitted synthetic content/matching fields. A test-event code alone does not isolate a production dataset. Record request attempted, provider response, observation in the intended dataset and deduplication separately. Preserve guest-conversion and COD Purchase exclusions. Do not activate an event or channel merely to finish this checklist.
-
-No DNS, VPS configuration, production migration, production service, production tracking flag or customer browser state was changed by these local checks.
+Verify translation-service availability and offline stored-content behavior manually, alongside desktop/mobile language selection and RTL layout. Keep these checks isolated from production data.

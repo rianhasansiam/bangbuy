@@ -12,16 +12,6 @@
     "typecheck": "tsc --noEmit",
     "i18n:validate": "tsx scripts/check-i18n.ts",
     "i18n:translations": "node --conditions=react-server --import tsx scripts/translations.ts",
-    "test": "vitest run",
-    "test:airwallex": "vitest run lib/airwallex/tests",
-    "test:watch": "vitest",
-    "marketing:worker": "node --conditions=react-server --import tsx scripts/marketing-worker.ts",
-    "tracking:disable": "node --import tsx scripts/disable-marketing.mts",
-    "test:marketing:browser": "node --import tsx scripts/test-marketing-browser.mts",
-    "test:capi:http": "node scripts/test-public-capi-http.mjs",
-    "tracking:check-build": "node --import tsx scripts/check-marketing-build.mts",
-    "tracking:review-context": "node --import tsx scripts/review-tracking-context.mts",
-    "test:commerce:isolation": "node --import tsx scripts/test-commerce-isolation.mts",
     "migration:audit-browser": "node --import tsx scripts/audit-browser-state.mts"
   },
   "dependencies": {
@@ -69,14 +59,11 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "esbuild": "^0.28.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
-    "playwright": "^1.65.0",
     "shadcn": "^4.13.1",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "vitest": "^4.1.10"
+    "typescript": "^5"
   },
   "overrides": {
     "next": {

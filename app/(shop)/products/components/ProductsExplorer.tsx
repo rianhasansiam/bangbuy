@@ -250,7 +250,7 @@ export default function ProductsExplorer({
   ].filter((value) => value !== "" && value != null && value !== 0).length;
 
   return (
-    <div data-tracking-public-snapshot={JSON.stringify({ products: initialProducts.map(product => ({ id: product.id, productCode: product.productCode, slug: product.slug, name: product.name, description: product.description, modelNumber: product.modelNumber, series: product.series, specifications: product.specifications, price: product.price, discountPrice: product.discountPrice, image: product.image, images: product.images, rating: product.rating, reviewCount: product.reviewCount, badge: product.badge, categoryId: product.categoryId, category: product.category, categoryPath: product.categoryPath, categoryImage: product.categoryImage, categoryBreadcrumb: product.categoryBreadcrumb, brand: product.brand, brandSlug: product.brandSlug, manufacturer: product.manufacturer, manufacturerSlug: product.manufacturerSlug, stock: product.stock, inStock: product.inStock, variantCount: product.variantCount, createdAt: product.createdAt, translationAvailable: product.translationAvailable, sourceLocale: product.sourceLocale, contentLocale: product.contentLocale, fieldLocales: product.fieldLocales })), facets: initialFacets })} className="min-h-screen bg-brand-light-bg">
+    <div className="min-h-screen bg-brand-light-bg">
       <div className="mx-auto max-w-7xl px-3 py-4 sm:px-4 sm:py-6 lg:px-6">
         <div className="mb-4 min-w-0">
           <h1 className="text-2xl font-bold tracking-tight text-gray-950 [overflow-wrap:anywhere] sm:text-3xl">

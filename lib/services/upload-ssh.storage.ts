@@ -17,14 +17,14 @@ const VALID_CATEGORIES = new Set([
 const GENERATED_FILENAME = /^[a-z0-9]+-[a-f0-9]{24}\.(webp|gif)$/;
 
 type StorageRequest = {
-  action: "write" | "delete";
+  action: "write";
   category: string;
   filename: string;
   root: string;
-  size?: number;
+  size: number;
 };
 
-type StorageResponse = { success: true; deleted?: boolean };
+type StorageResponse = { success: true };
 
 export function usesSSHUploadStorage(): boolean {
   return process.env.UPLOAD_STORAGE === "ssh";
@@ -68,7 +68,7 @@ function sshArguments(): string[] {
 
 async function sendStorageRequest(
   request: StorageRequest,
-  data?: Buffer,
+  data: Buffer,
 ): Promise<StorageResponse> {
   try {
     if (
@@ -78,7 +78,7 @@ async function sendStorageRequest(
     ) {
       throw new Error("Invalid SSH upload path.");
     }
-    if (data && (data.length === 0 || data.length > MAX_STORED_BYTES)) {
+    if (data.length === 0 || data.length > MAX_STORED_BYTES) {
       throw new Error("SSH upload data exceeds the storage limit.");
     }
     const args = sshArguments();
@@ -150,9 +150,7 @@ async function sendStorageRequest(
           const response: unknown = JSON.parse(Buffer.concat(stdout).toString("utf8"));
           if (
             !response || typeof response !== "object" ||
-            !("success" in response) || response.success !== true ||
-            (request.action === "delete" &&
-              (!("deleted" in response) || typeof response.deleted !== "boolean"))
+            !("success" in response) || response.success !== true
           ) {
             throw new Error("SSH upload storage returned an invalid acknowledgement.");
           }
@@ -164,7 +162,7 @@ async function sendStorageRequest(
 
       const header = Buffer.from(`${JSON.stringify(request)}\n`);
       try {
-        child.stdin.end(data ? Buffer.concat([header, data]) : header);
+        child.stdin.end(Buffer.concat([header, data]));
       } catch (error) {
         finish(error instanceof Error ? error : new Error("SSH upload stdin failed."), undefined, true);
       }
@@ -183,13 +181,4 @@ export async function writeUploadFileViaSSH(
   data: Buffer,
 ): Promise<void> {
   await sendStorageRequest({ action: "write", root, category, filename, size: data.length }, data);
-}
-
-export async function deleteUploadFileViaSSH(
-  root: string,
-  category: string,
-  filename: string,
-): Promise<boolean> {
-  const response = await sendStorageRequest({ action: "delete", root, category, filename });
-  return response.deleted!;
 }

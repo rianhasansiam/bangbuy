@@ -47,8 +47,6 @@ const adminProductsSlice = createSlice({
 
 export const {
   setAdminProducts,
-  upsertAdminProduct,
-  removeAdminProduct,
   setAdminProductsLoading,
   setAdminProductsError,
 } = adminProductsSlice.actions;

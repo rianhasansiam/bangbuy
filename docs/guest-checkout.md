@@ -118,69 +118,31 @@ also have an IP limit so rotating cookies does not reset the only limit.
   `airwallex-payment-initiation.service.ts`, `airwallex-payment-status.service.ts`:
   guest retry/status authorization through the existing frozen payment quote
   and provider verification paths.
-- `app/admin/orders/page.tsx`, components `AdminOrderDrawer.tsx`,
+- `app/(private-commerce)/admin/orders/page.tsx`, components `AdminOrderDrawer.tsx`,
   `OrdersTable.tsx`, `OrdersToolbar.tsx`, `features/admin-orders/api.ts`, and
   `app/api/admin/orders/route.ts`: Guest/Registered labels and filter, submitted
   contact/location/notes, and admin order API documentation.
-- `app/admin/users/page.tsx`, components `UserSummaryCards.tsx`,
+- `app/(private-commerce)/admin/users/page.tsx`, components `UserSummaryCards.tsx`,
   `UsersTable.tsx`, `UsersToolbar.tsx`, `features/admin-users/api.ts`, and
   `store/slices/admin-users.slice.ts`: combined registered/guest customer
   directory, search/type filters, guest summary, and account-only role controls.
 - `app/api/admin/guests/route.ts`, `lib/services/guest-customer.service.ts`, and
   `lib/validations/user.validation.ts`: authorized guest contact pagination,
   search, and per-guest order aggregates without account/contact matching.
-- New tests `admin-guest-orders`, `guest-checkout-api`,
-  `guest-checkout-client`, `guest-checkout-database`, `guest-checkout-form`,
-  `guest-checkout-route`, `guest-order-access`, `guest-payment-callback`,
-  `guest-sslcommerz-checkout`, and `airwallex-guest-access`: admin rendering,
-  browser logic, request validation, authorization, transactions, and payment
-  regression coverage.
-- `__tests__/admin-guest-customers.test.ts` and
-  `__tests__/admin-guest-customers-ui.test.ts`: directory authorization, profile
-  pagination/aggregates, guest display/filtering, registered account compatibility,
-  and guest exclusion from role updates.
-- Updated tests `currency-order-snapshots`, `meta-pixel-checkout`,
-  `meta-pixel-product-actions`, `airwallex-initiation`, and
-  `airwallex-payment-quote-token`: guest entry behavior, registered fixtures,
-  concurrent replay, and guest-bound quotes.
 
-## Verification and follow-up
+## Release verification
 
-Verification performed for the initial guest checkout implementation:
+Run Prisma validation/client generation, TypeScript, lint, catalog validation
+and the production build for the final artifact. Use an isolated database and
+synthetic users/orders for manual checkout checks; never replace production
+data to exercise a scenario.
 
-- Prisma generation and schema validation passed.
-- The new SQL migration applied to an original-schema local database containing
-  a registered user, an administrator, and a historical order. Original fields
-  and associations were unchanged. Prisma migration/schema comparison reported
-  no differences.
-- Ten real PostgreSQL integration tests passed, covering guest and registered
-  checkout, account/contact isolation, full-cart replay, concurrent identical
-  attempts, last-unit races, stock rejection, post-write rollback, scoped reads,
-  database constraints, and admin cancellation with stock/promo restoration.
-- Production build, TypeScript, and whitespace checks passed. Full ESLint
-  completed with no errors and four existing warnings.
-- A production-server HTTP smoke check passed for anonymous COD checkout,
-  one-debit retry replay, scoped confirmation, and profile/history/admin denial.
-- Chrome verification completed a COD order using only required guest fields
-  and displayed its order receipt without login.
-- The full automated suite reports one existing failure in
-  `__tests__/product-card-responsive.test.ts:91`, whose expected mobile button
-  classes do not match the unchanged `ProductCard.tsx` implementation. All other
-  tests pass: 584 passed and one failed across 47 files, including all checkout,
-  authentication, order management, and payment tests. This run enabled all ten
-  real database tests.
+Verify guest and registered COD checkout, replay of an identical attempt,
+concurrent stock limits, selected-cart preservation, rollback after a failed
+write, scoped receipt access, and admin cancellation with stock/promotion
+restoration. Confirm guest checkout does not create or match a registered
+account and that directory role controls remain account-only.
 
-The database suite is opt-in and defaults to skipped. Set
-`GUEST_CHECKOUT_TEST_DATABASE_URL` to an already migrated, disposable local
-database named `bangbuy_guest_checkout_test`, then run:
-
-```sh
-npx vitest run __tests__/guest-checkout-database.test.ts
-```
-
-This suite replaces test data in that database. It rejects remote hostnames and
-other database names, and never reads the application `DATABASE_URL` or `.env`.
-
-Before production release, manually verify real Airwallex/SSLCommerz sandbox
-redirects, webhook outcomes, gateway cancellation/retry, and admin fulfillment
-in the deployment environment. No live payment was charged during testing.
+Before production release, verify real Airwallex/SSLCommerz sandbox redirects,
+webhook outcomes, cancellation/retry and admin fulfillment in the deployment
+environment. Browser return parameters must never establish a paid state.

@@ -28,7 +28,7 @@ scripts/translation/start-local.sh --port 5001
 scripts/translation/verify-local.sh
 ```
 
-The installer creates `tools/libretranslate/.venv`, uses the committed platform-specific dependency lock with required SHA256 hashes for all 62 distributions, and checks `pip check`. Locked pip 26.2.1, setuptools 84.0.0 and wheel 0.45.1 bootstrap source builds without installing unpinned isolated build dependencies. English/Bengali match the currently published interface languages. The existing French catalog draft remains available for human review, but no French model is installed merely because the draft exists.
+The installer creates `tools/libretranslate/.venv`, uses the committed platform-specific dependency lock with required SHA256 hashes for all 62 distributions, and checks `pip check`. Locked pip 26.2.1, setuptools 84.0.0 and wheel 0.45.1 bootstrap source builds without installing unpinned isolated build dependencies. English/Bengali match the currently published interface languages. Additional languages require selected models and a newly prepared, reviewed catalog.
 
 Persistent state lives beneath `tools/libretranslate/state/`: `data/` holds Argos packages, `cache/` holds MiniSBD sentence models, and `config/`, `run/` and `logs/` hold local service state. These paths and all virtual environments are ignored by Git. The child process receives private XDG paths and `ARGOS_DEVICE_TYPE=cpu`, with one Argos inter-thread and two intra-threads. The helper also explicitly directs MiniSBD to its private cache because that library's macOS default ignores XDG cache paths. Bengali uses the pinned `hi` sentence-segmentation file through the official mapping; no Hindi translation model is installed. Model caches are not shared with unrelated applications. Keep both translation packages and sentence-boundary caches when backing up or updating. Starting a service does not erase models or approve website catalogs.
 
@@ -126,6 +126,7 @@ Selecting a language is not publication. Preserve the model manifest and package
 Static generation is explicit and never occurs during rendering. Use a supported installed target; the French example first requires its deliberately selected model above:
 
 ```sh
+mkdir -p translations
 npm run i18n:translations -- generate --locale fr
 npm run i18n:translations -- generate --locale fr --execute --max-characters 150000 --output translations/fr.json
 npm run i18n:translations -- validate --locale fr --file translations/fr.json
@@ -138,7 +139,7 @@ npm run i18n:translations -- import --locale fr --name French --native-name Fran
 npm run i18n:translations -- publish --locale fr --reviewer local-reviewer
 ```
 
-Catalog validation protects ICU variables, plurals, rich tags, URLs, numbers, terms and completeness. All-English placeholder foreign catalogs cannot be published. Important legal text retains its original English language until separately reviewed. Existing `translations/drafts/fr.json` is preserved unpublished and requires review rather than regeneration to demonstrate the native install.
+Catalog validation protects ICU variables, plurals, rich tags, URLs, numbers, terms and completeness. All-English placeholder foreign catalogs cannot be published. Important legal text retains its original English language until separately reviewed. Prepare a fresh catalog for each new language and review it before import.
 
 Dynamic content is queued only from approved public fields. Use an existing local public entity identifier in a batch JSON file:
 
@@ -189,8 +190,6 @@ With the explicit local database and port-5001 URL exported:
 ```sh
 npm run lint
 npm run typecheck
-npm test
-RUN_LOCAL_TRANSLATION_INTEGRATION=1 LIBRETRANSLATE_URL=http://127.0.0.1:5001 npx vitest run __tests__/translation-local.integration.test.ts
 npm run i18n:validate
 npm run build
 npm run dev -- --hostname 127.0.0.1
@@ -198,6 +197,4 @@ npm run dev -- --hostname 127.0.0.1
 
 First visits must use English even when the browser prefers another language. Test selecting Bengali and English, refreshing, explicit locale URLs, login/cart retention, admin authorization, stored dynamic content, localized metadata/hreflang/sitemap and RTL layout. Stop the native translator and verify public pages still render stored translations promptly; restart it afterward. No order, payment or third-party message is needed for these checks.
 
-On 13 October 2026 the native venv reported Python 3.11.17, LibreTranslate 1.9.6 and a clean `pip check`. Hash validation passed for both English↔Bengali 1.9 model archives and en/hi sentence files. Actual `/languages` returned `en` and `bn`, both advertising targets `bn,en`; `Hello world!` translated to `হ্যালো বিশ্ব!`. The Python process listened only on `127.0.0.1:5001`. Fresh staged install/activation/rollback, foreground ownership guards, graceful stop/restart and rejection of occupied port 5000 all passed; Control Center remained untouched.
-
-With the native service physically stopped, English/Bengali contact, product, cart and checkout page samples still returned HTTP 200 in 0.009–0.02 seconds. The native service was restored. Full verification results are recorded in [translation-architecture.md](translation-architecture.md). No VPS setup or deployment occurred.
+Record the actual interpreter/package versions, pinned-model checks, outgoing language pairs, sample translation, loopback listener and offline-page results for the environment being prepared. Historical local checks do not establish its current state. No VPS setup is performed by these local commands.

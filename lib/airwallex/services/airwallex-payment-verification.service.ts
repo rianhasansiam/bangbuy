@@ -1,5 +1,4 @@
 import "server-only";
-import { recordVerifiedPurchase } from "@/lib/analytics/conversion-outbox";
 
 import {
   Prisma,
@@ -418,10 +417,6 @@ export async function applyAuthoritativeAirwallexPayment(input: {
             note: "Airwallex payment confirmed by verified provider data.",
           });
         }
-        await recordVerifiedPurchase(tx, {
-          orderId: payment.orderId, paymentMethod: 'AIRWALLEX',
-          amount: payment.amount, currency: payment.currency, paidAt: verifiedPaidAt,
-        });
       }
     } else if (
       !reviewReason &&

@@ -19,7 +19,7 @@ export function readApiError(payload: unknown, fallback: string): string {
       record.fieldErrors as Record<string, string[] | undefined>,
     );
     const messages = fieldEntries
-      .flatMap(([_, errors]) => errors || [])
+      .flatMap(([, errors]) => errors || [])
       .filter(
         (msg): msg is string => typeof msg === "string" && Boolean(msg.trim()),
       );

@@ -41,7 +41,3 @@ export function toAppSession(session: Session | null): AppSession | null {
     },
   };
 }
-
-export function isAdminSession(session: AppSession): session is AdminSession {
-  return session.user.role === "ADMIN";
-}

@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 export default function Loading() {
   const t = useTranslations("Loading");
   return (
-    <div data-tracking-pending="page"><LoadingPage
+    <div><LoadingPage
       title={t("title")}
       message={t("description")}
     /></div>

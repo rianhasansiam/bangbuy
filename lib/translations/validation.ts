@@ -155,7 +155,3 @@ export function sourceLanguage(value: string): string {
 export function translationCacheKey(input: { entityType: string; entityId: string; field: string; sourceLocale: string; targetLocale: string; sourceHash: string; contextHash: string }): string {
   return contentHash(input);
 }
-
-export function canReplaceTranslation(existing: { origin: string; sourceHash: string; reviewedAt?:Date|null;reviewedBy?:string|null } | null, currentHash: string, jobHash: string): boolean {
-  return currentHash === jobHash && existing?.origin !== "manual"&&!existing?.reviewedAt&&!existing?.reviewedBy;
-}

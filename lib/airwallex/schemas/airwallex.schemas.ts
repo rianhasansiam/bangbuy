@@ -2,8 +2,6 @@ import { z } from "zod";
 
 import {
   AIRWALLEX_DESCRIPTOR_MAX_LENGTH,
-  AIRWALLEX_KNOWN_PAYMENT_ATTEMPT_STATUSES,
-  AIRWALLEX_KNOWN_PAYMENT_INTENT_STATUSES,
   AIRWALLEX_MERCHANT_ORDER_ID_MAX_LENGTH,
   AIRWALLEX_METADATA_KEY_MAX_LENGTH,
   AIRWALLEX_METADATA_MAX_ENTRIES,
@@ -35,13 +33,6 @@ export const airwallexTimestampSchema = z
   .min(1)
   .max(MAX_TIMESTAMP_LENGTH)
   .refine(isValidTimestamp, "Invalid Airwallex timestamp.");
-
-export const airwallexHttpsUrlSchema = z
-  .string()
-  .trim()
-  .min(1)
-  .max(MAX_URL_LENGTH)
-  .refine(isAirwallexHttpsUrl, "Expected a credential-free HTTPS URL.");
 
 export const airwallexReturnUrlSchema = z
   .string()
@@ -108,19 +99,11 @@ export const airwallexPaymentIntentStatusSchema = z
   .min(1)
   .max(MAX_STATUS_LENGTH);
 
-export const airwallexKnownPaymentIntentStatusSchema = z.enum(
-  AIRWALLEX_KNOWN_PAYMENT_INTENT_STATUSES,
-);
-
 export const airwallexPaymentAttemptStatusSchema = z
   .string()
   .trim()
   .min(1)
   .max(MAX_STATUS_LENGTH);
-
-export const airwallexKnownPaymentAttemptStatusSchema = z.enum(
-  AIRWALLEX_KNOWN_PAYMENT_ATTEMPT_STATUSES,
-);
 
 export const airwallexMetadataSchema = z
   .record(

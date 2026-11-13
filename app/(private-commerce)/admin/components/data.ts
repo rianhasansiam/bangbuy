@@ -76,6 +76,3 @@ export const ADMIN_NAV_GROUPS: NavGroup[] = [
     ],
   },
 ];
-
-/** Flat compatibility export for code that needs to scan every route. */
-export const ADMIN_NAV = ADMIN_NAV_GROUPS.flatMap((group) => group.items);

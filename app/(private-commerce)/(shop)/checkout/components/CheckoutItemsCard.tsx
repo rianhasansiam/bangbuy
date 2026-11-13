@@ -62,7 +62,6 @@ export default function CheckoutItemsCard({
             return (
               <li
                 key={item.variantId || item.productId}
-                data-tracking-content-id={item.productId}
                 className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
               >
                 <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-brand-border bg-brand-light-bg">

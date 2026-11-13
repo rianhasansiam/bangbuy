@@ -49,16 +49,6 @@ function heroBackground(slide: CarouselSlide): string {
   });
 }
 
-/** Compact background for the deal selector cards (no "via" stop). */
-function cardBackground(slide: CarouselSlide): string {
-  return resolveBannerBackground({
-    bgType: slide.bgType,
-    bgColor: slide.bgColor,
-    bgFrom: slide.bgFrom,
-    bgTo: slide.bgTo,
-  });
-}
-
 export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
   const i18n = useInterfaceTranslations("InterfaceComponentsCarouselBanner");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -81,7 +71,7 @@ export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
   const activeDeal = slides[safeIndex];
 
   return (
-    <div data-tracking-mutable={slides.length > 1 ? "rotating-carousel" : undefined} className="space-y-5">
+    <div className="space-y-5">
       {/* Hero Banner */}
       <div
         className="relative mx-0 mt-4 overflow-hidden rounded-2xl transition-all duration-700 sm:mx-4 lg:mx-6"
@@ -149,58 +139,6 @@ export default function CaroselBanner({ slides }: { slides: CarouselSlide[] }) {
           </div>
         </div>
       </div>
-
-      {/* Deal Cards */}
-      {/* {slides.length > 1 && (
-        <div className="px-3 sm:px-4 lg:px-6">
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            {slides.map((card, index) => {
-              const isActive = index === safeIndex;
-
-              return (
-                <button
-                  key={card.id}
-                  onClick={() => setActiveIndex(index)}
-                  aria-pressed={isActive}
-                  style={{ background: cardBackground(card) }}
-                  className={`rounded-xl min-w-[160px] sm:min-w-[180px] h-28 sm:h-32 shrink-0
-                  shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300
-                  cursor-pointer relative overflow-hidden group flex-1 text-start
-                  ${
-                    isActive
-                      ? "ring-4 ring-brand-red ring-offset-2 ring-offset-white scale-[1.03]"
-                      : "ring-1 ring-white/20"
-                  }
-                `}
-                >
-                  <Image
-                    src={card.image}
-                    alt={card.subtitle}
-                    fill
-                    sizes="(max-width: 640px) 160px, (max-width: 1024px) 180px, 25vw"
-                    className={`object-cover transition-all duration-500 ${
-                      isActive
-                        ? "opacity-60 scale-110"
-                        : "opacity-40 group-hover:opacity-50 group-hover:scale-110"
-                    }`}
-                  />
-
-                  <div className="absolute inset-0 bg-linear-to-t from-black/50 to-transparent" />
-
-                  <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-3">
-                    <h3 className="text-lg sm:text-xl font-black text-white drop-shadow-lg mb-0.5">
-                      {card.title}
-                    </h3>
-                    <p className="text-xs sm:text-sm font-semibold text-white/90 drop-shadow">
-                      {card.subtitle}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )} */}
     </div>
   );
 }

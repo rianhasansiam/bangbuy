@@ -10,10 +10,7 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
-
-# Python upload-helper test caches
+# Python helper caches
 __pycache__/
 
 # next.js

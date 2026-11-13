@@ -15,14 +15,6 @@ export function normalizeCheckoutPromoCode(
   return normalized;
 }
 
-export function buildCheckoutHref(promoCode?: string | null): string {
-  const normalized = normalizeCheckoutPromoCode(promoCode);
-  if (!normalized) return "/checkout";
-
-  const params = new URLSearchParams({ promo: normalized });
-  return `/checkout?${params.toString()}`;
-}
-
 type CartSelectionItem = {
   productId: string;
   variantId?: string | null;

@@ -2,7 +2,6 @@ import publication from "./published.json";
 
 /** Language and currency are intentionally independent. Never infer this from geo. */
 export const DEFAULT_LOCALE = "en";
-export const SOURCE_LOCALE = "en";
 export const LOCALE_COOKIE = "bangbuy_locale";
 export const LOCALE_HEADER = "x-bangbuy-locale";
 export const PATH_HEADER = "x-bangbuy-path";

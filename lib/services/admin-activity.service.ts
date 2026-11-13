@@ -95,55 +95,13 @@ export async function logAdminActivity(
   }
 }
 
-export async function listRecentAdminActivities(
-  limit = 20,
-): Promise<SerializedAdminActivity[]> {
-  const take = Math.min(Math.max(Math.trunc(limit), 1), 100);
-  try {
-    const rows = await prisma.$queryRaw<AdminActivityRow[]>`
-      SELECT
-        "id",
-        "kind",
-        "action",
-        "target",
-        "targetId",
-        "href",
-        "actorId",
-        "actorName",
-        "actorEmail",
-        "createdAt"
-      FROM "AdminActivityLog"
-      ORDER BY "createdAt" DESC
-      LIMIT ${take}
-    `;
-
-    return rows.map((row) => ({
-      ...row,
-      kind: normalizeActivityKind(row.kind),
-      createdAt: row.createdAt.toISOString(),
-    }));
-  } catch (error) {
-    console.error("[admin.activity] list failed", error);
-    return [];
-  }
-}
-
-export type AdminActivityListParams = {
-  page?: number;
-  pageSize?: number;
+/** Filters shared by the unified activity feed's windowed reader. */
+export type AdminActivityFilter = {
   kind?: AdminActivityKind | null;
   actorId?: string | null;
   search?: string | null;
   from?: Date | null;
   to?: Date | null;
-};
-
-export type AdminActivityListResult = {
-  items: SerializedAdminActivity[];
-  page: number;
-  pageSize: number;
-  total: number;
-  totalPages: number;
 };
 
 export type AdminActivityActorOption = {
@@ -152,14 +110,6 @@ export type AdminActivityActorOption = {
   email: string | null;
 };
 
-/** Filter-only subset (no pagination) shared by the paginated list and
- *  the windowed reader used by the unified activity feed. */
-export type AdminActivityFilter = Pick<
-  AdminActivityListParams,
-  "kind" | "actorId" | "search" | "from" | "to"
->;
-
-const ACTIVITY_PAGE_SIZE_MAX = 100;
 const ACTIVITY_WINDOW_MAX = 1000;
 
 /**
@@ -195,73 +145,11 @@ function buildActivityWhere(params: AdminActivityFilter): Prisma.Sql {
 }
 
 /**
- * Paginated + filterable read over the admin audit log, newest first.
- *
- * Uses raw SQL to stay consistent with the rest of this service. Filters
- * are composed with `Prisma.sql` so values stay parameterized.
- */
-export async function listAdminActivities(
-  params: AdminActivityListParams = {},
-): Promise<AdminActivityListResult> {
-  const page = Math.max(Math.trunc(params.page ?? 1), 1);
-  const pageSize = Math.min(
-    Math.max(Math.trunc(params.pageSize ?? 20), 1),
-    ACTIVITY_PAGE_SIZE_MAX,
-  );
-  const offset = (page - 1) * pageSize;
-
-  const where = buildActivityWhere(params);
-
-  try {
-    const [rows, totals] = await Promise.all([
-      prisma.$queryRaw<AdminActivityRow[]>`
-        SELECT
-          "id",
-          "kind",
-          "action",
-          "target",
-          "targetId",
-          "href",
-          "actorId",
-          "actorName",
-          "actorEmail",
-          "createdAt"
-        FROM "AdminActivityLog"
-        ${where}
-        ORDER BY "createdAt" DESC
-        LIMIT ${pageSize} OFFSET ${offset}
-      `,
-      prisma.$queryRaw<{ count: bigint }[]>`
-        SELECT COUNT(*)::bigint AS count FROM "AdminActivityLog" ${where}
-      `,
-    ]);
-
-    const total = Number(totals[0]?.count ?? 0);
-
-    return {
-      items: rows.map((row) => ({
-        ...row,
-        kind: normalizeActivityKind(row.kind),
-        createdAt: row.createdAt.toISOString(),
-      })),
-      page,
-      pageSize,
-      total,
-      totalPages: Math.max(Math.ceil(total / pageSize), 1),
-    };
-  } catch (error) {
-    console.error("[admin.activity] paginated list failed", error);
-    return { items: [], page, pageSize, total: 0, totalPages: 1 };
-  }
-}
-
-/**
  * Non-paginated read over the admin audit log, newest first.
  *
  * Used by the unified activity feed, which merges this source with other
  * tables in memory. When `limit` is provided it returns a capped recent
- * window; otherwise it returns all rows matching the same filters as
- * `listAdminActivities`.
+ * window; otherwise it returns all rows matching the supplied filters.
  */
 export async function listAdminActivityWindow(
   params: AdminActivityFilter,

@@ -31,22 +31,6 @@ export function canUseServerWishlist(
   return status === "authenticated" && isServerWishlistRole(role);
 }
 
-export async function syncWishlistToServer(
-  productIds: string[],
-): Promise<WishlistItem[]> {
-  const response = await fetch("/api/wishlist", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ productIds }),
-    cache: "no-store",
-  });
-
-  return readApiData<WishlistItem[]>(
-    response,
-    "Failed to sync wishlist with server.",
-  );
-}
-
 export async function createWishlistItemOnServer(
   productId: string,
 ): Promise<WishlistItem> {

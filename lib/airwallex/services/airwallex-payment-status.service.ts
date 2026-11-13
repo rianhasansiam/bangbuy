@@ -139,14 +139,6 @@ export function isLegalAirwallexTransition(
   return LEGAL_TRANSITIONS[from].has(to);
 }
 
-export function isTerminalAirwallexStatus(
-  status: PaymentTransactionStatus,
-): boolean {
-  return ["SUCCESS", "FAILED", "CANCELLED", "REFUNDED", "EXPIRED"].includes(
-    status,
-  );
-}
-
 export type PublicAirwallexPaymentStatus =
   | "CREATED"
   | "REQUIRES_PAYMENT_METHOD"

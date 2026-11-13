@@ -1,5 +1,5 @@
 import { readApiData } from "@/features/http/api-envelope";
-import { createEventId, trackAddToCart } from "@/lib/analytics/meta-pixel";
+import { trackAddToCart } from "@/lib/meta-pixel";
 
 export type CartStatus = "ACTIVE" | "INACTIVE";
 
@@ -57,11 +57,7 @@ export async function createCartItemOnServer(
   productId: string,
   quantity = 1,
   variantId?: string | null,
-  eventId = createEventId(),
 ): Promise<CartItem> {
-  // Keep the submitted quantity/identity independent of the cumulative cart
-  // row returned by the server and of later UI selection changes.
-  const submittedQuantity = quantity;
   const response = await fetch("/api/cart", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -74,7 +70,7 @@ export async function createCartItemOnServer(
   });
 
   const item = await readApiData<CartItem>(response, "Failed to add item to cart.");
-  trackAddToCart({ ...item, quantity: submittedQuantity }, eventId);
+  trackAddToCart(item, quantity);
   return item;
 }
 
@@ -82,26 +78,8 @@ export async function addToCartOnServer(
   productId: string,
   quantity = 1,
   variantId?: string | null,
-  eventId?: string,
 ): Promise<CartItem> {
-  return createCartItemOnServer(productId, quantity, variantId, eventId);
-}
-
-export async function syncCartToServer(localItems: CartItem[]): Promise<CartSnapshot> {
-  const response = await fetch("/api/cart", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      items: localItems.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        ...(item.variantId ? { variantId: item.variantId } : {}),
-      })),
-    }),
-    cache: "no-store",
-  });
-
-  return readApiData<CartSnapshot>(response, "Failed to sync cart with server.");
+  return createCartItemOnServer(productId, quantity, variantId);
 }
 
 export async function updateCartItemOnServer(

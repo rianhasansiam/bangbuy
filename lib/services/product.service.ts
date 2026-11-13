@@ -106,15 +106,6 @@ export type ListProductsOptions = {
   publicOnly?: boolean;
 };
 
-export function effectiveProductPrice(product: {
-  salePrice: Prisma.Decimal;
-  discountPrice: Prisma.Decimal | null;
-}): number {
-  const sale = product.salePrice.toNumber();
-  const discount = product.discountPrice?.toNumber() ?? null;
-  return discount != null && discount < sale ? discount : sale;
-}
-
 function productRating(product: Pick<ProductRow, "reviews">) {
   const reviewCount = product.reviews.length;
   const rating =
@@ -709,16 +700,6 @@ export async function getActiveProductById(id: string) {
   return (await withBreadcrumbs([row]))[0] ?? null;
 }
 
-export async function getProductBySlug(slug: string) {
-  const normalizedSlug = slug.trim().toLowerCase();
-  return hydrateOne(
-    await prisma.product.findUnique({
-      where: { slug: normalizedSlug },
-      include: productInclude,
-    }),
-  );
-}
-
 export function getProductRedirectBySlug(
   slug: string,
 ): Promise<CatalogRedirectDto<"PRODUCT"> | null> {
@@ -1137,15 +1118,6 @@ export async function updateProduct(id: string, input: UpdateProductInput) {
     });
   });
 
-  return hydrateOne(row).then((product) => product!);
-}
-
-export async function softDeleteProduct(id: string) {
-  const row = await prisma.product.update({
-    where: { id },
-    data: { status: "INACTIVE" },
-    include: productInclude,
-  });
   return hydrateOne(row).then((product) => product!);
 }
 

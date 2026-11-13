@@ -2,6 +2,7 @@
 import { useLocale } from "next-intl";
 import { useSurface } from "@/components/layout/SurfaceContext";
 import { navigateShoppingHandoff } from "@/lib/security/shopping-handoff";
+import { trackCartAddition } from "@/lib/meta-pixel";
 import { useInterfaceTranslations } from "@/components/i18n/translate";
 
 
@@ -31,7 +32,6 @@ import {
 } from "@/features/cart/storage";
 import type { CartItem } from "@/features/cart/api";
 import type { Product } from "@/features/products/api";
-import { createEventId, trackLocalCartAddition } from "@/lib/analytics/meta-pixel";
 
 type ViewMode = "grid" | "list";
 
@@ -205,14 +205,12 @@ function ListItem({ product }: { product: Product }) {
 
     const nextLocal = upsertLocalCartItem(localBefore, optimisticItem);
     writeLocalCart(nextLocal);
+    trackCartAddition(localBefore, nextLocal);
     dispatch(setCartData({ items: nextLocal, summary: computeCartSummary(nextLocal) }));
-    if (product.inStock && product.variantCount > 0) {
-      trackLocalCartAddition(localBefore, nextLocal, createEventId());
-    }
   };
 
   return (
-    <div data-tracking-content-id={product.productCode || product.id} className="group flex gap-3 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:border-brand-red hover:shadow-md sm:gap-4">
+    <div className="group flex gap-3 overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:border-brand-red hover:shadow-md sm:gap-4">
       <Link
         href={`/products/${product.slug}`}
         className="relative aspect-square w-28 shrink-0 overflow-hidden bg-gray-50 sm:w-40 md:w-48"

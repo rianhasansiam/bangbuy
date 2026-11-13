@@ -12,7 +12,7 @@ import type { PublicCategoryNode } from "@/features/categories/api";
 export default function PublicNavbar({ categories, languages }: { categories: PublicCategoryNode[]; languages: SelectableLanguage[] }) {
   const t = useTranslations("Navigation");
   const [open, setOpen] = useState(false);
-  return <header data-tracking-public-snapshot={JSON.stringify(categories)} className="sticky top-0 z-40 border-b border-brand-border bg-white">
+  return <header className="sticky top-0 z-40 border-b border-brand-border bg-white">
     <nav aria-label={t("allProducts")} className="relative mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-4">
       <Link href="/" className="me-auto text-3xl font-black tracking-tighter">Bang<span className="text-brand-red">Buy</span></Link>
       <div className="hidden items-center gap-2 xl:flex"><DesktopCategoryMenu categories={categories} active={false} /><Link href="/products" className="rounded-xl px-3 py-2 font-semibold">{t("allProducts")}</Link><Link href="/about" className="rounded-xl px-3 py-2 font-semibold">{t("about")}</Link></div>

@@ -4,7 +4,6 @@ import SiteChrome from "@/components/layout/SiteChrome";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import TopBanner from "@/components/layout/TopBanner";
-import MarketingConsentControls from "@/components/analytics/MarketingConsentControls";
 import { getActiveCategoryTree } from "@/lib/services/category.service";
 import { parsePublicCategoryNode } from "@/features/categories/api";
 import { getRequestCurrencyContext } from "@/lib/currency/request-currency";
@@ -21,6 +20,6 @@ export default async function PrivateRoot({ children }: { children: React.ReactN
   ]);
   const languageChoices = languages.map(({ code, englishName, nativeName, direction }) => ({ code, englishName, nativeName, direction }));
   return <DocumentFrame><Providers initialCurrencyContext={currencyContext}>
-    <SiteChrome banner={<TopBanner />} navbar={<Navbar categories={categories} languages={languageChoices} />} footer={<Footer />}>{children}</SiteChrome>{process.env.META_TRACKING_MODE !== "server-only" && <MarketingConsentControls />}
+    <SiteChrome banner={<TopBanner />} navbar={<Navbar categories={categories} languages={languageChoices} />} footer={<Footer />}>{children}</SiteChrome>
   </Providers></DocumentFrame>;
 }

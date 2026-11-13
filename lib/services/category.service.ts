@@ -645,13 +645,6 @@ export function getActiveCategoryByPath(
   )();
 }
 
-/** Compatibility for the former root-only `/categories/[slug]` page. */
-export function getActiveCategoryBySlug(
-  slug: string,
-): Promise<PublicCategory | null> {
-  return getActiveCategoryByPath(slug);
-}
-
 type CategoryReader = Pick<Prisma.TransactionClient, "category">;
 
 async function loadCategoryRecords(
@@ -667,9 +660,6 @@ export async function getEffectiveActiveCategoryIds(
   const byId = new Map(records.map((record) => [record.id, record]));
   return [...computeEffectiveActiveIds(records, byId)];
 }
-
-/** Grammar-compatible alias for existing service callers. */
-export const getEffectivelyActiveCategoryIds = getEffectiveActiveCategoryIds;
 
 export async function isCategoryEffectivelyActive(
   categoryId: string,
@@ -733,12 +723,6 @@ export async function getCategoryBreadcrumbsByIds(
   }
 
   return result;
-}
-
-export function categoryHasProducts(id: string): Promise<boolean> {
-  return prisma.product
-    .findFirst({ where: { categoryId: id }, select: { id: true } })
-    .then((row) => row !== null);
 }
 
 type CategoryTransaction = Prisma.TransactionClient;
@@ -1228,17 +1212,4 @@ export async function deleteCategory(id: string): Promise<CategoryDto> {
     await normalizeSiblingPositions(tx, existing.parentId);
     return snapshot;
   });
-}
-
-export function softDeleteCategory(id: string): Promise<CategoryDto> {
-  return updateCategory(id, { status: "INACTIVE" });
-}
-
-/**
- * Deprecated compatibility wrapper. It no longer deletes products: the
- * category deletion policy permits only empty leaf categories.
- */
-export async function hardDeleteCategoryWithProducts(id: string) {
-  const category = await deleteCategory(id);
-  return { category, deletedProducts: 0 };
 }

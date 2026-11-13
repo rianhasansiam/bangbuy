@@ -78,24 +78,10 @@ cp .env.example .env
 
 ```
 
-Meta delivery is disabled by default. A numeric `NEXT_PUBLIC_META_PIXEL_ID`
-does not approve a business, data source, page or event. The public storefront
-and private commerce use separate root documents and configured origins. Only
-an explicitly approved public document with valid marketing consent may load
-Pixel; private checkout, account, order and payment screens stay untracked.
-There is no Meta noscript fallback or automatic query-string tracking.
-
-The tracking defaults in `.env.example` require separate Pixel and CAPI flags,
-an independently reviewable policy manifest, migration readiness and a runtime
-kill switch. Configure the existing database, authentication and payment
-settings alongside those defaults. See the [isolation decision](docs/adr-meta-tracking-isolation.md),
-[origin migration instructions](docs/meta-origin-isolation.md) and
-[optional conversion worker](docs/marketing-conversion-worker.md) before
-preparing a staging rollout. The [context review tool](docs/meta-context-review.md)
-can prepare an anonymous public fingerprint candidate without approving it.
-Browser issuance, provider acknowledgement and
-Events Manager receipt must be verified separately; repository tests do not
-establish live delivery.
+Configure the existing database, authentication, payment and upload settings
+privately. The optional origin settings in `.env.example` support separate
+catalog and commerce hosts; leave them blank for the existing single-origin
+deployment. Preserve customer sessions, carts and payment callback origins.
 
 The [customer journey and checkout architecture document](docs/bangbuy-customer-journey-and-checkout-architecture.docx)
 explains the screens from home to receipt. Deployment preparation is collected in
@@ -104,12 +90,12 @@ the [deployment runbook](docs/deployment-runbook.md),
 [blocker matrix](docs/deployment-blockers.md),
 [redacted environment checklist](docs/deployment-environment.md),
 [customer-state migration](docs/customer-state-migration.md),
-[database and worker operations](docs/deployment-database-and-worker.md),
-[staging verification](docs/deployment-staging-verification.md) and
-[separate tracking activation checklist](docs/tracking-activation.md).
+[database operations](docs/deployment-database-and-worker.md) and
+[staging verification](docs/deployment-staging-verification.md).
 Both existing apex and www origins need a tested customer-state compatibility
-plan before strict two-origin cutover. Repository preparation does not change
-production or establish external event delivery.
+plan before strict two-origin cutover. Repository changes do not deploy the
+application or apply database migrations. Review the tracking-table removal
+migration and stop any previously deployed conversion worker before release.
 
 ---
 
@@ -243,12 +229,9 @@ location /uploads/ {
 
 Run `nginx -t` before reloading Nginx. Without the size directive, Nginx can
 reject images over its default request limit before the app receives them.
-Verify the storage code with:
-
-```bash
-npx vitest run __tests__/upload-service.test.ts __tests__/upload-ssh-storage.test.ts
-python3 -m unittest discover -s scripts/tests -p 'test_upload_storage.py'
-```
+Verify uploads in a controlled environment by uploading an allowed image,
+checking its public URL, and deleting it through the application. Confirm
+invalid files and oversized requests are rejected.
 
 ---
 
@@ -260,12 +243,6 @@ npm run lint
 
 # Type check
 npx tsc --noEmit
-
-# Run all tests (Vitest)
-npm test
-
-# Run tests in watch mode
-npm run test:watch
 
 # Production build
 npm run build
@@ -345,7 +322,7 @@ bangbuy/
 ├── hooks/                      # Custom React hooks
 │
 ├── prisma/
-│   ├── schema.prisma           # Commerce, localization and marketing outbox schema
+│   ├── schema.prisma           # Commerce and localization schema
 │   └── migrations/             # SQL migration history
 │
 ├── public/                     # Static assets (logos, images)
@@ -353,7 +330,6 @@ bangbuy/
 ├── proxy.ts                    # Catalog URL canonicalization proxy
 ├── next.config.ts              # Next.js configuration
 ├── tsconfig.json               # TypeScript configuration
-├── vitest.config.mts           # Vitest test configuration
 ├── .env.example                # Environment variable template
 └── package.json                # Project dependencies and scripts
 ```

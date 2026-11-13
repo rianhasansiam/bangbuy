@@ -2,11 +2,12 @@
 import { useLocale } from "next-intl";
 import { useSurface } from "@/components/layout/SurfaceContext";
 import { navigateShoppingHandoff } from "@/lib/security/shopping-handoff";
+import { trackCartAddition } from "@/lib/meta-pixel";
 import { useSearchParams } from "next/navigation";
 import { useInterfaceTranslations } from "@/components/i18n/translate";
 
 
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback } from 'react'
 import Image from 'next/image'
 import Link from "@/lib/i18n/navigation"
 import { useRouter } from "@/lib/i18n/navigation";import { ShoppingBag } from 'lucide-react'
@@ -34,7 +35,6 @@ import {
 } from '@/store/slices/cart.slice'
 import { ButtonLoader } from '@/components/ui/loading'
 import CurrencyAmount from '@/components/currency/CurrencyAmount'
-import { createEventId, trackLocalCartAddition } from '@/lib/analytics/meta-pixel'
 
 type RecentProductItem = {
   id: string
@@ -71,7 +71,6 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
   const [visibleCount, setVisibleCount] = useState(searchParams?.get("related") === "all" ? products.length : ITEMS_PER_PAGE)
   const [isLoading, setIsLoading] = useState(false)
   const [cartBusyId, setCartBusyId] = useState<string | null>(null)
-  useEffect(() => { window.dispatchEvent(new Event("bangbuy:public-content-ready")); }, []);
 
   const handleLoadMore = useCallback(() => {
     if (surface === "public") {
@@ -139,10 +138,8 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
 
     const nextLocal = upsertLocalCartItem(localBefore, optimisticItem)
     writeLocalCart(nextLocal)
+    trackCartAddition(localBefore, nextLocal)
     dispatch(setCartData({ items: nextLocal, summary: computeCartSummary(nextLocal) }))
-    if (product.inStock !== false && (product.variantCount ?? 1) > 0) {
-      trackLocalCartAddition(localBefore, nextLocal, createEventId())
-    }
     setCartBusyId(null)
     toast.success(i18n("Added to cart"))
   }, [cartBusyId, dispatch, handoffLocale, i18n, router, session?.user?.role, status, surface])
@@ -155,8 +152,7 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
   const hasMore = visibleCount < products.length
 
   return (
-    <div data-tracking-public-snapshot={JSON.stringify(products.map(product => ({ id: product.id, productCode: product.productCode, slug: product.slug, name: product.name, image: product.image, price: product.price, originalPrice: product.originalPrice, discount: product.discount, variantCount: product.variantCount, inStock: product.inStock })))} className="min-w-0 space-y-6">
-      <span hidden>{products.map(product => <span key={product.id} data-tracking-content-id={product.productCode || product.id} />)}</span>
+    <div className="min-w-0 space-y-6">
       <h2 className="text-xl font-bold text-brand-black [overflow-wrap:anywhere]">
         {i18n(title)}
       </h2>
@@ -164,7 +160,7 @@ const RelatedProducts: React.FC<RelatedProductsProps> = ({
       <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 md:grid-cols-4 lg:grid-cols-5">
         {visibleProducts.map((product) => (
           <article
-            key={product.id} data-tracking-content-id={product.productCode || product.id}
+            key={product.id}
             className="group flex min-w-0 flex-col overflow-hidden rounded-xl border border-gray-100 bg-white transition-all hover:border-brand-red hover:shadow-lg"
           >
             {/* Image Container */}

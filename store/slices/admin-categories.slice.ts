@@ -69,9 +69,6 @@ const adminCategoriesSlice = createSlice({
 
 export const {
   setAdminCategories,
-  upsertAdminCategory,
-  patchAdminCategory,
-  removeAdminCategory,
   setAdminCategoriesLoading,
   setAdminCategoriesError,
 } = adminCategoriesSlice.actions;

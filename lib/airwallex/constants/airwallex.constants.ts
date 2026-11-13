@@ -12,22 +12,11 @@ export const AIRWALLEX_API_BASE_URLS = {
   production: "https://api.airwallex.com",
 } as const;
 
-export const AIRWALLEX_JS_ENVIRONMENTS = {
-  sandbox: "demo",
-  production: "prod",
-} as const;
-
 export const AIRWALLEX_API_PATHS = {
   authenticate: "/api/v1/authentication/login",
   createPaymentIntent: "/api/v1/pa/payment_intents/create",
   paymentIntents: "/api/v1/pa/payment_intents",
 } as const;
-
-export const AIRWALLEX_DEFAULT_HTTP_TIMEOUT_MS = 10_000;
-export const AIRWALLEX_DEFAULT_WEBHOOK_TOLERANCE_SECONDS = 300;
-
-/** Airwallex access tokens are documented as valid for 30 minutes. */
-export const AIRWALLEX_ACCESS_TOKEN_LIFETIME_MS = 30 * 60_000;
 
 /** PaymentIntent client secrets are documented as valid for 60 minutes. */
 export const AIRWALLEX_CLIENT_SECRET_LIFETIME_MS = 60 * 60_000;

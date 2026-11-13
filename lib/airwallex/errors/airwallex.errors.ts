@@ -141,28 +141,6 @@ export class AirwallexReplayError extends AirwallexError {
   }
 }
 
-export class AirwallexAmountMismatchError extends AirwallexError {
-  constructor() {
-    super({
-      code: "AIRWALLEX_AMOUNT_MISMATCH",
-      status: 422,
-      message: "Payment verification requires manual review.",
-    });
-    this.name = "AirwallexAmountMismatchError";
-  }
-}
-
-export class AirwallexCurrencyMismatchError extends AirwallexError {
-  constructor() {
-    super({
-      code: "AIRWALLEX_CURRENCY_MISMATCH",
-      status: 422,
-      message: "Payment verification requires manual review.",
-    });
-    this.name = "AirwallexCurrencyMismatchError";
-  }
-}
-
 export class AirwallexStateTransitionError extends AirwallexError {
   constructor() {
     super({

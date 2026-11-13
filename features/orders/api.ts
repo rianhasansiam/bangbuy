@@ -4,7 +4,6 @@ import {
   type CurrencyCode,
 } from "@/lib/currency/config";
 import type { OrderStatus } from "@/lib/orders/status";
-import type { VerifiedPurchaseSnapshot } from "@/lib/analytics/order-purchase";
 
 /**
  * Client-side types and fetchers for order detail / summary screens.
@@ -103,7 +102,6 @@ export type OrderDetail = {
   paymentMethod: OrderPaymentMethod;
   paymentStatus: PaymentStatus;
   requiresPaymentReview: boolean;
-  metaPurchase?: VerifiedPurchaseSnapshot | null;
 
   createdAt: string;
   updatedAt: string;

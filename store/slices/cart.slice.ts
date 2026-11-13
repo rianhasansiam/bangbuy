@@ -105,14 +105,7 @@ const cartSlice = createSlice({
 
 export const {
   setCartData,
-  upsertCartItem,
-  updateCartItem,
-  removeCartItemById,
-  removeCartItemByProductId,
-  clearCartItems,
-  setCartSummary,
   setCartMode,
-  setCartHydrated,
   setCartLoading,
   setCartError,
   resetCartState,

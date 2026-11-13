@@ -2,6 +2,7 @@
 import { useLocale } from "next-intl";
 import { useSurface } from "@/components/layout/SurfaceContext";
 import { navigateShoppingHandoff } from "@/lib/security/shopping-handoff";
+import { trackCartAddition } from "@/lib/meta-pixel";
 import { useLocaleDraft, useLocaleSwitchGuard } from "@/components/i18n/useLocaleDraft";
 import { useInterfaceTranslations } from "@/components/i18n/translate";
 
@@ -38,7 +39,6 @@ import {
 } from "@/features/wishlist/storage";
 import { useSession } from "@/lib/auth/use-app-session";
 import { toast } from "@/lib/feedback";
-import { createEventId, trackLocalCartAddition } from "@/lib/analytics/meta-pixel";
 import { type AppDispatch, type RootState } from "@/store";
 import {
   setCartData,
@@ -181,7 +181,7 @@ const ProductActions = ({
   const [isBuyNowPending, startBuyNowTransition] = useTransition();
   useLocaleSwitchGuard(isCartBusy || isWishlistBusy || isBuyNowPending);
   const selectionDraft = { selectedVariantId: selectedVariantId ?? "", quantity };
-  const publicSelectionReady = useLocaleDraft("product-options:" + productId, selectionDraft, (update) => {
+  useLocaleDraft("product-options:" + productId, selectionDraft, (update) => {
     const next = typeof update === "function" ? update(selectionDraft) : update;
     const variant = activeVariants.find((entry) => entry.id === next.selectedVariantId);
     if (variant) {
@@ -287,6 +287,7 @@ const ProductActions = ({
 
     const nextLocal = upsertLocalCartItem(localBefore, optimisticItem);
     writeLocalCart(nextLocal);
+    trackCartAddition(localBefore, nextLocal);
     dispatch(
       setCartData({
         items: nextLocal,
@@ -294,7 +295,6 @@ const ProductActions = ({
       }),
     );
     toast.success(i18n(`${productName} added to cart`));
-    trackLocalCartAddition(localBefore, nextLocal, createEventId());
   };
 
   const handleBuyNow = () => {
@@ -390,7 +390,7 @@ const ProductActions = ({
   };
 
   return (
-    <div data-tracking-public-snapshot={JSON.stringify({ productId, productCode, productSlug, productName, image, brand, category, rating, reviewCount, salePrice, discountPrice, variants: variants.map(variant => ({ id: variant.id, variantKey: variant.variantKey, name: variant.name, modelNumber: variant.modelNumber, sku: variant.sku, color: variant.color, size: variant.size, attributes: variant.attributes, stock: variant.stock, image: variant.image, isActive: variant.isActive })) })} data-tracking-pending={publicSelectionReady === false ? "restoring-product-selection" : undefined} className="min-w-0 space-y-5 border-t border-gray-100 pt-4">
+    <div className="min-w-0 space-y-5 border-t border-gray-100 pt-4">
       <div className="flex min-w-0 flex-wrap items-baseline gap-3">
         <CurrencyAmount
           amountBDT={unitPrice}

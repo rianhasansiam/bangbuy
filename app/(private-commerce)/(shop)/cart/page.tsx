@@ -1,6 +1,7 @@
 "use client";
 import { useLocaleDraft, useLocaleSwitchGuard } from "@/components/i18n/useLocaleDraft";
 import { useInterfaceTranslations } from "@/components/i18n/translate";
+import { trackCartAddition } from "@/lib/meta-pixel";
 
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -61,7 +62,6 @@ import {
   LIST_ITEM_VARIANTS,
 } from "@/lib/motion/list-removal";
 import { confirm, toast } from "@/lib/feedback";
-import { createEventId, trackLocalCartAddition } from "@/lib/analytics/meta-pixel";
 import { ButtonLoader, LoadingSpinner, SectionLoader } from "@/components/ui/loading";
 
 type AppliedPromo = {
@@ -606,7 +606,6 @@ export default function CartPage() {
   const handleSavedMoveToCart = (id: string) => {
     const target = saved.find((item) => item.id === id);
     if (!target || !target.inStock) return;
-    const cartEventId = createEventId();
 
     queueSavedRemoval(
       id,
@@ -615,7 +614,7 @@ export default function CartPage() {
           dispatch(setCartError(null));
 
           try {
-            await addToCartOnServer(target.productId, 1, target.variantId, cartEventId);
+            await addToCartOnServer(target.productId, 1, target.variantId);
             const snapshot = await fetchServerCartSnapshot();
             dispatch(setCartData(snapshot));
             writeLocalCart(snapshot.items);
@@ -665,13 +664,13 @@ export default function CartPage() {
             : [nextItem, ...localCartBefore];
 
           writeLocalCart(localCartAfter);
+          trackCartAddition(localCartBefore, localCartAfter);
           dispatch(
             setCartData({
               items: localCartAfter,
               summary: computeCartSummary(localCartAfter),
             }),
           );
-          trackLocalCartAddition(localCartBefore, localCartAfter, cartEventId);
         }
 
         removeSavedFromLocal(id);

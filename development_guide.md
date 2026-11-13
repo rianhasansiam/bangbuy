@@ -567,7 +567,6 @@ npx prisma validate
 npx prisma generate
 npm run lint
 npx tsc --noEmit
-npm test
 npm run build
 exit
 ```
@@ -1880,7 +1879,6 @@ the running server.
 
    npm run lint
    npx tsc --noEmit
-   npm test
 
    npx prisma migrate deploy
    npx prisma migrate status
@@ -1962,6 +1960,3 @@ Also verify:
   recovery privilege remains.
 - Only ports 22 (as required), 80, and 443 are publicly reachable; Node 3000 and
   PostgreSQL 5432 are private.
-
-For the project’s cache/SEO behavior and CDN restrictions, also read
-[`docs/seo-performance-architecture.md`](docs/seo-performance-architecture.md).

@@ -20,13 +20,10 @@ export async function runDeploymentHealthChecks({ publicOrigin, commerceOrigin, 
   const record = (name, passed, observed) => checks.push({ name, passed: Boolean(passed), observed });
   for (const [label, base] of [["public", storefront], ["commerce", commerce]]) {
     try {
-      const response = await request(`${base}/api/public/tracking-policy`, { headers: { accept: "application/json" } });
-      const body = await response.json();
-      const policy = body?.policy;
-      record(`${label} policy endpoint is bounded and uncached`, response.status === 200 && noCache(response) && response.headers.get("referrer-policy") === "no-referrer", { status: response.status });
-      record(`${label} delivery remains disabled`, policy && policy.runtimeEnabled === false && policy.pixelEnabled === false && policy.capiEnabled === false, { runtimeEnabled: policy?.runtimeEnabled, pixelEnabled: policy?.pixelEnabled, capiEnabled: policy?.capiEnabled });
-      record(`${label} runtime origin configuration matches`, policy?.storefrontOrigin === storefront && policy?.commerceOrigin === commerce, { matches: policy?.storefrontOrigin === storefront && policy?.commerceOrigin === commerce });
-    } catch { record(`${label} policy endpoint available`, false, { code: "POLICY_READ_FAILED" }); }
+      const response = await request(`${base}/en`, { headers: { accept: "text/html" } });
+      const body = await response.text();
+      record(`${label} document is available with restricted security headers`, response.status === 200 && privateHeaders(response) && !/facebook\.com\/tr|connect\.facebook\.net|fbevents\.js|__bangbuyMetaPixel/i.test(body), { status: response.status, securityHeaders: privateHeaders(response) });
+    } catch { record(`${label} document is available with restricted security headers`, false, { code: "PAGE_READ_FAILED" }); }
   }
   try {
     const response = await request(`${storefront}/en/cart`, {});
@@ -38,14 +35,14 @@ export async function runDeploymentHealthChecks({ publicOrigin, commerceOrigin, 
   } catch { record("public account API is absent", false, { code: "API_READ_FAILED" }); }
   try {
     const response = await request(`${commerce}/api/user/me`, { headers: { origin: storefront } });
-    record("tracked-origin private API request is rejected without CORS", response.status === 403 && !response.headers.has("access-control-allow-origin") && !response.headers.has("access-control-allow-credentials"), { status: response.status });
-  } catch { record("tracked-origin private API request is rejected without CORS", false, { code: "API_READ_FAILED" }); }
+    record("public-origin private API request is rejected without CORS", response.status === 403 && !response.headers.has("access-control-allow-origin") && !response.headers.has("access-control-allow-credentials"), { status: response.status });
+  } catch { record("public-origin private API request is rejected without CORS", false, { code: "API_READ_FAILED" }); }
   try {
     const response = await request(`${commerce}/en/cart`, {});
     const body = await response.text();
-    record("private document excludes Pixel bootstrap and has private headers", response.status === 200 && noCache(response) && privateHeaders(response) && !/facebook\.com\/tr|connect\.facebook\.net|fbevents\.js|__bangbuyMetaPixel/i.test(body), { status: response.status, privateHeaders: privateHeaders(response) });
-  } catch { record("private document excludes Pixel bootstrap and has private headers", false, { code: "PAGE_READ_FAILED" }); }
-  return { scope: "GET-only application host checks; not production readiness, database health or Meta receipt", passed: checks.every(check => check.passed), checks };
+    record("private document has no-store and restricted security headers", response.status === 200 && noCache(response) && privateHeaders(response) && !/facebook\.com\/tr|connect\.facebook\.net|fbevents\.js|__bangbuyMetaPixel/i.test(body), { status: response.status, privateHeaders: privateHeaders(response) });
+  } catch { record("private document has no-store and restricted security headers", false, { code: "PAGE_READ_FAILED" }); }
+  return { scope: "GET-only application host checks; not production readiness, database health or payment verification", passed: checks.every(check => check.passed), checks };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

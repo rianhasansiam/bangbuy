@@ -122,21 +122,3 @@ export async function createReview(
 
   return readApiData<Review>(response, "Failed to submit your review.");
 }
-
-export type ReviewableProduct = {
-  productId: string;
-  productName: string;
-  productImage: string | null;
-};
-
-export async function fetchReviewableProducts(): Promise<ReviewableProduct[]> {
-  const response = await fetch("/api/reviews/reviewable", {
-    method: "GET",
-    cache: "no-store",
-  });
-
-  return readApiData<ReviewableProduct[]>(
-    response,
-    "Failed to load reviewable products.",
-  );
-}

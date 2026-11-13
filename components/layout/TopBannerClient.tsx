@@ -96,7 +96,7 @@ const TopBannerClient = ({ slides }: { slides: TopBannerSlide[] }) => {
   if (!isVisible || !currentSale) return null;
 
   return (
-    <div data-tracking-mutable={slides.length > 1 ? "rotating-top-banner" : undefined} className="relative w-full max-w-full overflow-hidden bg-brand-black">
+    <div className="relative w-full max-w-full overflow-hidden bg-brand-black">
       <div className="mx-auto flex min-h-10 w-full max-w-7xl items-center gap-1.5 px-2 py-1.5 sm:gap-3 sm:px-4">
         <Link
           href={currentSale.link || "/products"}

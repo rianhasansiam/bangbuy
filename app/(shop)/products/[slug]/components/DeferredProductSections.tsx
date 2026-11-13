@@ -10,7 +10,6 @@ function SectionFallback({ label }: { label: string }) {
     <div
       aria-label={i18n(label)}
       aria-busy="true"
-      data-tracking-pending="deferred-product-section"
       role="status"
       className="min-h-28 animate-pulse rounded-2xl border border-brand-border bg-white"
     />

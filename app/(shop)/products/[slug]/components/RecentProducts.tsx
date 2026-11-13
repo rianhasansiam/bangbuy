@@ -33,7 +33,7 @@ const RecentProducts: React.FC<RecentProductsProps> = ({
   }
 
   return (
-    <div data-tracking-public-snapshot={JSON.stringify(products.map(product => ({ id: product.id, productCode: product.productCode, variantCount: product.variantCount, inStock: product.inStock, slug: product.slug, name: product.name, image: product.image, price: product.price, originalPrice: product.originalPrice, discount: product.discount })))} className="min-w-0 rounded-2xl border border-gray-100 bg-white p-4">
+    <div className="min-w-0 rounded-2xl border border-gray-100 bg-white p-4">
       <h3 className="mb-4 text-lg font-bold text-gray-900 [overflow-wrap:anywhere]">
         {i18n(title)}
       </h3>
@@ -41,7 +41,7 @@ const RecentProducts: React.FC<RecentProductsProps> = ({
       <div className="space-y-3">
         {products.slice(0, 6).map((product) => (
           <Link 
-            key={product.id} data-tracking-content-id={product.productCode || product.id}
+            key={product.id}
             href={`/products/${product.slug}`}
             className="group flex min-w-0 gap-3 rounded-xl p-2 transition-colors hover:bg-brand-light-bg"
           >

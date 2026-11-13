@@ -42,10 +42,7 @@ import { writeLocalCart } from "@/features/cart/storage";
 import type { AppDispatch, RootState } from "@/store";
 import { toast } from "@/lib/feedback";
 import { BASE_CURRENCY } from "@/lib/currency/config";
-import {
-  getNavigationEventId,
-  trackInitiateCheckout,
-} from "@/lib/analytics/meta-pixel";
+import { trackInitiateCheckout } from "@/lib/meta-pixel";
 import { startAirwallexHostedCheckout } from "@/lib/airwallex/components/AirwallexPayButton";
 import {
   CheckoutPageSkeleton,
@@ -167,6 +164,7 @@ function CheckoutPageInner() {
   useLocaleSwitchGuard(isPlacingOrder);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const submitInFlightRef = useRef(false);
+  const checkoutTrackedRef = useRef(false);
   const checkoutIdempotencyAttemptRef =
     useRef<CheckoutIdempotencyAttempt | null>(null);
   const [savedCheckoutAttempt, setSavedCheckoutAttempt] = useState<CheckoutIdempotencyAttempt | null>(null);
@@ -302,11 +300,6 @@ function CheckoutPageInner() {
     let ignore = false;
 
     void (async () => {
-      const query = searchParams.toString();
-      const checkoutEventId = getNavigationEventId(
-        "checkout",
-        query ? `/checkout?${query}` : "/checkout",
-      );
       // setState calls live inside the async closure (microtask) so the
       // lint rule against synchronous effect-body setState is satisfied.
       setPreviewLoading(true);
@@ -321,17 +314,11 @@ function CheckoutPageInner() {
         if (ignore) return;
 
         setPreview(next);
-        // One accepted, server-priced preview starts a checkout attempt for
-        // Buy Now, selected cart, and the profile/full-cart link alike.
-        // Pricing refreshes and effect replay reuse this navigation identity.
-        trackInitiateCheckout(
-          {
-            items: next.items,
-            currency: next.summary.currency,
-            value: next.summary.total,
-          },
-          checkoutEventId,
-        );
+        // A selected delivery area and successfully priced items mark a real
+        // checkout start; promo/auth/preview refreshes must not repeat it.
+        if (!checkoutTrackedRef.current && next.items.length > 0) {
+          checkoutTrackedRef.current = trackInitiateCheckout(next);
+        }
         setPaymentMethod((current) =>
           current === "AIRWALLEX" &&
           !next.availablePaymentMethods.includes("AIRWALLEX")

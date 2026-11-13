@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useDispatch } from "react-redux";
 import { useSession } from "@/lib/auth/use-app-session";
 import { useRouter } from "@/lib/i18n/navigation";
+import { trackCartAddition } from "@/lib/meta-pixel";
 import type { ShoppingSelection } from "@/lib/security/shopping-handoff";
 import { createCartItemOnServer, fetchServerCartSnapshot, canUseServerCart, type CartItem } from "@/features/cart/api";
 import { readLocalCart, upsertLocalCartItem, writeLocalCart } from "@/features/cart/storage";
@@ -13,7 +14,6 @@ import { setCartData } from "@/store/slices/cart.slice";
 import { createWishlistItemOnServer, canUseServerWishlist, type WishlistItem } from "@/features/wishlist/api";
 import { readLocalWishlist, upsertLocalWishlistItem, writeLocalWishlist } from "@/features/wishlist/storage";
 import { setWishlistItems } from "@/store/slices/wishlist.slice";
-import { createEventId, trackLocalCartAddition } from "@/lib/analytics/meta-pixel";
 import CurrencyAmount from "@/components/currency/CurrencyAmount";
 
 type PublicSelectionProduct = { id: string; productCode: string | null; slug: string; name: string; image: string | null; price: number; originalPrice: number; brand: string; category: string; rating: number; reviewCount: number; variantId: string | null; variantName: string | null; stock: number; variantCount: number };
@@ -44,7 +44,7 @@ export default function HandoffSelection({ selection, product }: { selection: Sh
           const before = readLocalCart();
           const price = latest.discountPrice != null && latest.discountPrice < latest.price ? latest.discountPrice : latest.price;
           const item: CartItem = { id: `local:${variant.id}`, productId: product.id, productCode: product.productCode, slug: product.slug, name: latest.name, image: variant.image ?? latest.image, quantity: selection.quantity, unitPrice: price, originalPrice: latest.price, lineTotal: price * selection.quantity, stock: variant.stock, status: "ACTIVE", variantId: variant.id, variantName: variant.name };
-          const after = upsertLocalCartItem(before, item); writeLocalCart(after); dispatch(setCartData({ items: after, summary: computeCartSummary(after) })); trackLocalCartAddition(before, after, createEventId());
+          const after = upsertLocalCartItem(before, item); writeLocalCart(after); trackCartAddition(before, after); dispatch(setCartData({ items: after, summary: computeCartSummary(after) }));
         }
         router.replace("/cart");
       } else {

@@ -14,8 +14,8 @@ async function inspectCurrentDocument() {
     try {
       for (let index = 0; index < storage.length; index++) {
         const key = storage.key(index) ?? "";
-        if (/^enterfly:(?:cart|wishlist|saved-for-later|order|meta)[-:]/.test(key) || key.startsWith("bangbuy:locale-draft:")) counts.legacyPrivate++;
-        else if (["bangbuy:public-product-selection", "bangbuy:privacy:marketing", "bangbuy_locale", "bangbuy_currency"].includes(key)) counts.publicPreferenceOrSelection++;
+        if (/^enterfly:(?:cart|wishlist|saved-for-later|order)[-:]/.test(key) || key.startsWith("bangbuy:locale-draft:")) counts.legacyPrivate++;
+        else if (["bangbuy:public-product-selection", "bangbuy_locale", "bangbuy_currency"].includes(key)) counts.publicPreferenceOrSelection++;
         else counts.unknown++;
       }
     } catch { counts.readable = false; }
@@ -84,12 +84,11 @@ try {
   assert(!evaluated.exceptionDetails && evaluated.result?.value, "Document inventory failed; raw details withheld.");
   const document = evaluated.result.value;
   const cookies = await read("Network.getCookies", { urls: [origin.origin + "/"] }) as { cookies: Cookie[] };
-  const cookieCounts = { session: 0, guestAccess: 0, preference: 0, marketing: 0, unknown: 0, parentDomain: 0, httpOnly: 0, insecure: 0 };
+  const cookieCounts = { session: 0, guestAccess: 0, preference: 0, unknown: 0, parentDomain: 0, httpOnly: 0, insecure: 0 };
   for (const cookie of cookies.cookies) {
     if (/authjs|next-auth/.test(cookie.name)) cookieCounts.session++;
     else if (/^bangbuy-guest-(?:checkout|order-)/.test(cookie.name)) cookieCounts.guestAccess++;
     else if (/^bangbuy_(?:locale|currency)$/.test(cookie.name)) cookieCounts.preference++;
-    else if (/^(?:_fbp|_fbc|bangbuy-marketing-consent)$/.test(cookie.name)) cookieCounts.marketing++;
     else cookieCounts.unknown++;
     if (cookie.domain.startsWith(".")) cookieCounts.parentDomain++;
     if (cookie.httpOnly) cookieCounts.httpOnly++;

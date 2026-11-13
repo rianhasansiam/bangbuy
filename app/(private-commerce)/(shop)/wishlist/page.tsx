@@ -1,5 +1,6 @@
 "use client";
 import { useInterfaceTranslations } from "@/components/i18n/translate";
+import { trackCartAddition } from "@/lib/meta-pixel";
 
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -50,7 +51,6 @@ import {
   LIST_ITEM_VARIANTS,
 } from "@/lib/motion/list-removal";
 import { confirm, toast } from "@/lib/feedback";
-import { createEventId, trackLocalCartAddition } from "@/lib/analytics/meta-pixel";
 
 type WishlistView = "grid" | "list";
 
@@ -358,8 +358,8 @@ export default function WishlistPage() {
     }, localBefore);
 
     writeLocalCart(optimistic);
+    trackCartAddition(localBefore, optimistic);
     dispatch(setCartData({ items: optimistic, summary: computeCartSummary(optimistic) }));
-    trackLocalCartAddition(localBefore, optimistic, createEventId());
 
     const removeIds = toMove.map((item) => item.id);
     removeSelection(removeIds);
@@ -447,7 +447,6 @@ export default function WishlistPage() {
   const handleSavedMoveToCart = (id: string) => {
     const target = saved.find((item) => item.id === id);
     if (!target || !target.inStock) return;
-    const cartEventId = createEventId();
 
     const canUseServerCart =
       status === "authenticated" && isServerWishlistRole(session?.user?.role);
@@ -458,7 +457,7 @@ export default function WishlistPage() {
         if (canUseServerCart) {
           dispatch(setCartErrorAction(null));
           try {
-            await addCartItemOnServer(target.productId, 1, target.variantId, cartEventId);
+            await addCartItemOnServer(target.productId, 1, target.variantId);
             const snapshot = await fetchServerCartSnapshot();
             writeLocalCart(snapshot.items);
             dispatch(setCartData(snapshot));
@@ -488,8 +487,8 @@ export default function WishlistPage() {
             status: "ACTIVE",
           });
           writeLocalCart(next);
+          trackCartAddition(localBefore, next);
           dispatch(setCartData({ items: next, summary: computeCartSummary(next) }));
-          trackLocalCartAddition(localBefore, next, cartEventId);
         }
 
         removeSavedFromLocal(id);

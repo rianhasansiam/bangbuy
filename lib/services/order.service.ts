@@ -34,7 +34,6 @@ import type {
 } from "@/lib/validations/order.validation";
 import { BASE_CURRENCY, parseCurrencyCode } from "@/lib/currency/config";
 import { createPricingContext } from "@/lib/currency/pricing.service";
-import { buildVerifiedPurchaseSnapshot } from "@/lib/analytics/order-purchase";
 import { checkoutCustomerOwnsOrder, publicOrderFields, type CheckoutCustomer } from "@/lib/orders/checkout-customer";
 
 /**
@@ -80,7 +79,6 @@ const orderItemInclude = {
       id: true,
       name: true,
       slug: true,
-      productCode: true,
     },
   },
 } satisfies Prisma.OrderItemInclude;
@@ -90,9 +88,8 @@ const orderInclude = {
   // Full audit trail, oldest first, so the customer tracker and admin
   // timeline render chronologically without a client-side sort.
   statusHistory: { orderBy: { createdAt: "asc" } },
-  // Keep gateway evidence for verified analytics and the customer-facing
-  // Airwallex payment quote, plus unresolved reviews from any provider.
-  // Payment identifiers and raw evidence never cross the JSON boundary.
+  // Keep the customer-facing Airwallex payment quote and unresolved reviews
+  // from any provider. Payment records never cross the JSON boundary.
   payments: {
     where: {
       OR: [{ provider: { in: ["AIRWALLEX", "SSLCOMMERZ"] } }, { requiresReview: true }],
@@ -103,13 +100,6 @@ const orderInclude = {
       currency: true,
       status: true,
       requiresReview: true,
-      transactionId: true,
-      validationId: true,
-      providerStatus: true,
-      paidAt: true,
-      baseAmount: true,
-      baseCurrency: true,
-      exchangeRate: true,
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
   },
@@ -295,7 +285,6 @@ export function serializeCustomerOrder<T extends OrderWithItems>(order: T) {
     requiresPaymentReview: payments.some(
       (payment) => payment.requiresReview,
     ),
-    metaPurchase: buildVerifiedPurchaseSnapshot(order),
   };
 }
 

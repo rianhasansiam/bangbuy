@@ -18,9 +18,6 @@ export type UploadedImage = {
   size: number;
 };
 
-/** Default upload size limit (5 MB). Must match server-side MAX_UPLOAD_SIZE_MB. */
-export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
-
 export const ACCEPTED_IMAGE_TYPES =
   "image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif";
 

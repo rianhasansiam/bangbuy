@@ -2,9 +2,6 @@ import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
 
-const AIRWALLEX_REQUEST_UUID =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[45][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
 export function createAirwallexRequestId(): string {
   return randomUUID();
 }
@@ -36,8 +33,4 @@ export function deriveAirwallexRequestId(
     hex.slice(16, 20),
     hex.slice(20),
   ].join("-");
-}
-
-export function isAirwallexRequestId(value: string): boolean {
-  return value.length <= 64 && AIRWALLEX_REQUEST_UUID.test(value);
 }

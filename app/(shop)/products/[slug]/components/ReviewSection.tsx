@@ -98,10 +98,6 @@ export default function ReviewSection({ productId, initialShowForm = false }: { 
     return () => window.clearTimeout(timer);
   }, [loadReviews]);
 
-  useEffect(() => {
-    if (!loading && surface === "public") window.dispatchEvent(new Event("bangbuy:public-content-ready"));
-  }, [loading, surface]);
-
   const visibleReviews = useMemo(() => {
     const filtered = filterRating
       ? reviews.filter((review) => review.rating === filterRating)
@@ -119,7 +115,7 @@ export default function ReviewSection({ productId, initialShowForm = false }: { 
   }, [filterRating, reviews, sortBy]);
 
   return (
-    <div data-tracking-public-snapshot={JSON.stringify(reviews.map(review => ({ id: review.id, productId: review.productId, authorName: review.authorName, authorImage: review.authorImage, rating: review.rating, title: review.title, comment: review.comment, source: review.source, verified: review.verified, createdAt: review.createdAt, updatedAt: review.updatedAt })))} data-tracking-pending={loading ? "reviews" : undefined} className="min-w-0 space-y-8">
+    <div className="min-w-0 space-y-8">
       <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="flex min-w-0 items-center gap-2 text-xl font-bold text-gray-900 sm:text-2xl">
           <span className="h-6 w-1.5 shrink-0 rounded-full bg-brand-red" />

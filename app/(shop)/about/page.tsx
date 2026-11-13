@@ -4,7 +4,6 @@ import AboutHero from "./components/AboutHero";
 import OurStory from "./components/OurStory";
 import WhyChooseUs from "./components/WhyChooseUs";
 import OurValues from "./components/OurValues";
-import TeamSection from "./components/TeamSection";
 import Testimonials from "./components/Testimonials";
 import AboutCTA from "./components/AboutCTA";
 
@@ -33,7 +32,6 @@ export default async function AboutPage() {
         <OurStory />
         <WhyChooseUs />
         <OurValues />
-        {/* <TeamSection /> */}
         <Testimonials testimonials={testimonials} />
         <AboutCTA />
       </div>

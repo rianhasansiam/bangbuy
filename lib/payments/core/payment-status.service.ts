@@ -7,7 +7,6 @@
  */
 
 import "server-only";
-import { recordVerifiedPurchase } from "@/lib/analytics/conversion-outbox";
 
 import { Prisma } from "@/app/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
@@ -267,14 +266,6 @@ export async function applySuccessfulPayment(
     if (confirmable) {
       await recordStatusHistory(tx, payment.orderId, "PAYMENT_CONFIRMED", {
         note: "Payment verified server-to-server by SSLCommerz.",
-      });
-    }
-
-    if (!requiresReview && payment.order.paymentStatus !== 'PAID' &&
-        ['PENDING', 'PAYMENT_CONFIRMED'].includes(payment.order.status)) {
-      await recordVerifiedPurchase(tx, {
-        orderId: payment.orderId, paymentMethod: 'SSLCOMMERZ',
-        amount: payment.amount, currency: payment.currency, paidAt: verifiedPaidAt,
       });
     }
 

@@ -50,33 +50,6 @@ export type Product = {
   fieldLocales?: Record<string,string>;
 };
 
-export type ApiProduct = {
-  id: string;
-  slug: string;
-  productCode: string;
-  name: string;
-  description: string | null;
-  price: number;
-  discountPrice: number | null;
-  image: string | null;
-  images: string[];
-  rating: number;
-  reviewCount: number;
-  badge: string | null;
-  status: "ACTIVE" | "INACTIVE";
-  stock: number;
-  createdAt: string;
-  categoryId: string;
-  category: {
-    id: string;
-    name: string;
-    slug?: string;
-    path?: string;
-    depth?: number;
-    image: string | null;
-  };
-};
-
 export type ApiMeta = {
   page: number;
   pageSize: number;
@@ -375,79 +348,6 @@ export async function fetchProductsFromApi(
   };
 }
 
-export async function fetchCatalogFacets(
-  signal?: AbortSignal,
-): Promise<CatalogFacets> {
-  const response = await fetch(`/api/catalog/facets?${addActiveApiLocale(new URLSearchParams())}`, { signal });
-  const envelope = await readResponse<unknown>(
-    response,
-    "Failed to load catalog filters.",
-  );
-  const row = asRecord(envelope.data);
-  if (!row) throw new Error("Catalog filters returned an unexpected response.");
-
-  const parseCategory = (value: unknown): CatalogCategoryFacet => {
-    const category = asRecord(value) ?? {};
-    return {
-      id: readString(category.id) ?? "",
-      name: readString(category.name) ?? "Category",
-      slug: readString(category.slug) ?? "",
-      path: readString(category.path) ?? readString(category.slug) ?? "",
-      depth: readNumber(category.depth) ?? 0,
-      position: readNumber(category.position) ?? 0,
-      directProductCount: readNumber(category.directProductCount) ?? 0,
-      totalProductCount: readNumber(category.totalProductCount) ?? 0,
-      children: Array.isArray(category.children)
-        ? category.children.map(parseCategory)
-        : [],
-    };
-  };
-
-  const parseEntity = (value: unknown): CatalogEntityFacet | null => {
-    const entity = asRecord(value);
-    if (!entity) return null;
-    const id = readString(entity.id);
-    const name = readString(entity.name);
-    const slug = readString(entity.slug);
-    if (!id || !name || !slug) return null;
-    return {
-      id,
-      name,
-      slug,
-      logo: readString(entity.logo),
-      productCount: readNumber(entity.productCount) ?? 0,
-    };
-  };
-
-  const priceBounds = asRecord(row.priceBounds);
-  const availability = asRecord(row.availability);
-  return {
-    categories: Array.isArray(row.categories)
-      ? row.categories.map(parseCategory)
-      : [],
-    brands: Array.isArray(row.brands)
-      ? row.brands.flatMap((item) => {
-          const entity = parseEntity(item);
-          return entity ? [entity] : [];
-        })
-      : [],
-    manufacturers: Array.isArray(row.manufacturers)
-      ? row.manufacturers.flatMap((item) => {
-          const entity = parseEntity(item);
-          return entity ? [entity] : [];
-        })
-      : [],
-    priceBounds: {
-      min: readNumber(priceBounds?.min) ?? 0,
-      max: readNumber(priceBounds?.max) ?? 0,
-    },
-    availability: {
-      inStock: readNumber(availability?.inStock) ?? 0,
-      outOfStock: readNumber(availability?.outOfStock) ?? 0,
-    },
-  };
-}
-
 export async function searchCatalogFromApi(
   query: string,
   options?: {
@@ -496,19 +396,6 @@ export async function searchCatalogFromApi(
     products: Array.isArray(row.products) ? row.products.map(mapApiProduct) : [],
     categories,
   };
-}
-
-/** Backward-compatible product-only search helper. */
-export async function searchProductsFromApi(
-  query: string,
-  options?: { limit?: number; signal?: AbortSignal },
-): Promise<Product[]> {
-  const result = await searchCatalogFromApi(query, {
-    productLimit: options?.limit,
-    categoryLimit: 1,
-    signal: options?.signal,
-  });
-  return result.products;
 }
 
 /** Admin review picker compatibility; storefront listing does not use this. */

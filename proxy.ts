@@ -41,7 +41,7 @@ export async function proxy(request: NextRequest) {
   if (surface === "public") {
     // Even deliberately supplied legacy credentials cannot authenticate a public
     // read handler. Do not trust request-supplied surface or forwarding headers.
-    const publicCookies = (request.headers.get("cookie") ?? "").split(";").map(value => value.trim()).filter(value => /^(?:bangbuy_locale|currency|bangbuy-marketing-consent)=/.test(value));
+    const publicCookies = (request.headers.get("cookie") ?? "").split(";").map(value => value.trim()).filter(value => /^(?:bangbuy_locale|currency)=/.test(value));
     if (publicCookies.length) requestHeaders.set("cookie", publicCookies.join("; ")); else requestHeaders.delete("cookie");
     requestHeaders.delete("authorization");
     if (incomingPath.startsWith("/api/") && !isPublicApiAllowed(incomingPath, request.method)) return secure(new NextResponse("Private commerce endpoint", { status: 404 }));

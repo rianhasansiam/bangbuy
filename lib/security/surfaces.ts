@@ -15,7 +15,7 @@ function origin(value: string | undefined): string | null {
   } catch { return null; }
 }
 
-/** Invalid, absent or identical origins never establish a tracking sandbox. */
+/** Invalid, absent or identical origins keep the application on one private surface. */
 export function getSurfaceOrigins(env: OriginEnvironment = { STOREFRONT_ORIGIN: process.env.STOREFRONT_ORIGIN, COMMERCE_ORIGIN: process.env.COMMERCE_ORIGIN }): SurfaceOrigins {
   const storefront = origin(env.STOREFRONT_ORIGIN);
   const commerce = origin(env.COMMERCE_ORIGIN);
@@ -32,7 +32,7 @@ export function getBrowserSurfaceOrigins(): SurfaceOrigins {
   return getSurfaceOrigins({ STOREFRONT_ORIGIN: process.env.NEXT_PUBLIC_STOREFRONT_ORIGIN, COMMERCE_ORIGIN: process.env.NEXT_PUBLIC_COMMERCE_ORIGIN });
 }
 
-/** The public list classifies documents, not marketing eligibility. Unknowns stay private. */
+/** Only known catalog and policy documents are public. Unknowns stay private. */
 export function classifySurfacePath(pathname: string): Surface {
   const first = pathname.split("/")[1];
   // A syntactically valid but unknown three-letter segment is not an approved
@@ -68,8 +68,8 @@ export function resolveSurfaceRequestUrl(request: Pick<Request, "url" | "headers
 
 /** Explicit anonymous operations only. Never expose session, user, cart or order handlers. */
 export function isPublicApiAllowed(pathname: string, method: string): boolean {
-  if (method === "GET" && /^\/api\/(?:products(?:\/[^/]+)?|categories(?:\/[^/]+)?|brands(?:\/[^/]+)?|manufacturers(?:\/[^/]+)?|reviews|catalog\/(?:search|facets)|public\/tracking-policy)$/.test(pathname)) return true;
-  return /^\/api\/public\/(?:language|consent)$/.test(pathname) && ["GET", "POST"].includes(method);
+  if (method === "GET" && /^\/api\/(?:products(?:\/[^/]+)?|categories(?:\/[^/]+)?|brands(?:\/[^/]+)?|manufacturers(?:\/[^/]+)?|reviews|catalog\/(?:search|facets))$/.test(pathname)) return true;
+  return /^\/api\/public\/language$/.test(pathname) && ["GET", "POST"].includes(method);
 }
 
 /** Only relative first-party navigation is remapped. No caller-supplied origin is trusted. */

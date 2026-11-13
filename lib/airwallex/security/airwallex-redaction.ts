@@ -9,17 +9,6 @@ export function sanitizeAirwallexCode(value: unknown): string | null {
   return normalized ? normalized.slice(0, 80) : null;
 }
 
-export function sanitizeAirwallexFailureMessage(
-  value: unknown,
-): string | null {
-  if (typeof value !== "string") return null;
-  const normalized = value
-    .replace(/[\r\n\t]+/g, " ")
-    .replace(/\bBearer\s+\S+/gi, "[REDACTED]")
-    .trim();
-  return normalized ? normalized.slice(0, 240) : null;
-}
-
 export function redactAirwallexValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(redactAirwallexValue);
   if (!value || typeof value !== "object") {

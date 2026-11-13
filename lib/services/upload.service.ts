@@ -1,12 +1,11 @@
 import "server-only";
 
 import { randomBytes } from "node:crypto";
-import { mkdir, writeFile, unlink, stat } from "node:fs/promises";
-import { join, relative, resolve } from "node:path";
+import { mkdir, writeFile } from "node:fs/promises";
+import { join, resolve } from "node:path";
 
 import { ServiceError } from "@/lib/services/service-error";
 import {
-  deleteUploadFileViaSSH,
   usesSSHUploadStorage,
   writeUploadFileViaSSH,
 } from "@/lib/services/upload-ssh.storage";
@@ -172,21 +171,6 @@ function safeCategoryDir(category: UploadCategory): string {
     throw new ServiceError(400, "Invalid upload category.");
   }
   return target;
-}
-
-/**
- * Returns true when `filePath` is physically inside the configured
- * `UPLOAD_DIR`. Used before unlink operations to prevent deletion of
- * arbitrary files.
- */
-export function isInsideUploadDir(filePath: string): boolean {
-  try {
-    const root = resolve(/* turbopackIgnore: true */ getUploadDir());
-    const resolved = resolve(/* turbopackIgnore: true */ filePath);
-    return resolved.startsWith(root + "/");
-  } catch {
-    return false;
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -363,84 +347,9 @@ export async function uploadImageToVPS(
     url: publicUrl,
     displayUrl: publicUrl,
     thumbUrl: publicUrl,
-    deleteUrl: "", // VPS images are deleted server-side, no external delete URL
+    deleteUrl: "", // VPS images have no external delete URL.
     width: optimized.width,
     height: optimized.height,
     size: optimized.size,
   };
-}
-
-// ---------------------------------------------------------------------------
-// Deletion helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Derive the filesystem path from a VPS-hosted public URL.
- * Returns `null` if the URL is not a VPS-hosted image (e.g. ImgBB).
- */
-export function resolveUploadPath(url: string): string | null {
-  let publicBase: string;
-  try {
-    publicBase = getUploadPublicUrl();
-  } catch {
-    return null;
-  }
-
-  if (!url.startsWith(`${publicBase}/`)) return null;
-
-  const relativePath = url.slice(publicBase.length).replace(/^\/+/, "");
-  if (!relativePath || relativePath.includes("..")) return null;
-
-  const uploadDir = getUploadDir();
-  const fullPath = resolve(/* turbopackIgnore: true */ uploadDir, relativePath);
-
-  // Safety: ensure the resolved path is inside the upload directory
-  if (!fullPath.startsWith(resolve(/* turbopackIgnore: true */ uploadDir) + "/")) return null;
-
-  return fullPath;
-}
-
-/**
- * Safely delete a VPS-hosted image file.
- *
- * - Only deletes files inside the configured UPLOAD_DIR.
- * - Silently ignores files that don't exist (already deleted).
- * - Never attempts to delete ImgBB or other external URLs.
- *
- * @returns true if the file was deleted, false if skipped/not found.
- */
-export async function deleteUploadedFile(url: string): Promise<boolean> {
-  const filePath = resolveUploadPath(url);
-  if (!filePath) return false; // External URL (e.g. ImgBB) — skip
-
-  if (!isInsideUploadDir(filePath)) return false;
-
-  try {
-    if (usesSSHUploadStorage()) {
-      const root = resolve(/* turbopackIgnore: true */ getUploadDir());
-      const parts = relative(root, filePath).split("/");
-      if (parts.length !== 2 || !VALID_CATEGORIES.has(parts[0] as UploadCategory)) {
-        return false;
-      }
-      return await deleteUploadFileViaSSH(root, parts[0], parts[1]);
-    }
-    // UPLOAD_DIR contains persistent runtime files outside the release tree.
-    // Tracing this dynamic path would incorrectly package the whole project.
-    const fileStat = await stat(/* turbopackIgnore: true */ filePath);
-    if (!fileStat.isFile()) return false; // Don't delete directories
-    await unlink(filePath);
-    return true;
-  } catch (error: unknown) {
-    // ENOENT = file already gone — not an error
-    if (
-      error &&
-      typeof error === "object" &&
-      "code" in error &&
-      (error as { code: string }).code === "ENOENT"
-    ) {
-      return false;
-    }
-    console.error("[upload.service] delete failed", filePath, error);
-    return false;
-  }
 }

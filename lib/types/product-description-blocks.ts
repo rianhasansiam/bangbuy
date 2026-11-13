@@ -96,9 +96,6 @@ export type ProductDescriptionBlock =
 /** Union of all supported block `type` literals. */
 export type ProductDescriptionBlockType = ProductDescriptionBlock["type"];
 
-export const PRODUCT_DESCRIPTION_BLOCK_TYPES: readonly ProductDescriptionBlockType[] =
-  ["richText", "featureGrid", "imageText", "specificationTable"] as const;
-
 export const BLOCK_SPACING_VALUES = ["small", "medium", "large"] as const;
 export const BLOCK_CONTAINER_VALUES = ["contained", "fullWidth"] as const;
 export const FEATURE_GRID_COLUMN_VALUES = [2, 3, 4] as const;

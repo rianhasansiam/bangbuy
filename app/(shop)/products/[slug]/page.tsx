@@ -22,7 +22,6 @@ import { cleanVariantAttributes } from "@/lib/catalog/variant-options";
 import { dependOnCatalogTags } from "@/lib/cache/catalog-dependency";
 import { productDetailCacheTags } from "@/lib/cache/product-detail-dependencies";
 import JsonLd from "@/components/seo/JsonLd";
-import ProductView from "@/components/analytics/ProductView";
 import {
   productFallbackDescription,
   productFallbackTitle,
@@ -632,13 +631,6 @@ export default async function ProductDetailsPage({ params }: Props) {
 
   return (
     <main className="min-h-screen bg-brand-light-bg pb-[calc(3.75rem+env(safe-area-inset-bottom))] lg:pb-0">
-      <ProductView item={{
-        productId: product.id,
-        productCode: product.productCode,
-        name: product.name,
-        quantity: 1,
-        unitPrice: currentPrice,
-      }} />
       {productSchema && breadcrumbSchema && (
         <JsonLd
           data={

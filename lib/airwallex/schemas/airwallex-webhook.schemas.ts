@@ -1,10 +1,6 @@
 import { z } from "zod";
 
 import {
-  AIRWALLEX_PAYMENT_ATTEMPT_FAILURE_EVENT_NAMES,
-  AIRWALLEX_PAYMENT_INTENT_EVENT_NAMES,
-} from "../constants/airwallex.constants";
-import {
   airwallexAmountSchema,
   airwallexCurrencySchema,
   airwallexPaymentAttemptStatusSchema,
@@ -36,14 +32,6 @@ export const airwallexWebhookEventNameSchema = z
   .min(3)
   .max(MAX_EVENT_NAME_LENGTH)
   .regex(/^[a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+$/);
-
-export const airwallexKnownPaymentIntentEventNameSchema = z.enum(
-  AIRWALLEX_PAYMENT_INTENT_EVENT_NAMES,
-);
-
-export const airwallexKnownPaymentAttemptFailureEventNameSchema = z.enum(
-  AIRWALLEX_PAYMENT_ATTEMPT_FAILURE_EVENT_NAMES,
-);
 
 export const airwallexWebhookVersionSchema = z
   .string()

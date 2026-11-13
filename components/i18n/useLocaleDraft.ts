@@ -19,8 +19,7 @@ export function useLocaleDraft<T extends object>(name: string, value: T, setValu
   useEffect(() => {
     if (!publicProductId) return;
     let active = true;
-    // Recovery is an external storage synchronization. Keep the document's
-    // tracking gate pending until the deferred restore commits.
+    // Restore the saved selection before persisting any new changes.
     queueMicrotask(() => {
       if (!active) return;
       const draft = readPublicProductSelection(publicProductId);
@@ -33,7 +32,6 @@ export function useLocaleDraft<T extends object>(name: string, value: T, setValu
     state.current = { value, setValue, safeFields };
     if (publicProductId && publicSelectionReady) {
       savePublicProductSelection(publicProductId, value);
-      window.dispatchEvent(new Event("bangbuy:public-content-ready"));
     }
   });
   useEffect(() => {

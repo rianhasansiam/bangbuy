@@ -1,8 +1,4 @@
-import type { CurrencyCode } from "./config";
-import {
-  countryToCurrency,
-  normalizeCountryCode,
-} from "./country-currency";
+import { normalizeCountryCode } from "./country-currency";
 
 /** The subset of the Web Headers API needed by country detection. */
 export type HeadersLike = {
@@ -64,12 +60,4 @@ export function detectCountryCode(
   }
 
   return null;
-}
-
-/** Resolve request headers directly to one of the six supported currencies. */
-export function detectCurrency(
-  headers: HeadersLike,
-  options: DetectCountryOptions = {},
-): CurrencyCode {
-  return countryToCurrency(detectCountryCode(headers, options));
 }

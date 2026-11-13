@@ -25,23 +25,6 @@ export type TailwindShade =
   | "900"
   | "950";
 
-export const TAILWIND_SHADES: readonly TailwindShade[] = [
-  "50",
-  "100",
-  "200",
-  "300",
-  "400",
-  "500",
-  "600",
-  "700",
-  "800",
-  "900",
-  "950",
-];
-
-/** Prefix that turns a `family-shade` token into a usable utility class. */
-export type TailwindColorPrefix = "bg-" | "from-" | "via-" | "to-";
-
 export type TailwindFamily = {
   name: string;
   label: string;
@@ -275,28 +258,6 @@ export function classToHex(value: string | null | undefined): string | null {
 /** Strip a known color prefix so we can re-prefix for a different slot. */
 export function stripColorPrefix(value: string): string {
   return value.replace(/^(bg|from|via|to)-/, "");
-}
-
-/** Split a prefixed class into `{ family, shade }`, or null if unrecognized. */
-export function parseColorToken(
-  value: string | null | undefined,
-): { family: string; shade: TailwindShade } | null {
-  if (!value) return null;
-  const token = stripColorPrefix(value.trim());
-  const match = /^([a-z]+)-(\d{2,3})$/.exec(token);
-  if (!match) return null;
-  if (!FAMILY_BY_NAME.has(match[1])) return null;
-  if (!TAILWIND_SHADES.includes(match[2] as TailwindShade)) return null;
-  return { family: match[1], shade: match[2] as TailwindShade };
-}
-
-/** Build a class string for a family/shade under a given prefix. */
-export function buildColorClass(
-  prefix: TailwindColorPrefix,
-  family: string,
-  shade: TailwindShade,
-): string {
-  return `${prefix}${family}-${shade}`;
 }
 
 

@@ -1,11 +1,8 @@
-import { Suspense } from "react";
 import DocumentFrame from "@/components/layout/DocumentFrame";
 import PublicProviders from "@/components/layout/PublicProviders";
 import PublicNavbar from "@/components/layout/PublicNavbar";
 import Footer from "@/components/layout/Footer";
 import TopBanner from "@/components/layout/TopBanner";
-import PublicTracking from "@/components/analytics/PublicTracking";
-import PublicCapiTracking from "@/components/analytics/PublicCapiTracking";
 import JsonLd from "@/components/seo/JsonLd";
 import { organizationJsonLd, websiteJsonLd } from "@/lib/seo/json-ld";
 import { getTranslations } from "next-intl/server";
@@ -28,7 +25,6 @@ export default async function PublicRoot({ children }: { children: React.ReactNo
   const [locale, seo] = await Promise.all([getRequestLocale(), getTranslations("Seo")]);
   return <DocumentFrame><PublicProviders currencyContext={currencyContext}>
     <JsonLd data={[organizationJsonLd(seo("siteDescription")), websiteJsonLd(locale, seo("siteDescription"))]} />
-    <div data-tracking-content><TopBanner /><PublicNavbar categories={categories} languages={languageChoices} />{children}<Footer /></div>
-    <Suspense fallback={null}>{process.env.META_TRACKING_MODE === "server-only" ? <PublicCapiTracking /> : <PublicTracking />}</Suspense>
+    <div><TopBanner /><PublicNavbar categories={categories} languages={languageChoices} />{children}<Footer /></div>
   </PublicProviders></DocumentFrame>;
 }

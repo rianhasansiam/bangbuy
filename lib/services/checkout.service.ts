@@ -1,5 +1,4 @@
 import "server-only";
-import { captureCurrentCheckoutMarketingConsent, recordCommittedOrder } from "@/lib/analytics/conversion-outbox";
 
 import { Prisma } from "@/app/generated/prisma/client";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
@@ -845,10 +844,6 @@ async function placeOrderInternal(
 
   const settings = settingsToSnapshot(await getStoreSettings());
 
-  // Host-scoped, optional marketing consent is separate from the customer
-  // identity and never changes checkout authorization or submitted fields.
-  const marketingConsent = await captureCurrentCheckoutMarketingConsent();
-
   // Account-backed orders always use the account email, never a client
   // override. Guest orders preserve the optional contact email entered by
   // the admin so a receipt can still be sent where available.
@@ -1203,11 +1198,6 @@ async function placeOrderInternal(
               },
         });
       }
-
-      await recordCommittedOrder(tx, {
-        orderId: order.id, createdAt: order.createdAt,
-        amount: order.totalAmount, currency: order.currency, consent: marketingConsent,
-      });
 
       return {
         order,
