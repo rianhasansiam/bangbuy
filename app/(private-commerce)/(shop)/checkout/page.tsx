@@ -42,7 +42,7 @@ import { writeLocalCart } from "@/features/cart/storage";
 import type { AppDispatch, RootState } from "@/store";
 import { toast } from "@/lib/feedback";
 import { BASE_CURRENCY } from "@/lib/currency/config";
-import { trackInitiateCheckout } from "@/lib/meta-pixel";
+import { META_PIXEL_CONSENT_EVENT, trackInitiateCheckout } from "@/lib/meta-pixel";
 import { startAirwallexHostedCheckout } from "@/lib/airwallex/components/AirwallexPayButton";
 import {
   CheckoutPageSkeleton,
@@ -262,6 +262,40 @@ function CheckoutPageInner() {
       !cartIsLoading &&
       (authStatus === "unauthenticated" || cartMode === "server"));
 
+  useEffect(() => {
+    if (authStatus === "loading" || !cartSourceReady) return;
+
+    const trackEntry = () => {
+      if (checkoutTrackedRef.current) return;
+      const checkoutItems = source.kind === "cart"
+        ? items.filter((item) => item.status === "ACTIVE")
+        : source.items;
+      if (checkoutItems.length === 0) return;
+      let valueBDT = source.kind === "cart" ? computeCartSummary(items).subtotal : undefined;
+      if (source.kind === "cart-selection" && cartIsHydrated && !cartIsLoading &&
+        (authStatus === "unauthenticated" || cartMode === "server")) {
+        const selectedPrices = source.items.map((selected) => {
+          const matched = items.find((item) => item.status === "ACTIVE" &&
+            item.productId === selected.productId &&
+            (item.variantId ?? undefined) === selected.variantId);
+          return matched ? matched.unitPrice * selected.quantity : undefined;
+        });
+        if (selectedPrices.every((price): price is number => price !== undefined && Number.isFinite(price) && price >= 0)) {
+          valueBDT = Math.round(selectedPrices.reduce((sum, price) => sum + price, 0) * 100) / 100;
+        }
+      }
+      // Track entry before delivery selection; Buy Now has no priced cart yet.
+      checkoutTrackedRef.current = trackInitiateCheckout(
+        checkoutItems,
+        valueBDT,
+      );
+    };
+
+    trackEntry();
+    window.addEventListener(META_PIXEL_CONSENT_EVENT, trackEntry);
+    return () => window.removeEventListener(META_PIXEL_CONSENT_EVENT, trackEntry);
+  }, [authStatus, cartSourceReady, cartIsHydrated, cartIsLoading, cartMode, items, source]);
+
   // Single source of truth for "fetch the preview". Triggered by:
   //   - a delivery area being selected
   //   - auth status becoming known
@@ -314,11 +348,6 @@ function CheckoutPageInner() {
         if (ignore) return;
 
         setPreview(next);
-        // A selected delivery area and successfully priced items mark a real
-        // checkout start; promo/auth/preview refreshes must not repeat it.
-        if (!checkoutTrackedRef.current && next.items.length > 0) {
-          checkoutTrackedRef.current = trackInitiateCheckout(next);
-        }
         setPaymentMethod((current) =>
           current === "AIRWALLEX" &&
           !next.availablePaymentMethods.includes("AIRWALLEX")

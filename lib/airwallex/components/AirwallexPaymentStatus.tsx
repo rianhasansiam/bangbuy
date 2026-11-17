@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { readApiData } from "@/features/http/api-envelope";
 import { fetchOrderDetail } from "@/features/orders/api";
-import { canTrackMetaPixel, trackPurchase } from "@/lib/meta-pixel";
+import { canTrackMetaPixel, META_PIXEL_CONSENT_EVENT, trackPurchase } from "@/lib/meta-pixel";
 import { cn } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 2_500;
@@ -280,14 +280,14 @@ export function AirwallexPaymentStatus({
       state.status !== "ready" ||
       state.snapshot.orderId !== orderId ||
       state.snapshot.paymentStatus !== "SUCCEEDED" ||
-      state.snapshot.requiresReview ||
-      !canTrackMetaPixel()
+      state.snapshot.requiresReview
     ) {
       return;
     }
 
     let active = true;
-    void (async () => {
+    const trackConfirmedPurchase = async () => {
+      if (!canTrackMetaPixel()) return;
       try {
         // The redirect and status alone do not supply a confirmed order total.
         const order = await fetchOrderDetail(state.snapshot.orderId);
@@ -295,10 +295,14 @@ export function AirwallexPaymentStatus({
       } catch {
         // Optional tracking must never affect payment confirmation or shopping.
       }
-    })();
+    };
+    const onConsentChange = () => { void trackConfirmedPurchase(); };
+    void trackConfirmedPurchase();
+    window.addEventListener(META_PIXEL_CONSENT_EVENT, onConsentChange);
 
     return () => {
       active = false;
+      window.removeEventListener(META_PIXEL_CONSENT_EVENT, onConsentChange);
     };
   }, [embedded, orderId, state]);
 

@@ -1,10 +1,12 @@
 import type { Surface } from "./surfaces";
+import { parseMetaPixelIds } from "@/lib/meta-pixel";
 
 /** Documents permit first-party assets and the providers needed for their surface. */
 export function documentSecurityHeaders(surface: Surface): Record<string, string> {
   const scripts = surface === "public" ? "" : "https://*.airwallex.com https://*.sslcommerz.com";
   const connections = surface === "public" ? "" : "https://*.airwallex.com https://*.sslcommerz.com https://api.emailjs.com";
-  const metaEnabled = process.env.NODE_ENV === "production" && /^\d+$/.test(process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim() ?? "");
+  const metaEnabled = process.env.NODE_ENV !== "test" &&
+    (process.env.NODE_ENV === "production" || process.env.NEXT_PUBLIC_META_PIXEL_TEST_MODE === "true") && parseMetaPixelIds().length > 0;
   const metaScript = metaEnabled ? "https://connect.facebook.net" : "";
   const metaEvents = metaEnabled ? "https://www.facebook.com https://connect.facebook.net" : "";
   return {

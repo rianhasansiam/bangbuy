@@ -7,6 +7,7 @@ import { loadMessages, selectClientMessages } from "@/lib/i18n/catalogs";
 import { getLocaleDefinition } from "@/lib/i18n/registry";
 import { getSurfaceOrigins } from "@/lib/security/surfaces";
 import { loadExchangeRateQuote } from "@/lib/currency/exchange-rate.service";
+import { parseMetaPixelIds } from "@/lib/meta-pixel";
 import "@/app/globals.css";
 
 const sans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -18,7 +19,7 @@ export default async function DocumentFrame({ children }: { children: ReactNode 
   // provider request, currency preference, order or payment state is changed.
   const [locale, pathname, quote] = await Promise.all([
     getRequestLocale(), getRequestPath(),
-    process.env.NODE_ENV === "production" && /^\d+$/.test(process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim() ?? "")
+    (process.env.NODE_ENV === "production" || process.env.NEXT_PUBLIC_META_PIXEL_TEST_MODE === "true") && parseMetaPixelIds().length > 0
       ? loadExchangeRateQuote("USD").catch(() => null) : null,
   ]);
   const messages = selectClientMessages(await loadMessages(locale), pathname);
