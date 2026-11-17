@@ -42,7 +42,7 @@ import { writeLocalCart } from "@/features/cart/storage";
 import type { AppDispatch, RootState } from "@/store";
 import { toast } from "@/lib/feedback";
 import { BASE_CURRENCY } from "@/lib/currency/config";
-import { META_PIXEL_CONSENT_EVENT, trackInitiateCheckout } from "@/lib/meta-pixel";
+import { trackInitiateCheckout } from "@/lib/meta-pixel";
 import { startAirwallexHostedCheckout } from "@/lib/airwallex/components/AirwallexPayButton";
 import {
   CheckoutPageSkeleton,
@@ -285,15 +285,15 @@ function CheckoutPageInner() {
         }
       }
       // Track entry before delivery selection; Buy Now has no priced cart yet.
-      checkoutTrackedRef.current = trackInitiateCheckout(
+      // Consume this entry even when consent is absent; never replay it later.
+      checkoutTrackedRef.current = true;
+      trackInitiateCheckout(
         checkoutItems,
         valueBDT,
       );
     };
 
     trackEntry();
-    window.addEventListener(META_PIXEL_CONSENT_EVENT, trackEntry);
-    return () => window.removeEventListener(META_PIXEL_CONSENT_EVENT, trackEntry);
   }, [authStatus, cartSourceReady, cartIsHydrated, cartIsLoading, cartMode, items, source]);
 
   // Single source of truth for "fetch the preview". Triggered by:

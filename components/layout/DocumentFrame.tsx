@@ -1,5 +1,6 @@
 import { Suspense, type ReactNode } from "react";
 import MetaPixel from "@/components/MetaPixel";
+import CookieConsent from "@/components/CookieConsent";
 import { Geist, Geist_Mono } from "next/font/google";
 import IntlProvider from "@/components/i18n/IntlProvider";
 import { getRequestLocale, getRequestPath } from "@/lib/i18n/server";
@@ -26,6 +27,6 @@ export default async function DocumentFrame({ children }: { children: ReactNode 
   const origins = getSurfaceOrigins();
   const usdExchangeRate = quote?.currency === "USD" ? quote.rate : null;
   return <html lang={locale} dir={getLocaleDefinition(locale).direction} data-surface-configured="true" data-storefront-origin={origins.separated ? origins.storefront : ""} data-commerce-origin={origins.separated ? origins.commerce : ""} className={`${sans.className} ${sans.variable} ${mono.variable} h-full antialiased`}>
-    <body suppressHydrationWarning><IntlProvider locale={locale} messages={messages}><Suspense fallback={null}><MetaPixel usdExchangeRate={usdExchangeRate} /></Suspense>{children}</IntlProvider></body>
+    <body suppressHydrationWarning><IntlProvider locale={locale} messages={messages}><CookieConsent /><Suspense fallback={null}><MetaPixel usdExchangeRate={usdExchangeRate} /></Suspense>{children}</IntlProvider></body>
   </html>;
 }

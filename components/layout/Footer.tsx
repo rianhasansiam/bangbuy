@@ -1,6 +1,7 @@
 
 import { useInterfaceTranslations } from "@/components/i18n/translate";
 import Link from "@/lib/i18n/navigation";
+import { CookieSettingsButton } from "@/components/CookieConsent";
 
 import { siteConfig } from "@/lib/seo/site";
 
@@ -94,6 +95,7 @@ const Footer = () => {
                   </Link>
                 </li>
               ))}
+              <li><CookieSettingsButton /></li>
             </ul>
           </div>
 

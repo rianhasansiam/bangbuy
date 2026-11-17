@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { readApiData } from "@/features/http/api-envelope";
 import { fetchOrderDetail } from "@/features/orders/api";
-import { canTrackMetaPixel, META_PIXEL_CONSENT_EVENT, trackPurchase } from "@/lib/meta-pixel";
+import { canTrackMetaPixel, trackPurchase } from "@/lib/meta-pixel";
 import { cn } from "@/lib/utils";
 
 const POLL_INTERVAL_MS = 2_500;
@@ -212,6 +212,7 @@ export function AirwallexPaymentStatus({
   const [refreshToken, setRefreshToken] = useState(0);
   const [timedOut, setTimedOut] = useState(false);
   const settledNotificationRef = useRef<string | null>(null);
+  const unconsentedPurchaseRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!orderId) return;
@@ -285,9 +286,15 @@ export function AirwallexPaymentStatus({
       return;
     }
 
+    if (!canTrackMetaPixel()) {
+      // A success observed without consent is not a queued shopping event.
+      unconsentedPurchaseRef.current = orderId;
+      return;
+    }
+    if (unconsentedPurchaseRef.current === orderId) return;
+
     let active = true;
     const trackConfirmedPurchase = async () => {
-      if (!canTrackMetaPixel()) return;
       try {
         // The redirect and status alone do not supply a confirmed order total.
         const order = await fetchOrderDetail(state.snapshot.orderId);
@@ -296,13 +303,10 @@ export function AirwallexPaymentStatus({
         // Optional tracking must never affect payment confirmation or shopping.
       }
     };
-    const onConsentChange = () => { void trackConfirmedPurchase(); };
     void trackConfirmedPurchase();
-    window.addEventListener(META_PIXEL_CONSENT_EVENT, onConsentChange);
 
     return () => {
       active = false;
-      window.removeEventListener(META_PIXEL_CONSENT_EVENT, onConsentChange);
     };
   }, [embedded, orderId, state]);
 

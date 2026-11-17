@@ -25,17 +25,53 @@ export function parseMetaPixelIds(raw = process.env.NEXT_PUBLIC_META_PIXEL_IDS):
 const pixelIds = parseMetaPixelIds();
 const initialized = new Set<string>();
 const purchases = new Set<string>();
-// No active consent manager exists in this project. Fail closed until the
-// site's authoritative marketing-consent decision is connected to the setter.
+// CookieConsent resolves the automatic default or saved rejection after hydration.
 let marketingConsent = false;
 let lastPage: string | null = null;
 let usdRate: string | null = null;
 export const META_PIXEL_CONSENT_EVENT = "bangbuy:meta-consent-change";
+export const META_PIXEL_LOAD_EVENT = "bangbuy:meta-load-change";
+export type MetaPixelLoadState = "idle" | "loading" | "loaded" | "failed";
+let loadState: MetaPixelLoadState = "idle";
+
+/** SDK resource state only; a loaded script does not confirm event delivery. */
+export function getMetaPixelLoadState(): MetaPixelLoadState { return loadState; }
+
+function setLoadState(next: MetaPixelLoadState): void {
+  if (loadState === next) return;
+  loadState = next;
+  try { window.dispatchEvent(new Event(META_PIXEL_LOAD_EVENT)); }
+  catch { /* Optional status observers must never affect shopping. */ }
+}
+
+function loadSdk(): void {
+  if (loadState !== "idle") return;
+  if (window.fbq?.callMethod) { setLoadState("loaded"); return; }
+  setLoadState("loading");
+  const timeout = window.setTimeout(() => setLoadState("failed"), 10_000);
+  const finish = (next: "loaded" | "failed") => {
+    window.clearTimeout(timeout);
+    setLoadState(next);
+  };
+  try {
+    const existing = document.querySelector<HTMLScriptElement>('script[src="https://connect.facebook.net/en_US/fbevents.js"]');
+    const script = existing ?? document.createElement("script");
+    script.addEventListener("load", () => finish("loaded"), { once: true });
+    script.addEventListener("error", () => finish("failed"), { once: true });
+    if (!existing) {
+      script.async = true;
+      script.src = "https://connect.facebook.net/en_US/fbevents.js";
+      script.referrerPolicy = "no-referrer";
+      document.head.appendChild(script);
+    }
+  } catch { finish("failed"); }
+}
 
 /** Call on initial consent resolution and every marketing-consent change. */
 export function setMetaPixelConsent(granted: boolean): void {
   if (typeof window === "undefined" || marketingConsent === granted) return;
   marketingConsent = granted;
+  if (!granted) lastPage = null;
   try {
     if (initialized.size) window.fbq?.("consent", granted ? "grant" : "revoke");
   } catch { /* Consent or tracking errors must never affect shopping. */ }
@@ -93,15 +129,9 @@ function pixel(): Pixel | null {
     fbq.push = fbq;
     window.fbq = fbq;
     window._fbq ??= fbq;
-    if (!document.querySelector('script[src="https://connect.facebook.net/en_US/fbevents.js"]')) {
-      const script = document.createElement("script");
-      script.async = true;
-      script.src = "https://connect.facebook.net/en_US/fbevents.js";
-      script.referrerPolicy = "no-referrer";
-      document.head.appendChild(script);
-    }
   }
   window.fbq.disablePushState = true;
+  loadSdk();
   return window.fbq ?? null;
 }
 
